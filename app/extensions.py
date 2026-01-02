@@ -31,11 +31,19 @@ def init_supabase():
     """Initialize Supabase client."""
     global supabase_client
     if not SUPABASE_AVAILABLE:
+        print("Supabase library not available, skipping initialization")
         return None
     url = os.environ.get('SUPABASE_URL')
     key = os.environ.get('SUPABASE_SERVICE_KEY')
     if url and key:
-        supabase_client = create_client(url, key)
+        try:
+            supabase_client = create_client(url, key)
+            print("Supabase client initialized successfully")
+        except Exception as e:
+            print(f"Warning: Failed to initialize Supabase: {e}")
+            supabase_client = None
+    else:
+        print("Supabase URL or key not provided, skipping initialization")
     return supabase_client
 
 
