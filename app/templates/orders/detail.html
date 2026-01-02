@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+
+{% block title %}{{ order.order_code }}{% endblock %}
+{% block page_title %}Invoice Detail{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+    <div class="page-header-left">
+        <a href="{{ url_for('views.orders') }}" class="btn btn-sm btn-outline mb-2">
+            <i class="fas fa-arrow-left"></i> Kembali
+        </a>
+        <div class="d-flex align-items-center gap-2">
+            <h2>{{ order.order_code }}</h2>
+            <span class="status status-{{ order.status }}">
+                {{ order.status.replace('_', ' ').title() }}
+            </span>
+        </div>
+    </div>
+    <div class="page-header-right">
+        {% if order.dso.first() %}
+        <a href="{{ url_for('views.dso_detail', dso_id=order.dso.first().id) }}" class="btn btn-primary">
+            <i class="fas fa-edit"></i> Edit DSO
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="detail-grid">
+    <!-- Order Info -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Informasi Invoice</h3>
+        </div>
+        <div class="card-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">Model</span>
+                    <span class="info-value">{{ order.model }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Customer</span>
+                    <span class="info-value">{{ order.customer.name if order.customer else '-' }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Quantity</span>
+                    <span class="info-value">{{ order.qty_total }} pcs</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Invoice Date</span>
+                    <span class="info-value">{{ order.order_date.strftime('%d/%m/%Y') if order.order_date else '-'
+                        }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Deadline</span>
+                    <span class="info-value">{{ order.deadline.strftime('%d/%m/%Y') if order.deadline else '-' }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Priority</span>
+                    <span class="info-value">
+                        {% if order.priority == 3 %}
+                        <span class="badge badge-danger">Urgent</span>
+                        {% elif order.priority == 2 %}
+                        <span class="badge badge-warning">High</span>
+                        {% else %}
+                        <span class="badge badge-secondary">Normal</span>
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+
+            {% if order.customer_notes %}
+            <div class="mt-3">
+                <span class="info-label">Catatan Customer</span>
+                <p class="mt-1">{{ order.customer_notes }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Production Progress -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Production Progress</h3>
+        </div>
+        <div class="card-body">
+            <div class="progress-overview mb-4">
+                <div class="progress-circle">
+                    <svg viewBox="0 0 36 36">
+                        <path class="progress-bg"
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        <path class="progress-fill" stroke-dasharray="{{ order.get_production_progress() }}, 100"
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    </svg>
+                    <span class="progress-value">{{ order.get_production_progress() }}%</span>
+                </div>
+            </div>
+
+            <div class="production-steps">
+                {% for task in tasks %}
+                <div
+                    class="step-item {% if task.status == 'completed' %}completed{% elif task.status == 'in_progress' %}active{% endif %}">
+                    <div class="step-icon">
+                        {% if task.status == 'completed' %}
+                        <i class="fas fa-check"></i>
+                        {% elif task.status == 'in_progress' %}
+                        <i class="fas fa-spinner fa-spin"></i>
+                        {% else %}
+                        <i class="fas fa-circle"></i>
+                        {% endif %}
+                    </div>
+                    <div class="step-content">
+                        <div class="step-title">{{ task.process.title() }}</div>
+                        <div class="step-status">{{ task.status.replace('_', ' ').title() }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- DSO Versions -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h3 class="card-title">DSO Versions</h3>
+    </div>
+    <div class="card-body">
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Version</th>
+                        <th>Status</th>
+                        <th>Bahan</th>
+                        <th>Warna</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dso in dsos %}
+                    <tr>
+                        <td><strong>v{{ dso.version }}</strong></td>
+                        <td>
+                            <span class="status status-{{ dso.status }}">
+                                {{ dso.status.replace('_', ' ').title() }}
+                            </span>
+                        </td>
+                        <td>{{ dso.bahan or '-' }}</td>
+                        <td>{{ dso.warna or '-' }}</td>
+                        <td>{{ dso.created_at.strftime('%d/%m/%Y %H:%M') if dso.created_at else '-' }}</td>
+                        <td>
+                            <a href="{{ url_for('views.dso_detail', dso_id=dso.id) }}" class="btn btn-sm btn-outline">
+                                <i class="fas fa-eye"></i> View
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">No DSO versions</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .detail-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+
+    .info-item {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .info-label {
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: var(--gray-500);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.25rem;
+    }
+
+    .info-value {
+        font-size: 0.9375rem;
+        color: var(--gray-800);
+    }
+
+    .progress-overview {
+        text-align: center;
+    }
+
+    .progress-circle {
+        width: 120px;
+        height: 120px;
+        position: relative;
+        margin: 0 auto;
+    }
+
+    .progress-circle svg {
+        width: 100%;
+        height: 100%;
+        transform: rotate(-90deg);
+    }
+
+    .progress-circle .progress-bg {
+        fill: none;
+        stroke: var(--gray-200);
+        stroke-width: 3;
+    }
+
+    .progress-circle .progress-fill {
+        fill: none;
+        stroke: var(--primary);
+        stroke-width: 3;
+        stroke-linecap: round;
+    }
+
+    .progress-circle .progress-value {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--gray-800);
+    }
+
+    .production-steps {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .step-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.75rem;
+        background: var(--gray-50);
+        border-radius: var(--radius);
+    }
+
+    .step-item.completed {
+        background: #D1FAE5;
+    }
+
+    .step-item.active {
+        background: #DBEAFE;
+    }
+
+    .step-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--gray-300);
+        color: white;
+        font-size: 0.75rem;
+    }
+
+    .step-item.completed .step-icon {
+        background: var(--success);
+    }
+
+    .step-item.active .step-icon {
+        background: var(--info);
+    }
+
+    .step-content {
+        flex: 1;
+    }
+
+    .step-title {
+        font-weight: 500;
+        font-size: 0.9375rem;
+    }
+
+    .step-status {
+        font-size: 0.75rem;
+        color: var(--gray-500);
+    }
+
+    @media (max-width: 1024px) {
+        .detail-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .info-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}

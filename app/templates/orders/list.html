@@ -1,0 +1,352 @@
+{% extends "base.html" %}
+
+{% block title %}Invoices{% endblock %}
+{% block page_title %}Invoice Management{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <p class="text-muted">Kelola semua invoice produksi</p>
+    </div>
+    <div class="page-header-right">
+        <button class="btn btn-primary" onclick="openModal('newOrderModal')">
+            <i class="fas fa-plus"></i> Invoice Baru
+        </button>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="filters-row">
+            <div class="filter-group">
+                <input type="text" class="form-input" id="searchInput" placeholder="Cari invoice...">
+            </div>
+            <div class="filter-group">
+                <select class="form-select" id="statusFilter">
+                    <option value="">Semua Status</option>
+                    <option value="draft">Draft</option>
+                    <option value="pending_dso">Pending DSO</option>
+                    <option value="dso_approved">DSO Approved</option>
+                    <option value="in_production">In Production</option>
+                    <option value="completed">Completed</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <select class="form-select" id="customerFilter">
+                    <option value="">Semua Customer</option>
+                    {% for customer in customers %}
+                    <option value="{{ customer.id }}">{{ customer.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Invoices Table -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-container">
+            <table class="table" id="ordersTable">
+                <thead>
+                    <tr>
+                        <th>Invoice / Order No</th>
+                        <th>Model</th>
+                        <th>Customer</th>
+                        <th>Qty</th>
+                        <th>Deadline</th>
+                        <th>Status</th>
+                        <th>Progress</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders.items %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('views.order_detail', order_id=order.id) }}">
+                                <strong>{{ order.order_code }}</strong>
+                            </a>
+                        </td>
+                        <td>{{ order.model }}</td>
+                        <td>{{ order.customer.name if order.customer else '-' }}</td>
+                        <td>{{ order.qty_total }} pcs</td>
+                        <td>{{ order.deadline.strftime('%d/%m/%Y') if order.deadline else '-' }}</td>
+                        <td>
+                            <span class="status status-{{ order.status }}">
+                                {{ order.status.replace('_', ' ').title() }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: {{ order.get_production_progress() }}%"></div>
+                            </div>
+                            <span class="progress-text">{{ order.get_production_progress() }}%</span>
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                <a href="{{ url_for('views.order_detail', order_id=order.id) }}"
+                                    class="btn btn-sm btn-outline" title="View">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if order.dso.first() %}
+                                <a href="{{ url_for('views.dso_detail', dso_id=order.dso.first().id) }}"
+                                    class="btn btn-sm btn-outline" title="Edit DSO">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% endif %}
+                                <button class="btn btn-sm btn-outline text-danger"
+                                    onclick="deleteOrder({{ order.id }}, '{{ order.order_code }}')" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8">
+                            <div class="empty-state">
+                                <div class="empty-state-icon"><i class="fas fa-inbox"></i></div>
+                                <div class="empty-state-title">Belum ada invoice</div>
+                                <div class="empty-state-text">Klik tombol "Invoice Baru" untuk membuat invoice pertama
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if orders.pages > 1 %}
+        <div class="pagination">
+            {% if orders.has_prev %}
+            <a href="?page={{ orders.prev_num }}" class="page-link"><i class="fas fa-chevron-left"></i></a>
+            {% endif %}
+
+            {% for page_num in orders.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+            {% if page_num %}
+            <a href="?page={{ page_num }}" class="page-link {% if page_num == orders.page %}active{% endif %}">{{
+                page_num }}</a>
+            {% else %}
+            <span class="page-link disabled">...</span>
+            {% endif %}
+            {% endfor %}
+
+            {% if orders.has_next %}
+            <a href="?page={{ orders.next_num }}" class="page-link"><i class="fas fa-chevron-right"></i></a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- New Order Modal -->
+<div class="modal-backdrop" id="newOrderModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title">Invoice Baru</h3>
+            <button class="modal-close" onclick="closeModal('newOrderModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="newOrderForm">
+                <div class="form-group">
+                    <label class="form-label">Customer *</label>
+                    <select class="form-select" name="customer_id" required>
+                        <option value="">Pilih Customer</option>
+                        {% for customer in customers %}
+                        <option value="{{ customer.id }}">{{ customer.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Model / Nama Produk *</label>
+                    <input type="text" class="form-input" name="model" required
+                        placeholder="Contoh: Kemeja Oxford Slim Fit">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Qty Total *</label>
+                        <input type="number" class="form-input" name="qty_total" required min="1" placeholder="0">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Deadline</label>
+                        <input type="date" class="form-input" name="deadline">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Catatan Customer</label>
+                    <textarea class="form-textarea" name="customer_notes" rows="3"
+                        placeholder="Catatan khusus dari customer..."></textarea>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('newOrderModal')">Batal</button>
+            <button class="btn btn-primary" onclick="createOrder()">
+                <i class="fas fa-save"></i> Simpan Invoice
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .filters-row {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .filter-group {
+        flex: 1;
+        min-width: 200px;
+    }
+
+    .progress-bar {
+        height: 6px;
+        background: var(--gray-200);
+        border-radius: 3px;
+        overflow: hidden;
+        margin-bottom: 0.25rem;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--primary), var(--primary-light));
+        border-radius: 3px;
+        transition: width 0.3s ease;
+    }
+
+    .progress-text {
+        font-size: 0.75rem;
+        color: var(--gray-500);
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    @media (max-width: 768px) {
+        .filters-row {
+            flex-direction: column;
+        }
+
+        .filter-group {
+            min-width: 100%;
+        }
+
+        .form-row {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<script>
+    async function createOrder() {
+        const form = document.getElementById('newOrderForm');
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+
+        // Validate
+        if (!data.customer_id || !data.model || !data.qty_total) {
+            showToast('Mohon lengkapi semua field yang wajib', 'error');
+            return;
+        }
+
+        try {
+            const response = await api.post('/orders', data);
+            showToast('Invoice berhasil dibuat!', 'success');
+            closeModal('newOrderModal');
+            window.location.reload();
+        } catch (error) {
+            showToast(error.message || 'Gagal membuat invoice', 'error');
+        }
+    }
+
+    // Apply filters - reload page with query params
+    function applyFilters() {
+        const search = document.getElementById('searchInput').value.trim();
+        const status = document.getElementById('statusFilter').value;
+        const customerId = document.getElementById('customerFilter').value;
+
+        const params = new URLSearchParams();
+        if (search) params.set('search', search);
+        if (status) params.set('status', status);
+        if (customerId) params.set('customer_id', customerId);
+
+        // Always navigate to new URL (even if params are empty, this clears filters)
+        const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+        window.location.href = newUrl;
+    }
+
+    // Filter event handlers
+    document.getElementById('statusFilter').addEventListener('change', applyFilters);
+    document.getElementById('customerFilter').addEventListener('change', applyFilters);
+    document.getElementById('searchInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            applyFilters();
+        }
+    });
+
+    // Client-side filter for instant feedback
+    document.getElementById('searchInput').addEventListener('input', debounce((e) => {
+        filterTableClientSide(e.target.value);
+    }, 300));
+
+    function filterTableClientSide(search) {
+        const rows = document.querySelectorAll('#ordersTable tbody tr');
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(search.toLowerCase()) ? '' : 'none';
+        });
+    }
+
+    // Set initial filter values from URL - use setTimeout to ensure DOM is fully ready
+    setTimeout(function () {
+        const params = new URLSearchParams(window.location.search);
+        const searchInput = document.getElementById('searchInput');
+        const statusFilter = document.getElementById('statusFilter');
+        const customerFilter = document.getElementById('customerFilter');
+
+        if (params.get('search') && searchInput) {
+            searchInput.value = params.get('search');
+        }
+        if (params.get('status') && statusFilter) {
+            statusFilter.value = params.get('status');
+        }
+        if (params.get('customer_id') && customerFilter) {
+            customerFilter.value = params.get('customer_id');
+        }
+    }, 0);
+
+    async function deleteOrder(orderId, orderCode) {
+        if (!confirm(`Apakah Anda yakin ingin menghapus invoice ${orderCode}?\n\nInvoice akan dihapus permanen beserta semua data terkait (DSO, Production Tasks, QC Sheets).\n\nTindakan ini tidak dapat dibatalkan!`)) {
+            return;
+        }
+
+        try {
+            await api.delete('/orders/' + orderId);
+            showToast('Invoice berhasil dihapus', 'success');
+            window.location.reload();
+        } catch (error) {
+            showToast(error.message || 'Gagal menghapus invoice', 'error');
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+{% block title %}Reports{% endblock %}
+{% block page_title %}Reports - Invoice Documentation{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+    <h2>Laporan Invoice</h2>
+    <p class="text-muted">Pilih invoice untuk melihat laporan komprehensif</p>
+</div>
+
+<!-- Search and Filter -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="search-filters">
+            <div class="search-group">
+                <i class="fas fa-search"></i>
+                <input type="text" class="form-input" id="searchInput" placeholder="Cari kode invoice atau model...">
+            </div>
+            <select class="form-select" id="statusFilter">
+                <option value="">Semua Status</option>
+                <option value="draft">Draft</option>
+                <option value="in_production">In Production</option>
+                <option value="qc_pending">QC Pending</option>
+                <option value="completed">Completed</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- Orders List -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-container">
+            <table class="table" id="ordersTable">
+                <thead>
+                    <tr>
+                        <th>Kode Invoice</th>
+                        <th>Customer</th>
+                        <th>Model</th>
+                        <th>Qty</th>
+                        <th>Deadline</th>
+                        <th>Status</th>
+                        <th>Progress</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="ordersBody">
+                    <tr>
+                        <td colspan="8" class="text-center">
+                            <div class="spinner"></div>
+                            <p>Loading invoices...</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="pagination" id="pagination"></div>
+    </div>
+</div>
+
+<style>
+    .search-filters {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .search-group {
+        flex: 1;
+        min-width: 250px;
+        position: relative;
+    }
+
+    .search-group i {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--gray-400);
+    }
+
+    .search-group input {
+        padding-left: 2.5rem;
+    }
+
+    .search-filters .form-select {
+        min-width: 180px;
+    }
+
+    .progress-bar {
+        height: 6px;
+        background: var(--gray-200);
+        border-radius: 3px;
+        overflow: hidden;
+        min-width: 80px;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: var(--primary);
+        transition: width 0.3s;
+    }
+
+    .progress-text {
+        font-size: 0.75rem;
+        color: var(--gray-500);
+        margin-top: 0.25rem;
+    }
+</style>
+
+<script>
+    let currentPage = 1;
+    let searchQuery = '';
+    let statusFilter = '';
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadOrders();
+
+        document.getElementById('searchInput').addEventListener('input', debounce(() => {
+            searchQuery = document.getElementById('searchInput').value;
+            currentPage = 1;
+            loadOrders();
+        }, 300));
+
+        document.getElementById('statusFilter').addEventListener('change', () => {
+            statusFilter = document.getElementById('statusFilter').value;
+            currentPage = 1;
+            loadOrders();
+        });
+    });
+
+    async function loadOrders() {
+        const tbody = document.getElementById('ordersBody');
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center"><div class="spinner"></div></td></tr>';
+
+        try {
+            let url = `/api/reports/orders?page=${currentPage}`;
+            if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
+            if (statusFilter) url += `&status=${statusFilter}`;
+
+            const res = await api.get(url);
+            const { orders, pagination } = res.data;
+
+            if (orders.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="text-center">
+                            <div class="empty-state">
+                                <i class="fas fa-file-alt empty-state-icon"></i>
+                                <p class="empty-state-title">Tidak ada invoice ditemukan</p>
+                            </div>
+                        </td>
+                    </tr>`;
+                return;
+            }
+
+            tbody.innerHTML = orders.map(o => `
+                <tr>
+                    <td><strong>${o.order_code}</strong></td>
+                    <td>${o.customer_name || '-'}</td>
+                    <td>${o.model}</td>
+                    <td>${o.qty_total}</td>
+                    <td>${o.deadline ? formatDate(o.deadline) : '-'}</td>
+                    <td><span class="status status-${o.status}">${formatStatus(o.status)}</span></td>
+                    <td>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${o.production_progress}%"></div>
+                        </div>
+                        <div class="progress-text">${o.production_progress}%</div>
+                    </td>
+                    <td>
+                        <a href="/reports/${o.id}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-file-alt"></i> Lihat Report
+                        </a>
+                    </td>
+                </tr>
+            `).join('');
+
+            renderPagination(pagination);
+        } catch (e) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger">Gagal memuat data</td></tr>';
+        }
+    }
+
+    function renderPagination(p) {
+        const container = document.getElementById('pagination');
+        if (p.total_pages <= 1) {
+            container.innerHTML = '';
+            return;
+        }
+
+        let html = '';
+        if (p.page > 1) {
+            html += `<button class="page-link" onclick="goToPage(${p.page - 1})">&laquo; Prev</button>`;
+        }
+        for (let i = 1; i <= p.total_pages; i++) {
+            html += `<button class="page-link ${i === p.page ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+        }
+        if (p.page < p.total_pages) {
+            html += `<button class="page-link" onclick="goToPage(${p.page + 1})">Next &raquo;</button>`;
+        }
+        container.innerHTML = html;
+    }
+
+    function goToPage(page) {
+        currentPage = page;
+        loadOrders();
+    }
+
+    function formatDate(dateStr) {
+        return new Date(dateStr).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    function formatStatus(status) {
+        const map = {
+            'draft': 'Draft',
+            'in_production': 'In Production',
+            'qc_pending': 'QC Pending',
+            'completed': 'Completed',
+            'cancelled': 'Cancelled'
+        };
+        return map[status] || status;
+    }
+
+    function debounce(fn, delay) {
+        let timer;
+        return function (...args) {
+            clearTimeout(timer);
+            timer = setTimeout(() => fn.apply(this, args), delay);
+        };
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,524 @@
+{% extends "base.html" %}
+{% block title %}SOP Documents{% endblock %}
+{% block page_title %}SOP Documents{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+    <div class="page-header-left">
+        <p class="text-muted">Dokumen Standard Operating Procedure</p>
+    </div>
+    <div class="page-header-right">
+        {% if current_user.can_access('edit_dso') %}
+        <button class="btn btn-primary" onclick="openModal('newSopModal')">
+            <i class="fas fa-plus"></i> Tambah SOP
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Category Filter -->
+<div class="filter-bar mb-4">
+    <div class="category-tabs">
+        <button class="tab-btn active" onclick="filterByCategory('')">Semua</button>
+        <button class="tab-btn" onclick="filterByCategory('Produksi')">Produksi</button>
+        <button class="tab-btn" onclick="filterByCategory('QC')">Quality Control</button>
+        <button class="tab-btn" onclick="filterByCategory('Safety')">Safety</button>
+    </div>
+</div>
+
+<!-- SOP Documents Table -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-container">
+            <table class="table" id="sopTable">
+                <thead>
+                    <tr>
+                        <th>Nama Dokumen</th>
+                        <th>Kode</th>
+                        <th>No. Revisi</th>
+                        <th>Tanggal Revisi</th>
+                        <th>Berlaku Efektif</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for doc in documents.items %}
+                    <tr data-id="{{ doc.id }}">
+                        <td>
+                            <div class="doc-name">
+                                <i class="fas fa-file-pdf text-danger"></i>
+                                <div>
+                                    <strong>{{ doc.title }}</strong>
+                                    {% if doc.category %}
+                                    <span class="category-tag {{ doc.category.lower() }}">{{ doc.category }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td><code>{{ doc.document_code }}</code></td>
+                        <td class="text-center">
+                            <span class="revision-badge">Rev. {{ doc.revision_number or 0 }}</span>
+                        </td>
+                        <td>
+                            {{ doc.revision_date.strftime('%d/%m/%Y') if doc.revision_date else '-' }}
+                        </td>
+                        <td>
+                            <span class="effective-date">
+                                {{ doc.effective_date.strftime('%d/%m/%Y') if doc.effective_date else '-' }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="status-badge {{ 'active' if doc.is_active else 'inactive' }}">
+                                {{ 'Aktif' if doc.is_active else 'Tidak Aktif' }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                {% if doc.file_url %}
+                                <a href="{{ doc.file_url }}" target="_blank" class="btn btn-xs btn-outline"
+                                    title="Download">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                                <a href="{{ doc.file_url }}" target="_blank" class="btn btn-xs btn-outline-primary"
+                                    title="View">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% endif %}
+                                {% if current_user.can_access('edit_dso') %}
+                                <button class="btn btn-xs btn-outline" onclick="editSop({{ doc.id }})" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7">
+                            <div class="empty-state">
+                                <i class="fas fa-file-alt"></i>
+                                <p>Belum ada dokumen SOP</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% if documents.pages > 1 %}
+<div class="pagination">
+    {% for p in documents.iter_pages() %}
+    {% if p %}<a href="?page={{ p }}" class="page-link {% if p == documents.page %}active{% endif %}">{{ p }}</a>{%
+    endif %}
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Add SOP Modal -->
+<div class="modal-backdrop" id="newSopModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title"><i class="fas fa-file-alt"></i> Tambah SOP Baru</h3>
+            <button class="modal-close" onclick="closeModal('newSopModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="sopForm">
+                <input type="hidden" name="sop_id" id="sopId">
+                <div class="form-group">
+                    <label class="form-label">Nama Dokumen *</label>
+                    <input type="text" class="form-input" name="title" id="sopTitle" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Kategori</label>
+                        <select class="form-select" name="category" id="sopCategory">
+                            <option value="">-- Pilih Kategori --</option>
+                            <option value="Produksi">Produksi</option>
+                            <option value="QC">Quality Control</option>
+                            <option value="Safety">Safety</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Version</label>
+                        <input type="text" class="form-input" name="version" id="sopVersion" value="1.0">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">No. Revisi</label>
+                        <input type="number" class="form-input" name="revision_number" id="sopRevisionNumber" value="0"
+                            min="0">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tanggal Revisi</label>
+                        <input type="date" class="form-input" name="revision_date" id="sopRevisionDate">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Berlaku Efektif</label>
+                    <input type="date" class="form-input" name="effective_date" id="sopEffectiveDate">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Deskripsi</label>
+                    <textarea class="form-input" name="description" id="sopDescription" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Upload File PDF</label>
+                    <div class="file-upload-area" id="fileUploadArea">
+                        <input type="file" id="sopFile" accept=".pdf" style="display: none;"
+                            onchange="handleFileSelect(this)">
+                        <div class="file-upload-btn" onclick="document.getElementById('sopFile').click()">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <span id="fileLabel">Klik untuk memilih file PDF</span>
+                        </div>
+                        <div class="file-info" id="fileInfo" style="display: none;">
+                            <i class="fas fa-file-pdf text-danger"></i>
+                            <span id="fileName"></span>
+                            <button type="button" class="btn btn-xs btn-outline-danger" onclick="clearFile()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="current-file" id="currentFile" style="display: none;">
+                            <small class="text-muted">File saat ini: <a id="currentFileLink" href="#"
+                                    target="_blank"></a></small>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('newSopModal')">Batal</button>
+            <button class="btn btn-primary" onclick="saveSop()">
+                <i class="fas fa-save"></i> Simpan
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .filter-bar {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .category-tabs {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .tab-btn {
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--gray-300);
+        background: white;
+        border-radius: var(--radius);
+        cursor: pointer;
+        transition: all var(--transition);
+    }
+
+    .tab-btn:hover {
+        background: var(--gray-50);
+    }
+
+    .tab-btn.active {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
+
+    /* Table Styles */
+    .doc-name {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .doc-name i {
+        font-size: 1.25rem;
+    }
+
+    .category-tag {
+        display: inline-block;
+        padding: 0.125rem 0.5rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.7rem;
+        margin-left: 0.5rem;
+    }
+
+    .category-tag.produksi {
+        background: #DBEAFE;
+        color: #1E40AF;
+    }
+
+    .category-tag.qc {
+        background: #D1FAE5;
+        color: #065F46;
+    }
+
+    .category-tag.safety {
+        background: #FEF3C7;
+        color: #92400E;
+    }
+
+    .revision-badge {
+        background: var(--gray-100);
+        padding: 0.25rem 0.5rem;
+        border-radius: var(--radius-sm);
+        font-weight: 600;
+        font-size: 0.8125rem;
+    }
+
+    .effective-date {
+        font-weight: 500;
+    }
+
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .status-badge.active {
+        background: #D1FAE5;
+        color: #065F46;
+    }
+
+    .status-badge.inactive {
+        background: var(--gray-100);
+        color: var(--gray-500);
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 0.25rem;
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .form-row {
+            grid-template-columns: 1fr;
+        }
+
+        .category-tabs {
+            flex-wrap: wrap;
+        }
+    }
+
+    /* File Upload */
+    .file-upload-area {
+        margin-top: 0.5rem;
+    }
+
+    .file-upload-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        border: 2px dashed var(--gray-300);
+        border-radius: var(--radius);
+        background: var(--gray-50);
+        cursor: pointer;
+        transition: all var(--transition);
+    }
+
+    .file-upload-btn:hover {
+        border-color: var(--primary);
+        background: #f0f9ff;
+    }
+
+    .file-upload-btn i {
+        font-size: 2rem;
+        color: var(--gray-400);
+        margin-bottom: 0.5rem;
+    }
+
+    .file-upload-btn span {
+        color: var(--gray-500);
+        font-size: 0.875rem;
+    }
+
+    .file-info {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        background: var(--gray-50);
+        border-radius: var(--radius);
+        margin-top: 0.5rem;
+    }
+
+    .file-info i {
+        font-size: 1.5rem;
+    }
+
+    .file-info span {
+        flex: 1;
+        font-weight: 500;
+    }
+
+    .current-file {
+        margin-top: 0.5rem;
+    }
+</style>
+
+<script>
+    let currentCategory = '';
+
+    function filterByCategory(category) {
+        currentCategory = category;
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.textContent.trim() === (category || 'Semua')) {
+                btn.classList.add('active');
+            }
+        });
+
+        // Reload with filter
+        window.location.href = `?category=${category}`;
+    }
+
+    function editSop(id) {
+        // Reset form first
+        resetForm();
+
+        // Fetch SOP details and open modal
+        api.get(`/sop/${id}`).then(result => {
+            const sop = result.data;
+            document.getElementById('sopId').value = sop.id;
+            document.getElementById('sopTitle').value = sop.title;
+            document.getElementById('sopCategory').value = sop.category || '';
+            document.getElementById('sopVersion').value = sop.version;
+            document.getElementById('sopRevisionNumber').value = sop.revision_number || 0;
+            document.getElementById('sopRevisionDate').value = sop.revision_date || '';
+            document.getElementById('sopEffectiveDate').value = sop.effective_date || '';
+            document.getElementById('sopDescription').value = sop.description || '';
+
+            // Show current file if exists
+            if (sop.file_url) {
+                document.getElementById('currentFile').style.display = 'block';
+                document.getElementById('currentFileLink').href = sop.file_url;
+                document.getElementById('currentFileLink').textContent = sop.title + '.pdf';
+            }
+
+            openModal('newSopModal');
+        }).catch(err => {
+            showToast(err.message || 'Gagal memuat data', 'error');
+        });
+    }
+
+    function resetForm() {
+        document.getElementById('sopId').value = '';
+        document.getElementById('sopTitle').value = '';
+        document.getElementById('sopCategory').value = '';
+        document.getElementById('sopVersion').value = '1.0';
+        document.getElementById('sopRevisionNumber').value = '0';
+        document.getElementById('sopRevisionDate').value = '';
+        document.getElementById('sopEffectiveDate').value = '';
+        document.getElementById('sopDescription').value = '';
+        document.getElementById('sopFile').value = '';
+        document.getElementById('fileInfo').style.display = 'none';
+        document.querySelector('.file-upload-btn').style.display = 'flex';
+        document.getElementById('currentFile').style.display = 'none';
+    }
+
+    function handleFileSelect(input) {
+        const file = input.files[0];
+        if (file) {
+            if (file.type !== 'application/pdf') {
+                showToast('Hanya file PDF yang diperbolehkan', 'error');
+                input.value = '';
+                return;
+            }
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('fileInfo').style.display = 'flex';
+            document.querySelector('.file-upload-btn').style.display = 'none';
+        }
+    }
+
+    function clearFile() {
+        document.getElementById('sopFile').value = '';
+        document.getElementById('fileInfo').style.display = 'none';
+        document.querySelector('.file-upload-btn').style.display = 'flex';
+    }
+
+    async function uploadFile(sopId) {
+        const fileInput = document.getElementById('sopFile');
+        if (!fileInput.files[0]) return true;
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+
+        try {
+            const response = await fetch(`/api/sop/${sopId}/upload`, {
+                method: 'POST',
+                body: formData,
+                credentials: 'same-origin'
+            });
+
+            if (!response.ok) {
+                throw new Error('Upload gagal');
+            }
+            return true;
+        } catch (error) {
+            showToast('Gagal upload file: ' + error.message, 'error');
+            return false;
+        }
+    }
+
+    async function saveSop() {
+        const sopId = document.getElementById('sopId').value;
+        const data = {
+            title: document.getElementById('sopTitle').value,
+            category: document.getElementById('sopCategory').value,
+            version: document.getElementById('sopVersion').value,
+            revision_number: parseInt(document.getElementById('sopRevisionNumber').value) || 0,
+            revision_date: document.getElementById('sopRevisionDate').value || null,
+            effective_date: document.getElementById('sopEffectiveDate').value || null,
+            description: document.getElementById('sopDescription').value
+        };
+
+        if (!data.title) {
+            showToast('Nama dokumen wajib diisi', 'error');
+            return;
+        }
+
+        try {
+            let savedSopId = sopId;
+
+            if (sopId) {
+                await api.put(`/sop/${sopId}`, data);
+            } else {
+                const result = await api.post('/sop', data);
+                savedSopId = result.data.id;
+            }
+
+            // Upload file if selected
+            const hasFile = document.getElementById('sopFile').files.length > 0;
+            if (hasFile) {
+                const uploaded = await uploadFile(savedSopId);
+                if (!uploaded) return;
+            }
+
+            showToast('SOP berhasil disimpan', 'success');
+            closeModal('newSopModal');
+            location.reload();
+        } catch (error) {
+            showToast(error.message || 'Gagal menyimpan', 'error');
+        }
+    }
+
+    // Reset form when opening modal for new SOP
+    document.querySelector('.page-header-right .btn-primary')?.addEventListener('click', resetForm);
+</script>
+{% endblock %}

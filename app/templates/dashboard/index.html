@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Stats Cards -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon primary">
+            <i class="fas fa-clipboard-list"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value">{{ total_orders }}</div>
+            <div class="stat-label">Total Invoices</div>
+            <div class="stat-change positive">
+                <i class="fas fa-arrow-up"></i> 12% dari bulan lalu
+            </div>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon info">
+            <i class="fas fa-industry"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value">{{ active_orders }}</div>
+            <div class="stat-label">Produksi Aktif</div>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon warning">
+            <i class="fas fa-clock"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value">{{ pending_qc }}</div>
+            <div class="stat-label">Pending QC</div>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon success">
+            <i class="fas fa-check-double"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value" id="passRate">-</div>
+            <div class="stat-label">QC Pass Rate</div>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-grid">
+    <!-- Recent Invoices -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Invoice Terbaru</h3>
+            <a href="{{ url_for('views.orders') }}" class="btn btn-sm btn-outline">
+                Lihat Semua
+            </a>
+        </div>
+        <div class="card-body">
+            {% if recent_orders %}
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Invoice Code</th>
+                            <th>Model</th>
+                            <th>Customer</th>
+                            <th>Qty</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in recent_orders %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('views.order_detail', order_id=order.id) }}">
+                                    <strong>{{ order.order_code }}</strong>
+                                </a>
+                            </td>
+                            <td>{{ order.model }}</td>
+                            <td>{{ order.customer.name if order.customer else '-' }}</td>
+                            <td>{{ order.qty_total }}</td>
+                            <td>
+                                <span class="status status-{{ order.status }}">
+                                    {{ order.status.replace('_', ' ').title() }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-state-icon">
+                    <i class="fas fa-inbox"></i>
+                </div>
+                <div class="empty-state-title">Belum ada invoice</div>
+                <div class="empty-state-text">Buat invoice pertama Anda untuk memulai</div>
+                <a href="{{ url_for('views.orders') }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Buat Invoice
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Quick Actions</h3>
+        </div>
+        <div class="card-body">
+            <div class="quick-actions">
+                <a href="{{ url_for('views.orders') }}?action=new" class="quick-action-btn">
+                    <div class="quick-action-icon primary">
+                        <i class="fas fa-plus"></i>
+                    </div>
+                    <span>Invoice Baru</span>
+                </a>
+
+                <a href="{{ url_for('views.qc_list') }}" class="quick-action-btn">
+                    <div class="quick-action-icon success">
+                        <i class="fas fa-clipboard-check"></i>
+                    </div>
+                    <span>QC Inspect</span>
+                </a>
+
+                <a href="{{ url_for('views.barcode_center') }}" class="quick-action-btn">
+                    <div class="quick-action-icon info">
+                        <i class="fas fa-qrcode"></i>
+                    </div>
+                    <span>Scan Barcode</span>
+                </a>
+
+                <a href="{{ url_for('views.reports') }}" class="quick-action-btn">
+                    <div class="quick-action-icon warning">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <span>Reports</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 1.5rem;
+    }
+
+    .quick-actions {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+
+    .quick-action-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1.25rem;
+        background: var(--gray-50);
+        border-radius: var(--radius-md);
+        text-decoration: none;
+        color: var(--gray-700);
+        transition: all var(--transition-fast);
+    }
+
+    .quick-action-btn:hover {
+        background: var(--gray-100);
+        transform: translateY(-2px);
+    }
+
+    .quick-action-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: var(--radius);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        color: white;
+    }
+
+    .quick-action-icon.primary {
+        background: var(--primary);
+    }
+
+    .quick-action-icon.success {
+        background: var(--success);
+    }
+
+    .quick-action-icon.info {
+        background: var(--info);
+    }
+
+    .quick-action-icon.warning {
+        background: var(--warning);
+    }
+
+    .quick-action-btn span {
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    @media (max-width: 1024px) {
+        .dashboard-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .quick-actions {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<script>
+    // Load QC stats
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            const response = await api.get('/qc/stats');
+            if (response.data && response.data.inspections) {
+                const { passed, total } = response.data.inspections;
+                const rate = total > 0 ? ((passed / total) * 100).toFixed(1) : 0;
+                document.getElementById('passRate').textContent = rate + '%';
+            }
+        } catch (e) {
+            console.log('Could not load QC stats');
+        }
+    });
+</script>
+{% endblock %}

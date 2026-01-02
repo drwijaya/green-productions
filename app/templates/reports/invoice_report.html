@@ -1,0 +1,732 @@
+{% extends "base.html" %}
+{% block title %}Report - {{ order.order_code }}{% endblock %}
+{% block page_title %}Invoice Report{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+    <a href="{{ url_for('views.reports') }}" class="btn btn-sm btn-outline">
+        <i class="fas fa-arrow-left"></i> Kembali
+    </a>
+    <button class="btn btn-primary" onclick="window.print()">
+        <i class="fas fa-print"></i> Cetak / Export PDF
+    </button>
+</div>
+
+<div class="invoice-report" id="printArea">
+    <!-- Header -->
+    <div class="report-header">
+        <div class="header-logo">
+            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Green Production"
+                style="max-height: 60px;">
+        </div>
+        <div class="header-title">
+            <h1>LAPORAN INVOICE</h1>
+            <p>Green Production Konveksi Bandung</p>
+        </div>
+        <div class="header-info">
+            <div class="info-row">
+                <span class="label">Kode Order</span>
+                <span class="value">{{ order.order_code }}</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Tanggal Report</span>
+                <span class="value" id="reportDate">-</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Information -->
+    <section class="report-section">
+        <h2>1. Informasi Order</h2>
+        <div class="info-grid">
+            <div class="info-item">
+                <label>Customer</label>
+                <span id="customerName">-</span>
+            </div>
+            <div class="info-item">
+                <label>Model</label>
+                <span>{{ order.model }}</span>
+            </div>
+            <div class="info-item">
+                <label>Tanggal Order</label>
+                <span>{{ order.order_date.strftime('%d/%m/%Y') if order.order_date else '-' }}</span>
+            </div>
+            <div class="info-item">
+                <label>Deadline</label>
+                <span>{{ order.deadline.strftime('%d/%m/%Y') if order.deadline else '-' }}</span>
+            </div>
+            <div class="info-item">
+                <label>Total Qty</label>
+                <span>{{ order.qty_total }} pcs</span>
+            </div>
+            <div class="info-item">
+                <label>Status</label>
+                <span class="status status-{{ order.status }}">{{ order.status.replace('_', ' ').title() }}</span>
+            </div>
+        </div>
+        {% if order.description %}
+        <div class="description-box">
+            <label>Deskripsi:</label>
+            <p>{{ order.description }}</p>
+        </div>
+        {% endif %}
+    </section>
+
+    <!-- DSO Summary -->
+    <section class="report-section" id="dsoSection">
+        <h2>2. Spesifikasi Produk (DSO)</h2>
+        <div class="loading-placeholder">
+            <div class="spinner"></div>
+        </div>
+    </section>
+
+    <!-- Production Timeline -->
+    <section class="report-section" id="productionSection">
+        <h2>3. Timeline Produksi</h2>
+        <div class="loading-placeholder">
+            <div class="spinner"></div>
+        </div>
+    </section>
+
+    <!-- QC Summary -->
+    <section class="report-section" id="qcSection">
+        <h2>4. Hasil Quality Control</h2>
+        <div class="loading-placeholder">
+            <div class="spinner"></div>
+        </div>
+    </section>
+
+    <!-- Defect Log -->
+    <section class="report-section" id="defectSection">
+        <h2>5. Log Defect</h2>
+        <div class="loading-placeholder">
+            <div class="spinner"></div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <div class="report-footer">
+        <div class="signature-area">
+            <div class="signature-box">
+                <label>Dibuat Oleh</label>
+                <div class="signature-line"></div>
+                <span>{{ current_user.full_name }}</span>
+            </div>
+            <div class="signature-box">
+                <label>Disetujui Oleh</label>
+                <div class="signature-line"></div>
+                <span>______________________</span>
+            </div>
+        </div>
+        <p class="footer-note">Report ini digenerate secara otomatis oleh sistem ERP Green Production</p>
+    </div>
+</div>
+
+<style>
+    .invoice-report {
+        background: white;
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 2rem;
+        box-shadow: var(--shadow-lg);
+        border-radius: var(--radius-lg);
+    }
+
+    /* Header */
+    .report-header {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 2rem;
+        align-items: center;
+        padding-bottom: 1.5rem;
+        border-bottom: 3px solid var(--primary);
+        margin-bottom: 2rem;
+    }
+
+    .header-title {
+        text-align: center;
+    }
+
+    .header-title h1 {
+        font-size: 1.5rem;
+        color: var(--secondary-dark);
+        margin: 0;
+    }
+
+    .header-title p {
+        color: var(--gray-500);
+        font-size: 0.875rem;
+        margin: 0.25rem 0 0;
+    }
+
+    .header-info {
+        text-align: right;
+    }
+
+    .header-info .info-row {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+        margin: 0.25rem 0;
+    }
+
+    .header-info .label {
+        color: var(--gray-500);
+    }
+
+    .header-info .value {
+        font-weight: 600;
+        color: var(--primary);
+    }
+
+    /* Sections */
+    .report-section {
+        margin-bottom: 2rem;
+        page-break-inside: avoid;
+    }
+
+    .report-section h2 {
+        font-size: 1rem;
+        color: var(--secondary-dark);
+        padding: 0.75rem 1rem;
+        background: var(--gray-50);
+        border-left: 4px solid var(--primary);
+        margin-bottom: 1rem;
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+    }
+
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .info-item label {
+        font-size: 0.75rem;
+        color: var(--gray-500);
+        text-transform: uppercase;
+        font-weight: 600;
+    }
+
+    .info-item span {
+        font-weight: 500;
+        color: var(--gray-800);
+    }
+
+    .description-box {
+        margin-top: 1rem;
+        padding: 1rem;
+        background: var(--gray-50);
+        border-radius: var(--radius);
+    }
+
+    .description-box label {
+        font-size: 0.75rem;
+        color: var(--gray-500);
+        text-transform: uppercase;
+        font-weight: 600;
+    }
+
+    .description-box p {
+        margin: 0.5rem 0 0;
+        color: var(--gray-700);
+    }
+
+    /* DSO Specs */
+    .dso-specs-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+
+    .spec-item {
+        display: flex;
+        gap: 0.5rem;
+        padding: 0.5rem;
+        border-bottom: 1px solid var(--gray-100);
+    }
+
+    .spec-item .spec-label {
+        width: 120px;
+        font-weight: 600;
+        color: var(--gray-600);
+        font-size: 0.875rem;
+    }
+
+    .spec-item .spec-value {
+        flex: 1;
+        color: var(--gray-800);
+        font-size: 0.875rem;
+    }
+
+    .dso-image-container {
+        margin-top: 1rem;
+        text-align: center;
+    }
+
+    .dso-image-container img {
+        max-width: 300px;
+        max-height: 300px;
+        object-fit: contain;
+        border: 1px solid var(--gray-200);
+        border-radius: var(--radius);
+    }
+
+    /* Tables */
+    .report-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem;
+    }
+
+    .report-table th,
+    .report-table td {
+        padding: 0.75rem;
+        border: 1px solid var(--gray-200);
+        text-align: left;
+    }
+
+    .report-table th {
+        background: var(--gray-100);
+        font-weight: 600;
+        color: var(--gray-700);
+    }
+
+    .report-table tr:nth-child(even) {
+        background: var(--gray-50);
+    }
+
+    /* QC Summary Cards */
+    .qc-summary-cards {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .qc-card {
+        text-align: center;
+        padding: 1rem;
+        border-radius: var(--radius);
+        background: var(--gray-50);
+    }
+
+    .qc-card.pass {
+        background: #D1FAE5;
+    }
+
+    .qc-card.fail {
+        background: #FEE2E2;
+    }
+
+    .qc-card.rate {
+        background: #DBEAFE;
+    }
+
+    .qc-card .qc-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+    }
+
+    .qc-card.pass .qc-value {
+        color: #059669;
+    }
+
+    .qc-card.fail .qc-value {
+        color: #DC2626;
+    }
+
+    .qc-card.rate .qc-value {
+        color: #1E40AF;
+    }
+
+    .qc-card .qc-label {
+        font-size: 0.75rem;
+        color: var(--gray-600);
+        text-transform: uppercase;
+        margin-top: 0.25rem;
+    }
+
+    /* Defect Summary */
+    .defect-summary {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .defect-badge {
+        padding: 0.5rem 1rem;
+        border-radius: var(--radius);
+        font-weight: 600;
+    }
+
+    .defect-badge.minor {
+        background: #FEF3C7;
+        color: #92400E;
+    }
+
+    .defect-badge.major {
+        background: #FED7AA;
+        color: #C2410C;
+    }
+
+    .defect-badge.critical {
+        background: #FEE2E2;
+        color: #991B1B;
+    }
+
+    /* Footer */
+    .report-footer {
+        margin-top: 3rem;
+        padding-top: 2rem;
+        border-top: 1px solid var(--gray-200);
+    }
+
+    .signature-area {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 3rem;
+        margin-bottom: 2rem;
+    }
+
+    .signature-box {
+        text-align: center;
+    }
+
+    .signature-box label {
+        display: block;
+        font-size: 0.875rem;
+        color: var(--gray-600);
+        margin-bottom: 3rem;
+    }
+
+    .signature-line {
+        border-bottom: 1px solid var(--gray-400);
+        margin-bottom: 0.5rem;
+    }
+
+    .signature-box span {
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    .footer-note {
+        text-align: center;
+        font-size: 0.75rem;
+        color: var(--gray-400);
+    }
+
+    .loading-placeholder {
+        padding: 2rem;
+        text-align: center;
+    }
+
+    .no-data {
+        padding: 1rem;
+        text-align: center;
+        color: var(--gray-500);
+        font-style: italic;
+    }
+
+    /* Print Styles */
+    @media print {
+        @page {
+            size: A4 portrait;
+            margin: 10mm;
+        }
+
+        body {
+            background: white !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        .page-header {
+            display: none !important;
+        }
+
+        .invoice-report {
+            box-shadow: none;
+            max-width: 100%;
+            padding: 0;
+            margin: 0;
+        }
+
+        .report-section {
+            page-break-inside: avoid;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .report-header {
+            grid-template-columns: 1fr;
+            text-align: center;
+        }
+
+        .header-info {
+            text-align: center;
+        }
+
+        .info-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .dso-specs-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .qc-summary-cards {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .signature-area {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        document.getElementById('reportDate').textContent = new Date().toLocaleDateString('id-ID', {
+            day: '2-digit', month: 'long', year: 'numeric'
+        });
+
+        try {
+            const res = await api.get('/reports/invoice/{{ order.id }}');
+            const data = res.data;
+
+            // Customer name
+            if (data.order && data.order.customer) {
+                document.getElementById('customerName').textContent = data.order.customer.name;
+            }
+
+            // DSO Section
+            renderDSO(data.dso);
+
+            // Production Section
+            renderProduction(data.production_tasks);
+
+            // QC Section
+            renderQC(data.qc_summary, data.qc_sheets);
+
+            // Defects Section
+            renderDefects(data.defect_summary, data.defects);
+
+        } catch (e) {
+            console.error('Failed to load report data', e);
+        }
+    });
+
+    function renderDSO(dso) {
+        const section = document.getElementById('dsoSection');
+        if (!dso) {
+            section.innerHTML += '<div class="no-data">Tidak ada DSO untuk order ini</div>';
+            return;
+        }
+
+        let html = '<div class="dso-specs-grid">';
+        const specs = [
+            ['Jenis', dso.jenis],
+            ['Bahan', dso.bahan],
+            ['Warna', dso.warna],
+            ['Sablon', dso.sablon],
+            ['Posisi', dso.posisi],
+            ['Kancing', dso.kancing],
+            ['Saku', dso.saku],
+            ['Resleting', dso.resleting],
+            ['Model Badan Bawah', dso.model_badan_bawah],
+            ['ACC 1', dso.acc_1],
+            ['ACC 2', dso.acc_2],
+            ['ACC 3', dso.acc_3],
+            ['Label', dso.label],
+            ['Status', dso.status]
+        ];
+
+        specs.forEach(([label, value]) => {
+            if (value) {
+                html += `<div class="spec-item"><span class="spec-label">${label}</span><span class="spec-value">${value}</span></div>`;
+            }
+        });
+        html += '</div>';
+
+        if (dso.gambar_depan_url) {
+            html += `<div class="dso-image-container"><img src="${dso.gambar_depan_url}" alt="Tampak Depan"></div>`;
+        }
+
+        section.querySelector('.loading-placeholder').remove();
+        section.innerHTML += html;
+    }
+
+    function renderProduction(tasks) {
+        const section = document.getElementById('productionSection');
+        section.querySelector('.loading-placeholder').remove();
+
+        if (!tasks || tasks.length === 0) {
+            section.innerHTML += '<div class="no-data">Tidak ada task produksi</div>';
+            return;
+        }
+
+        let html = `
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Proses</th>
+                        <th>Status</th>
+                        <th>Start</th>
+                        <th>End</th>
+                        <th>Qty Target</th>
+                        <th>Qty Selesai</th>
+                        <th>Defect</th>
+                        <th>Operator</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        tasks.forEach(t => {
+            html += `
+                <tr>
+                    <td><strong>${t.process ? t.process.charAt(0).toUpperCase() + t.process.slice(1) : '-'}</strong></td>
+                    <td><span class="status status-${t.status}">${t.status}</span></td>
+                    <td>${t.actual_start ? formatDate(t.actual_start) : '-'}</td>
+                    <td>${t.actual_end ? formatDate(t.actual_end) : '-'}</td>
+                    <td>${t.qty_target || 0}</td>
+                    <td>${t.qty_completed || 0}</td>
+                    <td>${t.qty_defect || 0}</td>
+                    <td>${t.operator_name || '-'}</td>
+                </tr>
+            `;
+        });
+
+        html += '</tbody></table>';
+        section.innerHTML += html;
+    }
+
+    function renderQC(summary, sheets) {
+        const section = document.getElementById('qcSection');
+        section.querySelector('.loading-placeholder').remove();
+
+        let html = `
+            <div class="qc-summary-cards">
+                <div class="qc-card">
+                    <div class="qc-value">${summary.total_inspected}</div>
+                    <div class="qc-label">Diperiksa</div>
+                </div>
+                <div class="qc-card pass">
+                    <div class="qc-value">${summary.total_passed}</div>
+                    <div class="qc-label">Lolos</div>
+                </div>
+                <div class="qc-card fail">
+                    <div class="qc-value">${summary.total_failed}</div>
+                    <div class="qc-label">Gagal</div>
+                </div>
+                <div class="qc-card rate">
+                    <div class="qc-value">${summary.overall_pass_rate}%</div>
+                    <div class="qc-label">Pass Rate</div>
+                </div>
+            </div>
+        `;
+
+        if (sheets && sheets.length > 0) {
+            html += `
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th>Kode Inspeksi</th>
+                            <th>Proses</th>
+                            <th>Hasil</th>
+                            <th>Qty Diperiksa</th>
+                            <th>Pass Rate</th>
+                            <th>Tanggal</th>
+                            <th>Inspector</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            sheets.forEach(s => {
+                html += `
+                    <tr>
+                        <td>${s.inspection_code}</td>
+                        <td>${s.process || '-'}</td>
+                        <td><span class="badge badge-${s.result === 'pass' ? 'success' : s.result === 'fail' ? 'danger' : 'warning'}">${s.result.toUpperCase()}</span></td>
+                        <td>${s.qty_inspected}</td>
+                        <td>${s.pass_rate}%</td>
+                        <td>${s.inspected_at ? formatDate(s.inspected_at) : '-'}</td>
+                        <td>${s.inspector_name || '-'}</td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+        } else {
+            html += '<div class="no-data">Belum ada data inspeksi QC</div>';
+        }
+
+        section.innerHTML += html;
+    }
+
+    function renderDefects(summary, defects) {
+        const section = document.getElementById('defectSection');
+        section.querySelector('.loading-placeholder').remove();
+
+        if (summary.total === 0) {
+            section.innerHTML += '<div class="no-data">Tidak ada defect tercatat</div>';
+            return;
+        }
+
+        let html = `
+            <div class="defect-summary">
+                <span class="defect-badge minor">Minor: ${summary.minor}</span>
+                <span class="defect-badge major">Major: ${summary.major}</span>
+                <span class="defect-badge critical">Critical: ${summary.critical}</span>
+                <span class="defect-badge" style="background: var(--gray-200);">Total: ${summary.total}</span>
+            </div>
+        `;
+
+        if (defects && defects.length > 0) {
+            html += `
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th>Tipe Defect</th>
+                            <th>Severity</th>
+                            <th>Qty</th>
+                            <th>Deskripsi</th>
+                            <th>Station</th>
+                            <th>Tanggal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            defects.forEach(d => {
+                html += `
+                    <tr>
+                        <td>${d.defect_type}</td>
+                        <td><span class="defect-badge ${d.severity}">${d.severity}</span></td>
+                        <td>${d.qty_defect}</td>
+                        <td>${d.description || '-'}</td>
+                        <td>${d.station || '-'}</td>
+                        <td>${d.created_at ? formatDate(d.created_at) : '-'}</td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+        }
+
+        section.innerHTML += html;
+    }
+
+    function formatDate(dateStr) {
+        return new Date(dateStr).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+</script>
+{% endblock %}

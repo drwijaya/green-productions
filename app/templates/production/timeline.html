@@ -1,0 +1,784 @@
+{% extends "base.html" %}
+{% block title %}Production Monitoring{% endblock %}
+{% block page_title %}Production Monitoring{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+    <div class="page-header-left">
+        <p class="text-muted">Kelola status produksi untuk setiap invoice</p>
+    </div>
+    <div class="page-header-right">
+        <div class="status-legend">
+            <span class="legend-item"><span class="dot pending"></span> Pending</span>
+            <span class="legend-item"><span class="dot assigned"></span> Assigned</span>
+            <span class="legend-item"><span class="dot in_progress"></span> In Progress</span>
+            <span class="legend-item"><span class="dot completed"></span> Completed</span>
+        </div>
+    </div>
+</div>
+
+<div class="orders-production-list">
+    {% for order in orders %}
+    <div class="production-card" data-order-id="{{ order.id }}">
+        <!-- Order Header -->
+        <div class="production-header" onclick="toggleExpand({{ order.id }})">
+            <div class="order-info">
+                <div class="order-badge">
+                    <span class="customer-name">{{ order.customer.name if order.customer else '-' }}</span>
+                </div>
+                <div class="order-main">
+                    <span class="order-code">{{ order.order_code }}</span>
+                    <h3 class="order-model">{{ order.model }}</h3>
+                </div>
+                <div class="order-qty">
+                    <span class="qty-value">{{ order.qty_total }}</span>
+                    <span class="qty-label">pcs</span>
+                </div>
+            </div>
+            <div class="order-status-area">
+                <div class="deadline-badge {% if order.deadline and order.deadline < now %}overdue{% endif %}">
+                    <i class="fas fa-calendar-alt"></i>
+                    {{ order.deadline.strftime('%d %b %Y') if order.deadline else 'No deadline' }}
+                </div>
+                <div class="progress-ring">
+                    <span class="progress-value">{{ order.get_production_progress() }}%</span>
+                </div>
+                <i class="fas fa-chevron-down expand-icon"></i>
+            </div>
+        </div>
+
+        <!-- Production Tasks - 5 Step Process -->
+        <div class="production-tasks" id="tasks-{{ order.id }}">
+            <div class="process-flow">
+                {% for task in order.production_tasks.order_by('sequence').all() %}
+                <div class="process-step status-{{ task.status }}" data-task-id="{{ task.id }}">
+                    <!-- Step Header -->
+                    <div class="step-header">
+                        <div class="step-number">{{ loop.index }}</div>
+                        <div class="step-info">
+                            <span class="process-name {{ task.process }}">{{ task.process.title() }}</span>
+                            <span class="status-badge {{ task.status }}">{{ task.status.replace('_', ' ').title()
+                                }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Progress Section (only show if started) -->
+                    {% if task.status in ['in_progress', 'completed'] %}
+                    <div class="step-progress">
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" style="width: {{ task.get_progress_percentage() }}%"></div>
+                        </div>
+                        <span class="progress-text">{{ task.qty_completed }}/{{ task.qty_target }}</span>
+                    </div>
+                    {% endif %}
+
+                    <!-- Workers Section -->
+                    <div class="step-workers">
+                        <div class="workers-label">
+                            <i class="fas fa-users"></i> Workers
+                        </div>
+                        <div class="workers-list">
+                            {% for log in task.worker_logs.all() %}
+                            <div class="worker-item" data-log-id="{{ log.id }}">
+                                <span class="worker-name">{{ log.employee.name if log.employee else '?' }}</span>
+                                {% if task.status == 'in_progress' %}
+                                <input type="number" class="qty-input" value="{{ log.qty_completed }}" min="0"
+                                    placeholder="qty" onchange="updateWorkerQty({{ log.id }}, this.value)">
+                                {% elif task.status == 'completed' %}
+                                <span class="worker-qty">{{ log.qty_completed }}</span>
+                                {% endif %}
+                            </div>
+                            {% else %}
+                            <span class="no-workers">Belum ada worker</span>
+                            {% endfor %}
+                        </div>
+                        {% if task.status in ['pending', 'assigned'] %}
+                        <button class="btn btn-xs btn-outline add-worker-btn"
+                            onclick="addWorker({{ task.id }}); event.stopPropagation();">
+                            <i class="fas fa-user-plus"></i> Tambah Worker
+                        </button>
+                        {% endif %}
+                    </div>
+
+                    <!-- Action Buttons - Contextual based on status -->
+                    <div class="step-actions">
+                        {% if task.status == 'pending' %}
+                        <div class="action-hint">
+                            <i class="fas fa-info-circle"></i> Tambahkan worker terlebih dahulu
+                        </div>
+                        {% elif task.status == 'assigned' %}
+                        <button class="btn btn-primary btn-action"
+                            onclick="startTask({{ task.id }}); event.stopPropagation();">
+                            <i class="fas fa-play"></i> Mulai Produksi
+                        </button>
+                        {% elif task.status == 'in_progress' %}
+                        <button class="btn btn-success btn-action"
+                            onclick="completeTask({{ task.id }}); event.stopPropagation();">
+                            <i class="fas fa-check"></i> Selesai
+                        </button>
+                        {% elif task.status == 'completed' %}
+                        <div class="completed-badge">
+                            <i class="fas fa-check-circle"></i> Completed
+                        </div>
+                        <a href="{{ url_for('views.qc_inspect', task_id=task.id) }}"
+                            class="btn btn-xs btn-outline-info">
+                            <i class="fas fa-clipboard-check"></i> QC Checklist
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if not loop.last %}
+                <div class="connector-line"></div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">
+            <i class="fas fa-industry"></i>
+        </div>
+        <div class="empty-state-title">Tidak ada invoice dalam produksi</div>
+        <div class="empty-state-text">Buat invoice baru untuk memulai produksi</div>
+        <a href="{{ url_for('views.orders') }}" class="btn btn-primary">Lihat Invoices</a>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Add Worker Modal -->
+<div class="modal-backdrop" id="workerModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title"><i class="fas fa-user-plus"></i> Tambah Worker</h3>
+            <button class="modal-close" onclick="closeModal('workerModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="workerTaskId">
+            <div class="form-group">
+                <label class="form-label">Pilih Karyawan</label>
+                <select class="form-select" id="workerEmployeeId">
+                    <option value="">-- Pilih Karyawan --</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Catatan (Optional)</label>
+                <textarea class="form-input" id="workerNotes" rows="2" placeholder="Catatan..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('workerModal')">Batal</button>
+            <button class="btn btn-primary" onclick="saveWorker()">
+                <i class="fas fa-plus"></i> Tambah Worker
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Complete Task Modal -->
+<div class="modal-backdrop" id="completeModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title"><i class="fas fa-check-circle"></i> Selesaikan Task</h3>
+            <button class="modal-close" onclick="closeModal('completeModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="completeTaskId">
+            <p class="text-success mb-3">
+                <i class="fas fa-info-circle"></i> Task akan ditandai sebagai selesai
+            </p>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Total Completed</label>
+                    <input type="number" class="form-input" id="completeQty" min="0">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Qty Defect</label>
+                    <input type="number" class="form-input" id="completeDefect" min="0" value="0">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('completeModal')">Batal</button>
+            <button class="btn btn-success" onclick="saveComplete()">
+                <i class="fas fa-check"></i> Tandai Selesai
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Status Legend */
+    .status-legend {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.8125rem;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+    }
+
+    .dot.pending {
+        background: var(--gray-400);
+    }
+
+    .dot.assigned {
+        background: #F59E0B;
+    }
+
+    .dot.in_progress {
+        background: #3B82F6;
+    }
+
+    .dot.completed {
+        background: #10B981;
+    }
+
+    /* Production Card */
+    .orders-production-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .production-card {
+        background: var(--bg-primary);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+    }
+
+    /* Order Header */
+    .production-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.25rem;
+        cursor: pointer;
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border-bottom: 1px solid var(--gray-200);
+        transition: background var(--transition);
+    }
+
+    .production-header:hover {
+        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    }
+
+    .order-info {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+    }
+
+    .order-badge {
+        background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: var(--radius);
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+
+    .order-main {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .order-code {
+        font-size: 0.75rem;
+        color: var(--gray-500);
+        font-weight: 600;
+    }
+
+    .order-model {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .order-qty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        background: var(--gray-100);
+        border-radius: var(--radius);
+    }
+
+    .qty-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--primary);
+    }
+
+    .qty-label {
+        font-size: 0.7rem;
+        color: var(--gray-500);
+    }
+
+    .order-status-area {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .deadline-badge {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        background: var(--gray-100);
+        border-radius: var(--radius);
+        font-size: 0.875rem;
+    }
+
+    .deadline-badge.overdue {
+        background: #FEE2E2;
+        color: #DC2626;
+    }
+
+    .progress-ring {
+        width: 50px;
+        height: 50px;
+        background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .progress-value {
+        color: white;
+        font-weight: 700;
+        font-size: 0.875rem;
+    }
+
+    .expand-icon {
+        color: var(--gray-400);
+        transition: transform var(--transition);
+    }
+
+    .production-card.expanded .expand-icon {
+        transform: rotate(180deg);
+    }
+
+    /* Production Tasks - Process Flow */
+    .production-tasks {
+        display: none;
+        padding: 1.5rem;
+    }
+
+    .production-card.expanded .production-tasks {
+        display: block;
+    }
+
+    .process-flow {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .process-step {
+        background: var(--gray-50);
+        border-radius: var(--radius);
+        padding: 1.25rem;
+        border-left: 4px solid var(--gray-300);
+        transition: all var(--transition);
+    }
+
+    .process-step.status-pending {
+        border-left-color: var(--gray-400);
+    }
+
+    .process-step.status-assigned {
+        border-left-color: #F59E0B;
+        background: #FFFBEB;
+    }
+
+    .process-step.status-in_progress {
+        border-left-color: #3B82F6;
+        background: #EFF6FF;
+    }
+
+    .process-step.status-completed {
+        border-left-color: #10B981;
+        background: #ECFDF5;
+    }
+
+    .connector-line {
+        width: 2px;
+        height: 20px;
+        background: var(--gray-300);
+        margin-left: 2rem;
+    }
+
+    /* Step Header */
+    .step-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .step-number {
+        width: 32px;
+        height: 32px;
+        background: var(--gray-200);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.875rem;
+    }
+
+    .status-completed .step-number {
+        background: #10B981;
+        color: white;
+    }
+
+    .status-in_progress .step-number {
+        background: #3B82F6;
+        color: white;
+    }
+
+    .status-assigned .step-number {
+        background: #F59E0B;
+        color: white;
+    }
+
+    .step-info {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .process-name {
+        font-weight: 600;
+        font-size: 1rem;
+    }
+
+    .process-name.cutting {
+        color: #1E40AF;
+    }
+
+    .process-name.sewing {
+        color: #92400E;
+    }
+
+    .process-name.sablon {
+        color: #9D174D;
+    }
+
+    .process-name.finishing {
+        color: #3730A3;
+    }
+
+    .process-name.packing {
+        color: #065F46;
+    }
+
+    .status-badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .status-badge.pending {
+        background: var(--gray-200);
+        color: var(--gray-600);
+    }
+
+    .status-badge.assigned {
+        background: #FEF3C7;
+        color: #92400E;
+    }
+
+    .status-badge.in_progress {
+        background: #DBEAFE;
+        color: #1E40AF;
+    }
+
+    .status-badge.completed {
+        background: #D1FAE5;
+        color: #065F46;
+    }
+
+    /* Step Progress */
+    .step-progress {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .progress-bar-container {
+        flex: 1;
+        height: 8px;
+        background: var(--gray-200);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #3B82F6 0%, #10B981 100%);
+        border-radius: 4px;
+        transition: width var(--transition);
+    }
+
+    .step-progress .progress-text {
+        font-weight: 600;
+        font-size: 0.875rem;
+        min-width: 60px;
+        text-align: right;
+    }
+
+    /* Workers Section */
+    .step-workers {
+        background: white;
+        border-radius: var(--radius);
+        padding: 0.75rem;
+        margin-bottom: 1rem;
+    }
+
+    .workers-label {
+        font-size: 0.75rem;
+        color: var(--gray-500);
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .workers-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .worker-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.25rem 0.75rem;
+        background: var(--gray-100);
+        border-radius: var(--radius);
+        font-size: 0.8125rem;
+    }
+
+    .worker-name {
+        font-weight: 500;
+    }
+
+    .qty-input {
+        width: 60px;
+        padding: 0.25rem;
+        border: 1px solid var(--gray-300);
+        border-radius: var(--radius-sm);
+        text-align: center;
+        font-size: 0.8125rem;
+    }
+
+    .worker-qty {
+        background: #D1FAE5;
+        color: #065F46;
+        padding: 0.125rem 0.5rem;
+        border-radius: var(--radius-sm);
+        font-weight: 600;
+        font-size: 0.75rem;
+    }
+
+    .no-workers {
+        color: var(--gray-400);
+        font-style: italic;
+        font-size: 0.8125rem;
+    }
+
+    .add-worker-btn {
+        margin-top: 0.5rem;
+    }
+
+    /* Step Actions */
+    .step-actions {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .action-hint {
+        color: var(--gray-500);
+        font-size: 0.8125rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .btn-action {
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+    }
+
+    .completed-badge {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #10B981;
+        font-weight: 600;
+    }
+
+    /* Form Row */
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .order-info {
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .order-status-area {
+            flex-wrap: wrap;
+        }
+
+        .status-legend {
+            display: none;
+        }
+
+        .form-row {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<script>
+    let employeesData = [];
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadEmployees();
+    });
+
+    async function loadEmployees() {
+        try {
+            const response = await api.get('/employees?per_page=100');
+            employeesData = response.data.employees || [];
+            updateEmployeeSelect();
+        } catch (error) {
+            console.log('Could not load employees');
+        }
+    }
+
+    function updateEmployeeSelect() {
+        const select = document.getElementById('workerEmployeeId');
+        select.innerHTML = '<option value="">-- Pilih Karyawan --</option>';
+        employeesData.forEach(emp => {
+            select.innerHTML += `<option value="${emp.id}">${emp.name} - ${emp.position || 'Staff'}</option>`;
+        });
+    }
+
+    function toggleExpand(orderId) {
+        const card = document.querySelector(`[data-order-id="${orderId}"]`);
+        card.classList.toggle('expanded');
+    }
+
+    function addWorker(taskId) {
+        document.getElementById('workerTaskId').value = taskId;
+        document.getElementById('workerNotes').value = '';
+        openModal('workerModal');
+    }
+
+    async function saveWorker() {
+        const taskId = document.getElementById('workerTaskId').value;
+        const employeeId = document.getElementById('workerEmployeeId').value;
+        const notes = document.getElementById('workerNotes').value;
+
+        if (!employeeId) {
+            showToast('Pilih karyawan terlebih dahulu', 'error');
+            return;
+        }
+
+        try {
+            await api.post(`/production/tasks/${taskId}/workers`, {
+                employee_id: parseInt(employeeId),
+                notes: notes
+            });
+            showToast('Worker berhasil ditambahkan', 'success');
+            closeModal('workerModal');
+            location.reload();
+        } catch (error) {
+            showToast(error.message || 'Gagal menambah worker', 'error');
+        }
+    }
+
+    async function startTask(taskId) {
+        if (!confirm('Mulai produksi untuk task ini?')) return;
+
+        try {
+            await api.post(`/production/tasks/${taskId}/start`);
+            showToast('Produksi dimulai!', 'success');
+            location.reload();
+        } catch (error) {
+            showToast(error.message || 'Gagal memulai task', 'error');
+        }
+    }
+
+    function completeTask(taskId) {
+        document.getElementById('completeTaskId').value = taskId;
+        // Get current qty from the task row
+        const taskRow = document.querySelector(`[data-task-id="${taskId}"]`);
+        const progressText = taskRow.querySelector('.progress-text');
+        if (progressText) {
+            const [completed, target] = progressText.textContent.split('/');
+            document.getElementById('completeQty').value = target.trim();
+        }
+        document.getElementById('completeDefect').value = 0;
+        openModal('completeModal');
+    }
+
+    async function saveComplete() {
+        const taskId = document.getElementById('completeTaskId').value;
+        const qtyCompleted = parseInt(document.getElementById('completeQty').value) || 0;
+        const qtyDefect = parseInt(document.getElementById('completeDefect').value) || 0;
+
+        try {
+            await api.post(`/production/tasks/${taskId}/complete`, {
+                qty_completed: qtyCompleted,
+                qty_defect: qtyDefect
+            });
+            showToast('Task selesai!', 'success');
+            closeModal('completeModal');
+            location.reload();
+        } catch (error) {
+            showToast(error.message || 'Gagal menyelesaikan task', 'error');
+        }
+    }
+
+    async function updateWorkerQty(logId, qty) {
+        try {
+            await api.put(`/production/workers/${logId}`, {
+                qty_completed: parseInt(qty) || 0
+            });
+            showToast('Progress disimpan', 'success');
+        } catch (error) {
+            showToast(error.message || 'Gagal update progress', 'error');
+        }
+    }
+</script>
+{% endblock %}

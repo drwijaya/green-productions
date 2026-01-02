@@ -1,0 +1,650 @@
+{% extends "base.html" %}
+
+{% block title %}QC Report - {{ sheet.inspection_code }}{% endblock %}
+{% block page_title %}Detail Laporan QC{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+    <a href="{{ url_for('views.qc_list') }}" class="btn btn-sm btn-outline">
+        <i class="fas fa-arrow-left"></i> Kembali ke Daftar
+    </a>
+    <button class="btn btn-sm btn-primary" onclick="printReport()">
+        <i class="fas fa-print"></i> Cetak
+    </button>
+</div>
+
+<div class="qc-sheet-detail" id="printArea">
+    <!-- Header -->
+    <div class="sheet-header">
+        <div class="header-logo">
+            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Green Production"
+                style="max-height: 60px; width: auto;">
+        </div>
+        <div class="header-info">
+            <h2>Laporan Quality Control</h2>
+            <p class="text-muted">Green Production Konveksi Bandung</p>
+        </div>
+        <div class="header-code">
+            <label>Kode Inspeksi</label>
+            <strong>{{ sheet.inspection_code }}</strong>
+        </div>
+    </div>
+
+    <!-- Result Badge -->
+    <div class="result-banner result-{{ sheet.result.value if sheet.result else 'pending' }}">
+        <div class="result-icon">
+            {% if sheet.result.value == 'pass' %}
+            <i class="fas fa-check-circle"></i>
+            {% elif sheet.result.value == 'fail' %}
+            <i class="fas fa-times-circle"></i>
+            {% elif sheet.result.value == 'conditional_pass' %}
+            <i class="fas fa-exclamation-circle"></i>
+            {% else %}
+            <i class="fas fa-clock"></i>
+            {% endif %}
+        </div>
+        <div class="result-text">
+            {{ sheet.result.value.replace('_', ' ').upper() if sheet.result else 'PENDING' }}
+        </div>
+    </div>
+
+    <!-- Info Section -->
+    <div class="info-section">
+        <div class="info-grid">
+            <div class="info-item">
+                <label>Order</label>
+                <span>{{ sheet.order.order_code if sheet.order else '-' }}</span>
+            </div>
+            <div class="info-item">
+                <label>Produk</label>
+                <span>{{ sheet.order.model if sheet.order else '-' }}</span>
+            </div>
+            <div class="info-item">
+                <label>Task/Proses</label>
+                <span>
+                    {% if sheet.production_task %}
+                    <span class="process-badge {{ sheet.production_task.process }}">
+                        {{ sheet.production_task.process.title() }}
+                    </span>
+                    {% else %}
+                    -
+                    {% endif %}
+                </span>
+            </div>
+            <div class="info-item">
+                <label>Tanggal Inspeksi</label>
+                <span>{{ sheet.inspected_at.strftime('%d/%m/%Y %H:%M') if sheet.inspected_at else '-' }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quantities -->
+    <div class="qty-section">
+        <div class="qty-grid">
+            <div class="qty-item">
+                <div class="qty-value">{{ sheet.qty_inspected }}</div>
+                <label>Diperiksa</label>
+            </div>
+            <div class="qty-item pass">
+                <div class="qty-value">{{ sheet.qty_passed }}</div>
+                <label>Lolos</label>
+            </div>
+            <div class="qty-item fail">
+                <div class="qty-value">{{ sheet.qty_failed }}</div>
+                <label>Gagal</label>
+            </div>
+            <div class="qty-item rate">
+                <div class="qty-value">{{ sheet.get_pass_rate() }}%</div>
+                <label>Pass Rate</label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Checklist -->
+    {% if sheet.checklist_json %}
+    <div class="checklist-section">
+        <h3><i class="fas fa-clipboard-check"></i> Checklist</h3>
+        <table class="checklist-table">
+            <thead>
+                <tr>
+                    <th>No</th>
+                    <th>Parameter</th>
+                    <th>Qty Dicek</th>
+                    <th>Qty NG</th>
+                    <th>Status</th>
+                    <th>Keterangan</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in sheet.checklist_json %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ item.parameter or item.item }}</td>
+                    <td>{{ item.qty_checked or '-' }}</td>
+                    <td>{{ item.qty_ng or '-' }}</td>
+                    <td>
+                        {% if item.status == 'pass' or item.result == 'pass' %}
+                        <span class="status-badge pass"><i class="fas fa-check"></i> Ya</span>
+                        {% elif item.status == 'fail' or item.result == 'fail' %}
+                        <span class="status-badge fail"><i class="fas fa-times"></i> Tidak</span>
+                        {% else %}
+                        <span class="status-badge pending">-</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ item.notes or '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- Defects -->
+    {% if sheet.defects.count() > 0 %}
+    <div class="defects-section">
+        <h3><i class="fas fa-exclamation-triangle"></i> Defects ({{ sheet.defects.count() }})</h3>
+        <div class="defects-grid">
+            {% for defect in sheet.defects.all() %}
+            <div class="defect-card severity-{{ defect.severity.value }}">
+                <div class="defect-header">
+                    <span class="defect-type">{{ defect.defect_type }}</span>
+                    <span class="severity-badge {{ defect.severity.value }}">{{ defect.severity.value }}</span>
+                </div>
+                <div class="defect-body">
+                    <div class="defect-qty">x{{ defect.qty_defect }}</div>
+                    {% if defect.description %}
+                    <p class="defect-desc">{{ defect.description }}</p>
+                    {% endif %}
+                </div>
+                {% if defect.photo_url %}
+                <div class="defect-photo">
+                    <img src="{{ defect.photo_url }}" alt="Defect photo">
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Notes -->
+    {% if sheet.notes %}
+    <div class="notes-section">
+        <h3><i class="fas fa-sticky-note"></i> Catatan</h3>
+        <p>{{ sheet.notes }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Footer -->
+    <div class="sheet-footer">
+        <div class="footer-info">
+            <span>Dibuat: {{ sheet.created_at.strftime('%d/%m/%Y %H:%M') if sheet.created_at else '-' }}</span>
+            {% if sheet.inspector %}
+            <span>Inspector: {{ sheet.inspector.name }}</span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .qc-sheet-detail {
+        background: var(--bg-primary);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+    }
+
+    /* Header */
+    .sheet-header {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 1.5rem;
+        padding: 1.5rem;
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border-bottom: 2px solid var(--gray-200);
+        align-items: center;
+    }
+
+    .header-logo {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .logo-icon {
+        width: 50px;
+        height: 50px;
+        background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+    }
+
+    .logo-text {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.2;
+    }
+
+    .logo-text strong {
+        font-size: 1.25rem;
+        color: var(--gray-800);
+    }
+
+    .logo-text span {
+        font-size: 0.7rem;
+        color: var(--gray-500);
+        letter-spacing: 2px;
+    }
+
+    .header-info h2 {
+        margin: 0;
+        font-size: 1.5rem;
+    }
+
+    .header-code {
+        text-align: right;
+    }
+
+    .header-code label {
+        display: block;
+        font-size: 0.75rem;
+        color: var(--gray-500);
+        margin-bottom: 0.25rem;
+    }
+
+    .header-code strong {
+        font-size: 1.125rem;
+        color: var(--primary);
+    }
+
+    /* Result Banner */
+    .result-banner {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        padding: 2rem;
+    }
+
+    .result-banner.result-pass {
+        background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+        color: white;
+    }
+
+    .result-banner.result-fail {
+        background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+        color: white;
+    }
+
+    .result-banner.result-conditional_pass {
+        background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+        color: white;
+    }
+
+    .result-banner.result-pending,
+    .result-banner.result-rework {
+        background: linear-gradient(135deg, #6B7280 0%, #4B5563 100%);
+        color: white;
+    }
+
+    .result-icon {
+        font-size: 3rem;
+    }
+
+    .result-text {
+        font-size: 2rem;
+        font-weight: 700;
+        letter-spacing: 2px;
+    }
+
+    /* Info Section */
+    .info-section {
+        padding: 1.5rem;
+        background: var(--gray-50);
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.5rem;
+    }
+
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .info-item label {
+        font-size: 0.75rem;
+        color: var(--gray-500);
+        text-transform: uppercase;
+        font-weight: 600;
+    }
+
+    .info-item span {
+        font-weight: 500;
+        color: var(--gray-800);
+    }
+
+    /* Quantity Section */
+    .qty-section {
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .qty-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+    }
+
+    .qty-item {
+        text-align: center;
+        padding: 1rem;
+        background: var(--gray-50);
+        border-radius: var(--radius);
+    }
+
+    .qty-item.pass {
+        background: #D1FAE5;
+    }
+
+    .qty-item.fail {
+        background: #FEE2E2;
+    }
+
+    .qty-item.rate {
+        background: linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%);
+    }
+
+    .qty-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--gray-800);
+    }
+
+    .qty-item.pass .qty-value {
+        color: #059669;
+    }
+
+    .qty-item.fail .qty-value {
+        color: #DC2626;
+    }
+
+    .qty-item.rate .qty-value {
+        color: #1E40AF;
+    }
+
+    .qty-item label {
+        display: block;
+        font-size: 0.75rem;
+        color: var(--gray-600);
+        text-transform: uppercase;
+        margin-top: 0.25rem;
+    }
+
+    /* Checklist Section */
+    .checklist-section {
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .checklist-section h3 {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        font-size: 1rem;
+    }
+
+    .checklist-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem;
+    }
+
+    .checklist-table th,
+    .checklist-table td {
+        border: 1px solid var(--gray-200);
+        padding: 0.75rem;
+        text-align: center;
+    }
+
+    .checklist-table th {
+        background: var(--gray-100);
+        font-weight: 600;
+    }
+
+    .checklist-table td:nth-child(2) {
+        text-align: left;
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .status-badge.pass {
+        background: #D1FAE5;
+        color: #059669;
+    }
+
+    .status-badge.fail {
+        background: #FEE2E2;
+        color: #DC2626;
+    }
+
+    .status-badge.pending {
+        background: var(--gray-100);
+        color: var(--gray-500);
+    }
+
+    /* Defects Section */
+    .defects-section {
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .defects-section h3 {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        font-size: 1rem;
+        color: var(--danger);
+    }
+
+    .defects-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1rem;
+    }
+
+    .defect-card {
+        border-radius: var(--radius);
+        overflow: hidden;
+        border: 1px solid var(--gray-200);
+    }
+
+    .defect-card.severity-minor {
+        border-color: #FCD34D;
+    }
+
+    .defect-card.severity-major {
+        border-color: #FB923C;
+    }
+
+    .defect-card.severity-critical {
+        border-color: #F87171;
+    }
+
+    .defect-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem;
+        background: var(--gray-50);
+    }
+
+    .defect-type {
+        font-weight: 600;
+    }
+
+    .severity-badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .severity-badge.minor {
+        background: #FEF3C7;
+        color: #92400E;
+    }
+
+    .severity-badge.major {
+        background: #FED7AA;
+        color: #C2410C;
+    }
+
+    .severity-badge.critical {
+        background: #FEE2E2;
+        color: #991B1B;
+    }
+
+    .defect-body {
+        padding: 0.75rem;
+    }
+
+    .defect-qty {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--danger);
+    }
+
+    .defect-desc {
+        margin: 0.5rem 0 0;
+        font-size: 0.875rem;
+        color: var(--gray-600);
+    }
+
+    .defect-photo img {
+        width: 100%;
+        height: 150px;
+        object-fit: cover;
+    }
+
+    /* Notes Section */
+    .notes-section {
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .notes-section h3 {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+        font-size: 1rem;
+    }
+
+    .notes-section p {
+        margin: 0;
+        color: var(--gray-600);
+        line-height: 1.6;
+    }
+
+    /* Footer */
+    .sheet-footer {
+        padding: 1rem 1.5rem;
+        background: var(--gray-50);
+    }
+
+    .footer-info {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.8125rem;
+        color: var(--gray-500);
+    }
+
+    /* Process Badge */
+    .process-badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .process-badge.cutting {
+        background: #DBEAFE;
+        color: #1E40AF;
+    }
+
+    .process-badge.sewing {
+        background: #FEF3C7;
+        color: #92400E;
+    }
+
+    .process-badge.finishing {
+        background: #E0E7FF;
+        color: #3730A3;
+    }
+
+    .process-badge.packing {
+        background: #D1FAE5;
+        color: #065F46;
+    }
+
+    .process-badge.sablon {
+        background: #FCE7F3;
+        color: #9D174D;
+    }
+
+    /* Print styles */
+    @media print {
+        .page-header {
+            display: none;
+        }
+
+        .qc-sheet-detail {
+            box-shadow: none;
+        }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .sheet-header {
+            grid-template-columns: 1fr;
+            text-align: center;
+        }
+
+        .header-code {
+            text-align: center;
+        }
+
+        .info-grid,
+        .qty-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+</style>
+
+<script>
+    function printReport() {
+        window.print();
+    }
+</script>
+{% endblock %}

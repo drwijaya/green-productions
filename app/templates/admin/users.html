@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}User Management{% endblock %}
+{% block page_title %}User Management{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+    <p class="text-muted">Kelola user dan akses sistem</p>
+    <button class="btn btn-primary" onclick="openModal('newUserModal')"><i class="fas fa-plus"></i> Tambah User</button>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Full Name</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Last Login</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users.items %}
+                    <tr>
+                        <td><strong>{{ u.username }}</strong></td>
+                        <td>{{ u.email }}</td>
+                        <td>{{ u.full_name }}</td>
+                        <td><span class="badge badge-primary">{{ u.role.replace('_', ' ').title() }}</span></td>
+                        <td><span class="badge badge-{{ 'success' if u.is_active else 'danger' }}">{{ 'Active' if
+                                u.is_active else 'Inactive' }}</span></td>
+                        <td>{{ u.last_login.strftime('%d/%m/%Y %H:%M') if u.last_login else 'Never' }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline"><i class="fas fa-edit"></i></button>
+                            {% if u.id != current_user.id %}
+                            <button class="btn btn-sm btn-outline text-danger"
+                                onclick="toggleUser({{ u.id }}, {{ 'false' if u.is_active else 'true' }})">
+                                <i class="fas fa-{{ 'ban' if u.is_active else 'check' }}"></i>
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal-backdrop" id="newUserModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title">Tambah User</h3><button class="modal-close"
+                onclick="closeModal('newUserModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="userForm">
+                <div class="form-group"><label class="form-label">Email *</label><input type="email" class="form-input"
+                        name="email" required></div>
+                <div class="form-group"><label class="form-label">Username *</label><input type="text"
+                        class="form-input" name="username" required></div>
+                <div class="form-group"><label class="form-label">Full Name *</label><input type="text"
+                        class="form-input" name="full_name" required></div>
+                <div class="form-group"><label class="form-label">Password *</label><input type="password"
+                        class="form-input" name="password" required></div>
+                <div class="form-group">
+                    <label class="form-label">Role *</label>
+                    <select class="form-select" name="role" required>
+                        <option value="operator">Operator</option>
+                        <option value="qc_line">QC Line</option>
+                        <option value="admin_produksi">Admin Produksi</option>
+                        <option value="owner">Owner</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label"><input type="checkbox" name="create_employee" checked> Buat employee
+                        profile</label>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('newUserModal')">Batal</button>
+            <button class="btn btn-primary" onclick="saveUser()"><i class="fas fa-save"></i> Simpan</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    async function saveUser() {
+        const form = document.getElementById('userForm');
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData);
+        data.create_employee = formData.get('create_employee') === 'on';
+
+        if (!data.email || !data.username || !data.full_name || !data.password) {
+            showToast('Lengkapi semua field wajib', 'error');
+            return;
+        }
+
+        try {
+            await api.post('/users', data);
+            showToast('User berhasil dibuat', 'success');
+            closeModal('newUserModal');
+            location.reload();
+        } catch (e) {
+            showToast(e.message, 'error');
+        }
+    }
+
+    async function toggleUser(id, activate) {
+        try {
+            await api.put('/users/' + id, { is_active: activate });
+            location.reload();
+        } catch (e) {
+            showToast(e.message, 'error');
+        }
+    }
+</script>
+{% endblock %}

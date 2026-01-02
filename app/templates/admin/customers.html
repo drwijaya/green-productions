@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Customers{% endblock %}
+{% block page_title %}Customer Management{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+    <p class="text-muted">Kelola data customer</p>
+    <button class="btn btn-primary" onclick="openModal('newCustomerModal')"><i class="fas fa-plus"></i> Tambah
+        Customer</button>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Nama</th>
+                        <th>Company</th>
+                        <th>Contact</th>
+                        <th>Phone</th>
+                        <th>City</th>
+                        <th>Orders</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in customers.items %}
+                    <tr>
+                        <td><strong>{{ c.name }}</strong></td>
+                        <td>{{ c.company_name or '-' }}</td>
+                        <td>{{ c.contact_person or '-' }}</td>
+                        <td>{{ c.phone or '-' }}</td>
+                        <td>{{ c.city or '-' }}</td>
+                        <td><span class="badge badge-primary">{{ c.orders.count() }}</span></td>
+                        <td><button class="btn btn-sm btn-outline"><i class="fas fa-edit"></i></button></td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted">Tidak ada customer</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal-backdrop" id="newCustomerModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title">Tambah Customer</h3><button class="modal-close"
+                onclick="closeModal('newCustomerModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="customerForm">
+                <div class="form-group"><label class="form-label">Nama *</label><input type="text" class="form-input"
+                        name="name" required></div>
+                <div class="form-group"><label class="form-label">Company</label><input type="text" class="form-input"
+                        name="company_name"></div>
+                <div class="form-group"><label class="form-label">Contact Person</label><input type="text"
+                        class="form-input" name="contact_person"></div>
+                <div class="form-group"><label class="form-label">Phone</label><input type="text" class="form-input"
+                        name="phone"></div>
+                <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input"
+                        name="email"></div>
+                <div class="form-group"><label class="form-label">City</label><input type="text" class="form-input"
+                        name="city"></div>
+                <div class="form-group"><label class="form-label">Address</label><textarea class="form-textarea"
+                        name="address" rows="2"></textarea></div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('newCustomerModal')">Batal</button>
+            <button class="btn btn-primary" onclick="saveCustomer()"><i class="fas fa-save"></i> Simpan</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    async function saveCustomer() {
+        const form = document.getElementById('customerForm');
+        const data = Object.fromEntries(new FormData(form));
+        if (!data.name) { showToast('Nama wajib diisi', 'error'); return; }
+        try {
+            await api.post('/customers', data);
+            showToast('Customer berhasil ditambahkan', 'success');
+            closeModal('newCustomerModal');
+            location.reload();
+        } catch (e) {
+            showToast(e.message, 'error');
+        }
+    }
+</script>
+{% endblock %}

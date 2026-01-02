@@ -1,0 +1,1097 @@
+{% extends "base.html" %}
+
+{% block title %}QC Checklist - {{ task.order.order_code }}{% endblock %}
+{% block page_title %}QC Checklist{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+    <a href="{{ url_for('views.qc_list') }}" class="btn btn-sm btn-outline">
+        <i class="fas fa-arrow-left"></i> Kembali
+    </a>
+</div>
+
+<!-- QC Document Header (Like SOP) -->
+<div class="qc-document">
+    <!-- Document Header -->
+    <div class="doc-header">
+        <div class="doc-logo">
+            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Green Production"
+                style="max-height: 60px; width: auto;">
+        </div>
+        <div class="doc-title">
+            <h2>Green Production Konveksi Bandung</h2>
+            <p class="text-muted">Jl. Buana Sari IV No.14, Margasari, Kujangsari, Buahbatu, Kota Bandung</p>
+            <div class="doc-type">
+                <span class="process-badge {{ task.process }}">Checklist {{ task.process.title() }}</span>
+            </div>
+        </div>
+        <div class="doc-info">
+            <div class="info-row">
+                <span class="label">No. Dokumen</span>
+                <span class="value" id="docNumber">-</span>
+            </div>
+            <div class="info-row">
+                <span class="label">No. Revisi</span>
+                <span class="value">01</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Berlaku Efektif</span>
+                <span class="value">{{ now.strftime('%d/%m/%Y') if now else '-' }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Production Info Section -->
+    <div class="production-info">
+        <div class="info-grid-4">
+            <div class="info-field">
+                <label>Tanggal Produksi</label>
+                <span>{{ task.actual_start.strftime('%d/%m/%Y') if task.actual_start else '-' }}</span>
+            </div>
+            <div class="info-field">
+                <label>No. Order/DSO</label>
+                <span>{{ task.order.order_code }}</span>
+            </div>
+            <div class="info-field">
+                <label>Nama Produk</label>
+                <span>{{ task.order.model }}</span>
+            </div>
+            <div class="info-field">
+                <label>Batch</label>
+                <input type="text" class="form-input" id="batchInput" placeholder="Masukkan batch...">
+            </div>
+        </div>
+        <div class="info-grid-2 mt-3">
+            <div class="info-field">
+                <label>Nama Pemeriksa (QC)</label>
+                <span id="inspectorName">{{ current_user.username if current_user else '-' }}</span>
+            </div>
+            <div class="info-field">
+                <label>Target Qty</label>
+                <span>{{ task.qty_target }} pcs</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- QC Checklist Table -->
+    <div class="checklist-table-container">
+        <table class="checklist-table" id="checklistTable">
+            <thead>
+                <tr>
+                    <th class="col-no">No</th>
+                    <th class="col-param">Parameter<br><small>{{ task.process.title() }}</small></th>
+                    <th class="col-checked">Jumlah<br>dicek</th>
+                    <th class="col-ng">Jumlah<br>NG</th>
+                    <th class="col-status">Status Diterima</th>
+                    <th class="col-notes">Keterangan</th>
+                </tr>
+            </thead>
+            <tbody id="checklistBody">
+                <!-- Will be populated by JavaScript based on process type -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Summary Section -->
+    <div class="summary-section">
+        <div class="summary-row">
+            <div class="summary-item">
+                <label>Total Diperiksa</label>
+                <input type="number" class="form-input" id="totalInspected" value="{{ task.qty_target }}" min="0">
+            </div>
+            <div class="summary-item">
+                <label>Total Lolos</label>
+                <input type="number" class="form-input" id="totalPassed" value="0" min="0">
+            </div>
+            <div class="summary-item">
+                <label>Total NG</label>
+                <input type="number" class="form-input" id="totalNG" value="0" min="0">
+            </div>
+            <div class="summary-item">
+                <label>Pass Rate</label>
+                <span class="pass-rate" id="passRate">0%</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overall Notes -->
+    <div class="notes-section">
+        <label>Catatan Inspeksi</label>
+        <textarea class="form-input" id="overallNotes" rows="3" placeholder="Catatan tambahan..."></textarea>
+    </div>
+
+    <!-- Signature Section -->
+    <div class="signature-section">
+        <div class="signature-box">
+            <label>Operator {{ task.process.title() }}</label>
+            <div class="signature-area">
+                <input type="text" class="form-input" id="operatorName" placeholder="Nama operator...">
+            </div>
+        </div>
+        <div class="signature-box">
+            <label>Operator QC</label>
+            <div class="signature-area">
+                <span id="qcOperatorName">{{ current_user.username if current_user else '-' }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+        <button type="button" class="btn btn-lg result-btn pass" onclick="submitChecklist('pass')">
+            <i class="fas fa-check-circle"></i> PASS - Diterima
+        </button>
+        <button type="button" class="btn btn-lg result-btn conditional" onclick="submitChecklist('conditional_pass')">
+            <i class="fas fa-exclamation-circle"></i> Conditional Pass
+        </button>
+        <button type="button" class="btn btn-lg result-btn fail" onclick="submitChecklist('fail')">
+            <i class="fas fa-times-circle"></i> FAIL - Ditolak
+        </button>
+    </div>
+</div>
+
+<!-- Defect Detail Modal -->
+<div class="modal-backdrop" id="defectModal">
+    <div class="modal modal-lg">
+        <div class="modal-header">
+            <h3 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Detail Defect</h3>
+            <button class="modal-close" onclick="closeModal('defectModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="defectRowIndex">
+            <div class="form-group">
+                <label class="form-label">Tipe Defect</label>
+                <select class="form-select" id="defectType">
+                    <option value="">Pilih tipe defect...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Severity</label>
+                <div class="severity-options">
+                    <label class="severity-option">
+                        <input type="radio" name="defectSeverity" value="minor" checked>
+                        <span class="severity-badge minor">Minor</span>
+                    </label>
+                    <label class="severity-option">
+                        <input type="radio" name="defectSeverity" value="major">
+                        <span class="severity-badge major">Major</span>
+                    </label>
+                    <label class="severity-option">
+                        <input type="radio" name="defectSeverity" value="critical">
+                        <span class="severity-badge critical">Critical</span>
+                    </label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Deskripsi</label>
+                <textarea class="form-input" id="defectDescription" rows="3"
+                    placeholder="Jelaskan detail defect..."></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Foto Evidence (Optional)</label>
+                <input type="file" class="form-input" id="defectPhoto" accept="image/*">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('defectModal')">Batal</button>
+            <button class="btn btn-danger" onclick="saveDefectDetail()">
+                <i class="fas fa-save"></i> Simpan Defect
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .qc-document {
+        background: var(--bg-primary);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+    }
+
+    /* Document Header */
+    .doc-header {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 1.5rem;
+        padding: 1.5rem;
+        border-bottom: 2px solid var(--gray-200);
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    }
+
+    .doc-logo {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding-right: 1.5rem;
+        border-right: 2px solid var(--gray-200);
+    }
+
+    .logo-icon {
+        width: 50px;
+        height: 50px;
+        background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+    }
+
+    .logo-text {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.2;
+    }
+
+    .logo-text strong {
+        font-size: 1.25rem;
+        color: var(--gray-800);
+    }
+
+    .logo-text span {
+        font-size: 0.75rem;
+        color: var(--gray-500);
+        letter-spacing: 2px;
+    }
+
+    .doc-title {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .doc-title h2 {
+        margin: 0;
+        font-size: 1.25rem;
+        color: var(--gray-800);
+    }
+
+    .doc-title p {
+        margin: 0.25rem 0;
+        font-size: 0.75rem;
+    }
+
+    .doc-type {
+        margin-top: 0.5rem;
+    }
+
+    .doc-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        padding-left: 1.5rem;
+        border-left: 2px solid var(--gray-200);
+    }
+
+    .doc-info .info-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        font-size: 0.8125rem;
+    }
+
+    .doc-info .label {
+        color: var(--gray-500);
+    }
+
+    .doc-info .value {
+        font-weight: 600;
+    }
+
+    /* Production Info */
+    .production-info {
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--gray-200);
+        background: var(--gray-50);
+    }
+
+    .info-grid-4 {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+    }
+
+    .info-grid-2 {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+
+    .info-field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .info-field label {
+        font-size: 0.75rem;
+        color: var(--gray-500);
+        text-transform: uppercase;
+        font-weight: 600;
+    }
+
+    .info-field span {
+        font-weight: 500;
+        color: var(--gray-800);
+    }
+
+    .info-field .form-input {
+        padding: 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    /* Checklist Table */
+    .checklist-table-container {
+        padding: 1.5rem;
+    }
+
+    .checklist-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem;
+    }
+
+    .checklist-table th,
+    .checklist-table td {
+        border: 1px solid var(--gray-200);
+        padding: 0.75rem;
+        text-align: center;
+    }
+
+    .checklist-table th {
+        background: var(--gray-100);
+        font-weight: 600;
+        color: var(--gray-700);
+    }
+
+    .checklist-table .col-no {
+        width: 50px;
+    }
+
+    .checklist-table .col-param {
+        width: 200px;
+        text-align: left;
+    }
+
+    .checklist-table .col-checked {
+        width: 100px;
+    }
+
+    .checklist-table .col-ng {
+        width: 100px;
+    }
+
+    .checklist-table .col-status {
+        width: 150px;
+    }
+
+    .checklist-table .col-notes {
+        width: auto;
+    }
+
+    .checklist-table td.param-cell {
+        text-align: left;
+        font-weight: 500;
+    }
+
+    .checklist-table input[type="number"] {
+        width: 70px;
+        padding: 0.5rem;
+        text-align: center;
+        border: 1px solid var(--gray-300);
+        border-radius: var(--radius-sm);
+    }
+
+    .checklist-table input[type="text"] {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid var(--gray-300);
+        border-radius: var(--radius-sm);
+    }
+
+    /* Status Buttons */
+    .status-buttons {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+    }
+
+    .status-btn {
+        padding: 0.5rem 1rem;
+        border: 2px solid;
+        border-radius: var(--radius);
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.75rem;
+        transition: all var(--transition-fast);
+        background: white;
+    }
+
+    .status-btn.ya {
+        border-color: #10B981;
+        color: #10B981;
+    }
+
+    .status-btn.ya.active,
+    .status-btn.ya:hover {
+        background: #10B981;
+        color: white;
+    }
+
+    .status-btn.tidak {
+        border-color: #EF4444;
+        color: #EF4444;
+    }
+
+    .status-btn.tidak.active,
+    .status-btn.tidak:hover {
+        background: #EF4444;
+        color: white;
+    }
+
+    .defect-btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.7rem;
+        margin-left: 0.5rem;
+    }
+
+    /* Summary Section */
+    .summary-section {
+        padding: 1.5rem;
+        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        border-top: 1px solid var(--gray-200);
+    }
+
+    .summary-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.5rem;
+    }
+
+    .summary-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .summary-item label {
+        font-size: 0.75rem;
+        color: var(--gray-600);
+        text-transform: uppercase;
+        font-weight: 600;
+    }
+
+    .summary-item .form-input {
+        font-size: 1.25rem;
+        font-weight: 700;
+        text-align: center;
+    }
+
+    .pass-rate {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #10B981;
+    }
+
+    /* Notes Section */
+    .notes-section {
+        padding: 1rem 1.5rem;
+        border-top: 1px solid var(--gray-200);
+    }
+
+    .notes-section label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-size: 0.75rem;
+        color: var(--gray-500);
+        text-transform: uppercase;
+        font-weight: 600;
+    }
+
+    /* Signature Section */
+    .signature-section {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 3rem;
+        padding: 1.5rem;
+        border-top: 1px solid var(--gray-200);
+    }
+
+    .signature-box {
+        text-align: center;
+    }
+
+    .signature-box label {
+        display: block;
+        margin-bottom: 1rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    .signature-area {
+        min-height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-bottom: 2px dotted var(--gray-400);
+    }
+
+    .signature-area .form-input {
+        border: none;
+        text-align: center;
+        font-size: 1rem;
+    }
+
+    /* Action Buttons */
+    .action-buttons {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        padding: 1.5rem;
+        background: var(--gray-50);
+        border-top: 2px solid var(--gray-200);
+    }
+
+    .result-btn {
+        padding: 1.25rem;
+        font-size: 1rem;
+        font-weight: 600;
+        border-radius: var(--radius-md);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .result-btn.pass {
+        background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+        color: white;
+        border: none;
+    }
+
+    .result-btn.pass:hover {
+        background: linear-gradient(135deg, #059669 0%, #047857 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    }
+
+    .result-btn.conditional {
+        background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+        color: white;
+        border: none;
+    }
+
+    .result-btn.conditional:hover {
+        background: linear-gradient(135deg, #D97706 0%, #B45309 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+    }
+
+    .result-btn.fail {
+        background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+        color: white;
+        border: none;
+    }
+
+    .result-btn.fail:hover {
+        background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+    }
+
+    /* Process Badge */
+    .process-badge {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: var(--radius);
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .process-badge.cutting {
+        background: linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%);
+        color: #1E40AF;
+    }
+
+    .process-badge.sewing {
+        background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+        color: #92400E;
+    }
+
+    .process-badge.finishing {
+        background: linear-gradient(135deg, #E0E7FF 0%, #C7D2FE 100%);
+        color: #3730A3;
+    }
+
+    .process-badge.packing {
+        background: linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%);
+        color: #065F46;
+    }
+
+    .process-badge.sablon {
+        background: linear-gradient(135deg, #FCE7F3 0%, #FBCFE8 100%);
+        color: #9D174D;
+    }
+
+    /* Severity */
+    .severity-options {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .severity-option {
+        cursor: pointer;
+    }
+
+    .severity-option input {
+        display: none;
+    }
+
+    .severity-badge {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: var(--radius);
+        font-size: 0.875rem;
+        font-weight: 500;
+        border: 2px solid transparent;
+        transition: all var(--transition-fast);
+    }
+
+    .severity-option input:checked+.severity-badge {
+        border-color: currentColor;
+        transform: scale(1.05);
+    }
+
+    .severity-badge.minor {
+        background: #FEF3C7;
+        color: #92400E;
+    }
+
+    .severity-badge.major {
+        background: #FED7AA;
+        color: #C2410C;
+    }
+
+    .severity-badge.critical {
+        background: #FEE2E2;
+        color: #991B1B;
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+        .doc-header {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        .doc-logo {
+            border-right: none;
+            padding-right: 0;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .doc-info {
+            border-left: none;
+            padding-left: 0;
+            padding-top: 1rem;
+            border-top: 1px solid var(--gray-200);
+        }
+
+        .info-grid-4 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .summary-row {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .action-buttons {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 768px) {
+
+        .info-grid-4,
+        .info-grid-2,
+        .summary-row {
+            grid-template-columns: 1fr;
+        }
+
+        .signature-section {
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+
+        .checklist-table-container {
+            overflow-x: auto;
+        }
+
+        .checklist-table {
+            min-width: 700px;
+        }
+    }
+</style>
+
+<script>
+    // QC Checklist Parameters based on Process
+    const checklistConfig = {
+        cutting: {
+            name: 'Cutting',
+            parameters: [
+                { id: 'jumlah_potongan', name: 'Jumlah Potongan' },
+                { id: 'ketepatan_ukuran', name: 'Ketepatan ukuran potong' },
+                { id: 'presisi_potongan', name: 'Presisi potongan' },
+                { id: 'kerapian_tepi', name: 'Kerapian tepi potongan' },
+                { id: 'kesesuaian_pola', name: 'Kesesuaian pola' },
+                { id: 'lainnya', name: 'Lainnya' }
+            ],
+            defectTypes: [
+                'Jumlah tidak sesuai',
+                'Ukuran tidak presisi',
+                'Potongan miring',
+                'Tepi tidak rapi',
+                'Pola tidak sesuai',
+                'Lainnya'
+            ]
+        },
+        sewing: {
+            name: 'Sewing',
+            parameters: [
+                { id: 'ukuran_produk', name: 'Ukuran produk' },
+                { id: 'kerapian_jahitan', name: 'Kerapian jahitan' },
+                { id: 'kekuatan_jahitan', name: 'Kekuatan jahitan' },
+                { id: 'simetri_produk', name: 'Simetri Produk' },
+                { id: 'bentuk_produk', name: 'Bentuk produk' },
+                { id: 'lainnya', name: 'Lainnya' }
+            ],
+            defectTypes: [
+                'Ukuran tidak sesuai',
+                'Jahitan tidak rapi',
+                'Jahitan lepas',
+                'Tidak simetris',
+                'Bentuk tidak sesuai',
+                'Lainnya'
+            ]
+        },
+        finishing: {
+            name: 'Finishing',
+            parameters: [
+                { id: 'pemasangan_kancing', name: 'Pemasangan Kancing' },
+                { id: 'pemasangan_aksesoris', name: 'Pemasangan aksesoris' },
+                { id: 'label_size_tag', name: 'Label & size tag' },
+                { id: 'kerapian_jahitan_akhir', name: 'Kerapian jahitan akhir' },
+                { id: 'kebersihan_produk', name: 'Kebersihan produk' },
+                { id: 'lainnya', name: 'Lainnya' }
+            ],
+            defectTypes: [
+                'Kancing tidak terpasang',
+                'Aksesoris salah posisi',
+                'Label tidak sesuai',
+                'Jahitan akhir tidak rapi',
+                'Produk kotor',
+                'Lainnya'
+            ]
+        },
+        sablon: {
+            name: 'Sablon',
+            parameters: [
+                { id: 'posisi_sablon', name: 'Posisi sablon' },
+                { id: 'ukuran_sablon', name: 'Ukuran sablon' },
+                { id: 'warna_sablon', name: 'Warna sablon' },
+                { id: 'ketajaman_hasil', name: 'Ketajaman hasil' },
+                { id: 'daya_lekat', name: 'Daya lekat sablon' },
+                { id: 'lainnya', name: 'Lainnya' }
+            ],
+            defectTypes: [
+                'Posisi geser',
+                'Ukuran tidak sesuai',
+                'Warna belang',
+                'Hasil buram',
+                'Sablon mengelupas',
+                'Lainnya'
+            ]
+        },
+        packing: {
+            name: 'Packing',
+            parameters: [
+                { id: 'kesesuaian_jumlah', name: 'Kesesuaian jumlah' },
+                { id: 'kesesuaian_ukuran', name: 'Kesesuaian ukuran' },
+                { id: 'kondisi_kemasan', name: 'Kondisi kemasan' },
+                { id: 'kelengkapan_label', name: 'Kelengkapan label' },
+                { id: 'siap_kirim', name: 'Siap kirim' },
+                { id: 'lainnya', name: 'Lainnya' }
+            ],
+            defectTypes: [
+                'Jumlah kurang',
+                'Ukuran salah',
+                'Kemasan rusak',
+                'Label tidak lengkap',
+                'Tidak siap kirim',
+                'Lainnya'
+            ]
+        }
+    };
+
+    const currentProcess = '{{ task.process }}';
+    const taskId = {{ task.id }};
+    const orderId = {{ task.order_id }};
+    let checklistData = [];
+    let defectDetails = {};
+    let existingSheet = null;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        initializeChecklist();
+        updatePassRate();
+
+        // Generate document number
+        const today = new Date();
+        const docNum = `QC-${currentProcess.toUpperCase().substring(0, 3)}-${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+        document.getElementById('docNumber').textContent = docNum;
+
+        // Load existing QC sheet data if available
+        await loadExistingData();
+    });
+
+    async function loadExistingData() {
+        try {
+            const response = await api.get(`/qc/sheets?task_id=${taskId}`);
+            const sheets = response.data.sheets || [];
+
+            if (sheets.length > 0) {
+                existingSheet = sheets[0];
+                document.getElementById('docNumber').textContent = existingSheet.inspection_code;
+
+                // Populate summary
+                document.getElementById('totalInspected').value = existingSheet.qty_inspected || 0;
+                document.getElementById('totalPassed').value = existingSheet.qty_passed || 0;
+                document.getElementById('totalNG').value = existingSheet.qty_failed || 0;
+                document.getElementById('overallNotes').value = existingSheet.notes || '';
+
+                // Populate checklist data from saved checklist_json
+                if (existingSheet.checklist_json && Array.isArray(existingSheet.checklist_json)) {
+                    existingSheet.checklist_json.forEach((item, index) => {
+                        if (index < checklistData.length) {
+                            // Update internal data
+                            checklistData[index].qtyChecked = item.qty_checked || 0;
+                            checklistData[index].qtyNG = item.qty_ng || 0;
+                            checklistData[index].status = item.status === 'pass' ? true : item.status === 'fail' ? false : null;
+                            checklistData[index].notes = item.notes || '';
+
+                            // Update UI
+                            const row = document.querySelectorAll('#checklistBody tr')[index];
+                            if (row) {
+                                const inputs = row.querySelectorAll('input');
+                                if (inputs[0]) inputs[0].value = item.qty_checked || 0;
+                                if (inputs[1]) inputs[1].value = item.qty_ng || 0;
+                                if (inputs[2]) inputs[2].value = item.notes || '';
+
+                                // Set status buttons
+                                if (item.status === 'pass') {
+                                    setStatus(index, true, null);
+                                } else if (item.status === 'fail') {
+                                    setStatus(index, false, null);
+                                }
+                            }
+                        }
+                    });
+                }
+
+                updatePassRate();
+                showToast('Data checklist sebelumnya dimuat', 'info');
+            }
+        } catch (e) {
+            console.log('No existing QC data found');
+        }
+    }
+
+    function initializeChecklist() {
+        const config = checklistConfig[currentProcess] || checklistConfig.sewing;
+        const tbody = document.getElementById('checklistBody');
+        const defectSelect = document.getElementById('defectType');
+
+        tbody.innerHTML = '';
+        defectSelect.innerHTML = '<option value="">Pilih tipe defect...</option>';
+
+        config.parameters.forEach((param, index) => {
+            checklistData.push({
+                id: param.id,
+                name: param.name,
+                qtyChecked: 0,
+                qtyNG: 0,
+                status: null,
+                notes: ''
+            });
+
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${index + 1}</td>
+                <td class="param-cell">${param.name}</td>
+                <td>
+                    <input type="number" min="0" value="0" onchange="updateRowData(${index}, 'qtyChecked', this.value)">
+                </td>
+                <td>
+                    <input type="number" min="0" value="0" onchange="updateRowData(${index}, 'qtyNG', this.value); checkNGValue(${index}, this.value)">
+                </td>
+                <td>
+                    <div class="status-buttons">
+                        <button type="button" class="status-btn ya" onclick="setStatus(${index}, true, this)" id="status-ya-${index}">Ya</button>
+                        <button type="button" class="status-btn tidak" onclick="setStatus(${index}, false, this)" id="status-tidak-${index}">Tidak</button>
+                    </div>
+                </td>
+                <td>
+                    <input type="text" placeholder="Keterangan..." onchange="updateRowData(${index}, 'notes', this.value)" id="notes-${index}">
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+
+        // Populate defect types
+        config.defectTypes.forEach(type => {
+            defectSelect.innerHTML += `<option value="${type}">${type}</option>`;
+        });
+    }
+
+    function updateRowData(index, field, value) {
+        checklistData[index][field] = field === 'qtyChecked' || field === 'qtyNG' ? parseInt(value) || 0 : value;
+        updatePassRate();
+    }
+
+    function setStatus(index, isYa, btn) {
+        checklistData[index].status = isYa;
+
+        // Update button states
+        document.getElementById(`status-ya-${index}`).classList.toggle('active', isYa);
+        document.getElementById(`status-tidak-${index}`).classList.toggle('active', !isYa);
+
+        updatePassRate();
+    }
+
+    function checkNGValue(index, value) {
+        const ngValue = parseInt(value) || 0;
+        if (ngValue > 0) {
+            // Auto set to Tidak if there are NG items
+            setStatus(index, false, null);
+
+            // Open defect modal
+            document.getElementById('defectRowIndex').value = index;
+            openModal('defectModal');
+        }
+    }
+
+    function saveDefectDetail() {
+        const index = document.getElementById('defectRowIndex').value;
+        const defectType = document.getElementById('defectType').value;
+        const severity = document.querySelector('input[name="defectSeverity"]:checked').value;
+        const description = document.getElementById('defectDescription').value;
+
+        if (!defectType) {
+            showToast('Pilih tipe defect', 'error');
+            return;
+        }
+
+        defectDetails[index] = {
+            defect_type: defectType,
+            severity: severity,
+            description: description,
+            qty_defect: checklistData[index].qtyNG
+        };
+
+        // Update notes with defect info
+        document.getElementById(`notes-${index}`).value = `${defectType} (${severity})`;
+        checklistData[index].notes = `${defectType} (${severity})`;
+
+        closeModal('defectModal');
+        showToast('Detail defect tersimpan', 'warning');
+    }
+
+    function updatePassRate() {
+        const totalInspected = parseInt(document.getElementById('totalInspected').value) || 0;
+        const totalPassed = parseInt(document.getElementById('totalPassed').value) || 0;
+
+        let rate = 0;
+        if (totalInspected > 0) {
+            rate = Math.round((totalPassed / totalInspected) * 100);
+        }
+
+        const rateEl = document.getElementById('passRate');
+        rateEl.textContent = rate + '%';
+        rateEl.style.color = rate >= 95 ? '#10B981' : rate >= 80 ? '#F59E0B' : '#EF4444';
+    }
+
+    // Listen to summary inputs
+    document.getElementById('totalInspected').addEventListener('input', updatePassRate);
+    document.getElementById('totalPassed').addEventListener('input', updatePassRate);
+    document.getElementById('totalNG').addEventListener('input', updatePassRate);
+
+    async function submitChecklist(result) {
+        const batch = document.getElementById('batchInput').value;
+        const operatorName = document.getElementById('operatorName').value;
+        const totalInspected = parseInt(document.getElementById('totalInspected').value) || 0;
+        const totalPassed = parseInt(document.getElementById('totalPassed').value) || 0;
+        const totalNG = parseInt(document.getElementById('totalNG').value) || 0;
+        const notes = document.getElementById('overallNotes').value;
+
+        // Validate checklist completion
+        const incompleteItems = checklistData.filter(item => item.status === null);
+        if (incompleteItems.length > 0 && result !== 'conditional_pass') {
+            showToast('Lengkapi semua status checklist (Ya/Tidak)', 'warning');
+            return;
+        }
+
+        // Build submission data
+        const submissionData = {
+            result: result,
+            qty_inspected: totalInspected,
+            qty_passed: totalPassed,
+            qty_failed: totalNG,
+            notes: notes,
+            barcode_scanned: true,
+            checklist: checklistData.map(item => ({
+                parameter: item.name,
+                qty_checked: item.qtyChecked,
+                qty_ng: item.qtyNG,
+                status: item.status === true ? 'pass' : item.status === false ? 'fail' : 'pending',
+                notes: item.notes
+            }))
+        };
+
+        try {
+            // Create QC Report
+            const response = await api.post('/qc/orders/' + orderId + '/report', {
+                production_task_id: taskId,
+                result: result,
+                qty_inspected: totalInspected,
+                qty_passed: totalPassed,
+                qty_failed: totalNG,
+                notes: notes,
+                checklist: submissionData.checklist
+            });
+
+            // Log defects if any
+            const sheetId = response.data.id;
+            for (const [index, defect] of Object.entries(defectDetails)) {
+                await api.post('/qc/sheets/' + sheetId + '/defect', defect);
+            }
+
+            const resultText = result === 'pass' ? 'PASS ✅' : result === 'conditional_pass' ? 'Conditional Pass ⚠️' : 'FAIL ❌';
+            showToast(`Checklist berhasil disimpan: ${resultText}`, result === 'pass' ? 'success' : result === 'conditional_pass' ? 'warning' : 'error');
+
+            setTimeout(() => {
+                window.location.href = '{{ url_for("views.qc_list") }}';
+            }, 1500);
+
+        } catch (error) {
+            showToast(error.message || 'Gagal menyimpan checklist', 'error');
+        }
+    }
+</script>
+{% endblock %}
