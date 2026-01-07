@@ -1,0 +1,8 @@
+# Nixpacks configuration for Railway
+# Installs LibreOffice for Word-to-PDF conversion
+
+[phases.setup]
+nixPkgs = ["libreoffice"]
+
+[phases.install]
+cmds = ["pip install -r requirements.txt"]

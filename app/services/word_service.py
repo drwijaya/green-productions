@@ -244,113 +244,60 @@ def _export_dso_to_pdf_windows(dso):
 
 
 def _export_dso_to_pdf_weasyprint(dso):
-    """Export DSO to PDF using fpdf2 (Linux/Railway compatible - pure Python)."""
-    from fpdf import FPDF
+    """Export DSO to PDF using LibreOffice (Linux/Railway compatible).
     
-    order = dso.order
-    dewasa = dso.size_chart_dewasa
-    anak = dso.size_chart_anak
+    This uses LibreOffice headless mode to convert Word to PDF,
+    giving the same result as docx2pdf on Windows.
+    """
+    import tempfile
+    import subprocess
+    import os
     
-    # Create PDF using fpdf2
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_auto_page_break(auto=True, margin=15)
+    # First, generate the Word document using the template
+    word_buffer = export_dso_to_word(dso)
     
-    # Title
-    pdf.set_font('Helvetica', 'B', 18)
-    pdf.set_text_color(46, 125, 50)
-    pdf.cell(0, 15, 'DETAIL SPEC ORDER (DSO)', ln=True, align='C')
-    pdf.ln(5)
+    # Create temp directory for conversion
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Save Word file
+        docx_path = os.path.join(tmpdir, 'dso.docx')
+        with open(docx_path, 'wb') as f:
+            f.write(word_buffer.getvalue())
+        
+        # Convert using LibreOffice headless
+        try:
+            result = subprocess.run([
+                'libreoffice',
+                '--headless',
+                '--convert-to', 'pdf',
+                '--outdir', tmpdir,
+                docx_path
+            ], capture_output=True, text=True, timeout=60)
+            
+            if result.returncode != 0:
+                raise Exception(f"LibreOffice conversion failed: {result.stderr}")
+            
+        except FileNotFoundError:
+            # LibreOffice not installed - try soffice command instead
+            result = subprocess.run([
+                'soffice',
+                '--headless',
+                '--convert-to', 'pdf',
+                '--outdir', tmpdir,
+                docx_path
+            ], capture_output=True, text=True, timeout=60)
+            
+            if result.returncode != 0:
+                raise Exception(f"LibreOffice conversion failed: {result.stderr}")
+        
+        # Read the generated PDF
+        pdf_path = os.path.join(tmpdir, 'dso.pdf')
+        
+        if not os.path.exists(pdf_path):
+            raise Exception(f"PDF file not created. LibreOffice output: {result.stdout}")
+        
+        with open(pdf_path, 'rb') as f:
+            pdf_content = f.read()
     
-    # Header info
-    pdf.set_fill_color(245, 245, 245)
-    pdf.set_text_color(0, 0, 0)
-    pdf.set_font('Helvetica', '', 10)
-    col_width = 47.5
-    pdf.cell(col_width, 8, f'Invoice: {order.order_code or "-"}', border=1, fill=True, align='C')
-    pdf.cell(col_width, 8, f'Model: {order.model or "-"}', border=1, fill=True, align='C')
-    deadline_str = order.deadline.strftime("%d/%m/%Y") if order.deadline else "-"
-    pdf.cell(col_width, 8, f'Deadline: {deadline_str}', border=1, fill=True, align='C')
-    pdf.cell(col_width, 8, f'Versi: v{dso.version}', border=1, fill=True, align='C')
-    pdf.ln(12)
-    
-    # Helper function
-    def add_row(label, value):
-        pdf.set_font('Helvetica', 'B', 10)
-        pdf.cell(50, 6, label, border=0)
-        pdf.set_font('Helvetica', '', 10)
-        pdf.cell(0, 6, str(value or '-'), border=0, ln=True)
-    
-    # Section: Informasi Produk
-    pdf.set_font('Helvetica', 'B', 12)
-    pdf.set_text_color(25, 118, 210)
-    pdf.cell(0, 8, 'Informasi Produk', ln=True)
-    pdf.set_text_color(0, 0, 0)
-    add_row('Jenis:', dso.jenis)
-    add_row('Bahan:', dso.bahan)
-    add_row('Warna:', dso.warna)
-    add_row('Sablon:', dso.sablon)
-    add_row('Posisi:', dso.posisi)
-    pdf.ln(5)
-    
-    # Section: Aksesoris
-    pdf.set_font('Helvetica', 'B', 12)
-    pdf.set_text_color(25, 118, 210)
-    pdf.cell(0, 8, 'Aksesoris', ln=True)
-    pdf.set_text_color(0, 0, 0)
-    add_row('Aksesoris 1:', dso.acc_1)
-    add_row('Aksesoris 2:', dso.acc_2)
-    add_row('Kancing:', dso.kancing)
-    add_row('Saku:', dso.saku)
-    pdf.ln(5)
-    
-    # Section: Size Chart Dewasa
-    pdf.set_font('Helvetica', 'B', 12)
-    pdf.set_text_color(25, 118, 210)
-    pdf.cell(0, 8, 'Size Chart - Dewasa', ln=True)
-    pdf.set_text_color(0, 0, 0)
-    pdf.set_font('Helvetica', 'B', 9)
-    pdf.set_fill_color(227, 242, 253)
-    col_w = 19
-    for s in ['Tipe', 'XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL', 'Total']:
-        pdf.cell(col_w, 7, s, border=1, fill=True, align='C')
-    pdf.ln()
-    pdf.set_font('Helvetica', '', 9)
-    pdf.cell(col_w, 7, 'Pendek', border=1, align='C')
-    for v in [dewasa.pendek_xs if dewasa else 0, dewasa.pendek_s if dewasa else 0, 
-              dewasa.pendek_m if dewasa else 0, dewasa.pendek_l if dewasa else 0,
-              dewasa.pendek_xl if dewasa else 0, dewasa.pendek_xxl if dewasa else 0,
-              dewasa.pendek_x3l if dewasa else 0, dewasa.pendek_x4l if dewasa else 0,
-              dewasa.jum_pendek if dewasa else 0]:
-        pdf.cell(col_w, 7, str(v), border=1, align='C')
-    pdf.ln()
-    pdf.cell(col_w, 7, 'Panjang', border=1, align='C')
-    for v in [dewasa.panjang_xs if dewasa else 0, dewasa.panjang_s if dewasa else 0,
-              dewasa.panjang_m if dewasa else 0, dewasa.panjang_l if dewasa else 0,
-              dewasa.panjang_xl if dewasa else 0, dewasa.panjang_xxl if dewasa else 0,
-              dewasa.panjang_x3l if dewasa else 0, dewasa.panjang_x4l if dewasa else 0,
-              dewasa.jum_panjang if dewasa else 0]:
-        pdf.cell(col_w, 7, str(v), border=1, align='C')
-    pdf.ln()
-    pdf.set_fill_color(255, 243, 224)
-    pdf.set_font('Helvetica', 'B', 9)
-    pdf.cell(col_w * 8, 7, 'Total Dewasa', border=1, fill=True, align='R')
-    pdf.cell(col_w * 2, 7, f'{dewasa.total if dewasa else 0} pcs', border=1, fill=True, align='C')
-    pdf.ln(10)
-    
-    # Section: Catatan
-    pdf.set_font('Helvetica', 'B', 12)
-    pdf.set_text_color(25, 118, 210)
-    pdf.cell(0, 8, 'Catatan', ln=True)
-    pdf.set_text_color(0, 0, 0)
-    add_row('Label:', dso.label)
-    add_row('Catatan 1:', dso.catatan_customer_1)
-    add_row('Catatan 2:', dso.catatan_customer_2)
-    
-    # Output to buffer
-    pdf_buffer = io.BytesIO()
-    pdf.output(pdf_buffer)
-    pdf_buffer.seek(0)
-    
+    pdf_buffer = io.BytesIO(pdf_content)
     return pdf_buffer
 
