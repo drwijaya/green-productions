@@ -244,179 +244,112 @@ def _export_dso_to_pdf_windows(dso):
 
 
 def _export_dso_to_pdf_weasyprint(dso):
-    """Export DSO to PDF using WeasyPrint (Linux/Railway compatible)."""
-    from weasyprint import HTML, CSS
+    """Export DSO to PDF using fpdf2 (Linux/Railway compatible - pure Python)."""
+    from fpdf import FPDF
     
     order = dso.order
     dewasa = dso.size_chart_dewasa
     anak = dso.size_chart_anak
     
-    # Build HTML for DSO
-    html_content = f'''
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <style>
-            @page {{ size: A4; margin: 1cm; }}
-            body {{ font-family: Arial, sans-serif; font-size: 10pt; }}
-            h1 {{ text-align: center; color: #2e7d32; font-size: 18pt; margin-bottom: 20px; }}
-            h2 {{ color: #1976d2; font-size: 12pt; margin-top: 15px; border-bottom: 1px solid #ccc; padding-bottom: 5px; }}
-            .header-info {{ display: flex; justify-content: space-between; margin-bottom: 20px; background: #f5f5f5; padding: 10px; border-radius: 5px; }}
-            .header-item {{ text-align: center; }}
-            .header-item strong {{ display: block; font-size: 11pt; }}
-            table {{ width: 100%; border-collapse: collapse; margin: 10px 0; }}
-            th, td {{ border: 1px solid #ddd; padding: 6px 8px; text-align: left; }}
-            th {{ background: #e3f2fd; font-weight: bold; }}
-            .size-table th {{ text-align: center; }}
-            .size-table td {{ text-align: center; }}
-            .total-row {{ background: #fff3e0; font-weight: bold; }}
-            .image-container {{ text-align: center; margin: 15px 0; }}
-            .image-container img {{ max-width: 300px; max-height: 300px; border: 1px solid #ddd; border-radius: 5px; }}
-            .notes {{ background: #fffde7; padding: 10px; border-radius: 5px; margin-top: 10px; }}
-        </style>
-    </head>
-    <body>
-        <h1>DETAIL SPEC ORDER (DSO)</h1>
-        
-        <div class="header-info">
-            <div class="header-item">
-                <span>Invoice</span>
-                <strong>{order.order_code or '-'}</strong>
-            </div>
-            <div class="header-item">
-                <span>Model</span>
-                <strong>{order.model or '-'}</strong>
-            </div>
-            <div class="header-item">
-                <span>Deadline</span>
-                <strong>{order.deadline.strftime('%d/%m/%Y') if order.deadline else '-'}</strong>
-            </div>
-            <div class="header-item">
-                <span>Versi</span>
-                <strong>v{dso.version}</strong>
-            </div>
-        </div>
-        
-        <h2>Informasi Produk</h2>
-        <table>
-            <tr><th width="30%">Jenis</th><td>{dso.jenis or '-'}</td></tr>
-            <tr><th>Bahan</th><td>{dso.bahan or '-'}</td></tr>
-            <tr><th>Warna</th><td>{dso.warna or '-'}</td></tr>
-            <tr><th>Sablon</th><td>{dso.sablon or '-'}</td></tr>
-            <tr><th>Posisi</th><td>{dso.posisi or '-'}</td></tr>
-        </table>
-        
-        <h2>Aksesoris</h2>
-        <table>
-            <tr>
-                <th>Aksesoris 1</th><td>{dso.acc_1 or '-'}</td>
-                <th>Aksesoris 2</th><td>{dso.acc_2 or '-'}</td>
-            </tr>
-            <tr>
-                <th>Aksesoris 3</th><td>{dso.acc_3 or '-'}</td>
-                <th>Aksesoris 4</th><td>{dso.acc_4 or '-'}</td>
-            </tr>
-            <tr>
-                <th>Kancing</th><td>{dso.kancing or '-'}</td>
-                <th>Saku</th><td>{dso.saku or '-'}</td>
-            </tr>
-            <tr>
-                <th>Resleting</th><td>{dso.resleting or '-'}</td>
-                <th>Model Badan Bawah</th><td>{dso.model_badan_bawah or '-'}</td>
-            </tr>
-        </table>
-        
-        <h2>Size Chart - Dewasa</h2>
-        <table class="size-table">
-            <tr>
-                <th>Tipe</th><th>XS</th><th>S</th><th>M</th><th>L</th><th>XL</th><th>XXL</th><th>3XL</th><th>4XL</th><th>5XL</th><th>Total</th>
-            </tr>
-            <tr>
-                <td><strong>Pendek</strong></td>
-                <td>{dewasa.pendek_xs if dewasa else 0}</td>
-                <td>{dewasa.pendek_s if dewasa else 0}</td>
-                <td>{dewasa.pendek_m if dewasa else 0}</td>
-                <td>{dewasa.pendek_l if dewasa else 0}</td>
-                <td>{dewasa.pendek_xl if dewasa else 0}</td>
-                <td>{dewasa.pendek_xxl if dewasa else 0}</td>
-                <td>{dewasa.pendek_x3l if dewasa else 0}</td>
-                <td>{dewasa.pendek_x4l if dewasa else 0}</td>
-                <td>{dewasa.pendek_x5l if dewasa else 0}</td>
-                <td><strong>{dewasa.jum_pendek if dewasa else 0}</strong></td>
-            </tr>
-            <tr>
-                <td><strong>Panjang</strong></td>
-                <td>{dewasa.panjang_xs if dewasa else 0}</td>
-                <td>{dewasa.panjang_s if dewasa else 0}</td>
-                <td>{dewasa.panjang_m if dewasa else 0}</td>
-                <td>{dewasa.panjang_l if dewasa else 0}</td>
-                <td>{dewasa.panjang_xl if dewasa else 0}</td>
-                <td>{dewasa.panjang_xxl if dewasa else 0}</td>
-                <td>{dewasa.panjang_x3l if dewasa else 0}</td>
-                <td>{dewasa.panjang_x4l if dewasa else 0}</td>
-                <td>-</td>
-                <td><strong>{dewasa.jum_panjang if dewasa else 0}</strong></td>
-            </tr>
-            <tr class="total-row">
-                <td colspan="9"><strong>Total Dewasa</strong></td>
-                <td colspan="2"><strong>{dewasa.total if dewasa else 0} pcs</strong></td>
-            </tr>
-        </table>
-        
-        <h2>Size Chart - Anak</h2>
-        <table class="size-table">
-            <tr>
-                <th>Tipe</th><th>XS</th><th>S</th><th>M</th><th>L</th><th>XL</th><th>XXL</th><th>3XL</th><th>4XL</th><th>5XL</th><th>Total</th>
-            </tr>
-            <tr>
-                <td><strong>Pendek</strong></td>
-                <td>{anak.pendek_xs if anak else 0}</td>
-                <td>{anak.pendek_s if anak else 0}</td>
-                <td>{anak.pendek_m if anak else 0}</td>
-                <td>{anak.pendek_l if anak else 0}</td>
-                <td>{anak.pendek_xl if anak else 0}</td>
-                <td>{anak.pendek_xxl if anak else 0}</td>
-                <td>{anak.pendek_x3l if anak else 0}</td>
-                <td>{anak.pendek_x4l if anak else 0}</td>
-                <td>{anak.pendek_x5l if anak else 0}</td>
-                <td><strong>{anak.jum_pendek if anak else 0}</strong></td>
-            </tr>
-            <tr>
-                <td><strong>Panjang</strong></td>
-                <td>{anak.panjang_xs if anak else 0}</td>
-                <td>{anak.panjang_s if anak else 0}</td>
-                <td>{anak.panjang_m if anak else 0}</td>
-                <td>{anak.panjang_l if anak else 0}</td>
-                <td>{anak.panjang_xl if anak else 0}</td>
-                <td>{anak.panjang_xxl if anak else 0}</td>
-                <td>{anak.panjang_x3l if anak else 0}</td>
-                <td>{anak.panjang_x4l if anak else 0}</td>
-                <td>-</td>
-                <td><strong>{anak.jum_panjang if anak else 0}</strong></td>
-            </tr>
-            <tr class="total-row">
-                <td colspan="9"><strong>Total Anak</strong></td>
-                <td colspan="2"><strong>{anak.total if anak else 0} pcs</strong></td>
-            </tr>
-        </table>
-        
-        {'<h2>Gambar Design</h2><div class="image-container"><img src="' + dso.gambar_depan_url + '" alt="Design"></div>' if dso.gambar_depan_url else ''}
-        
-        <h2>Catatan</h2>
-        <div class="notes">
-            <p><strong>Label:</strong> {dso.label or '-'}</p>
-            <p><strong>Catatan 1:</strong> {dso.catatan_customer_1 or '-'}</p>
-            <p><strong>Catatan 2:</strong> {dso.catatan_customer_2 or '-'}</p>
-            <p><strong>Catatan 3:</strong> {dso.catatan_customer_3 or '-'}</p>
-        </div>
-    </body>
-    </html>
-    '''
+    # Create PDF using fpdf2
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
     
-    # Generate PDF
+    # Title
+    pdf.set_font('Helvetica', 'B', 18)
+    pdf.set_text_color(46, 125, 50)
+    pdf.cell(0, 15, 'DETAIL SPEC ORDER (DSO)', ln=True, align='C')
+    pdf.ln(5)
+    
+    # Header info
+    pdf.set_fill_color(245, 245, 245)
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font('Helvetica', '', 10)
+    col_width = 47.5
+    pdf.cell(col_width, 8, f'Invoice: {order.order_code or "-"}', border=1, fill=True, align='C')
+    pdf.cell(col_width, 8, f'Model: {order.model or "-"}', border=1, fill=True, align='C')
+    deadline_str = order.deadline.strftime("%d/%m/%Y") if order.deadline else "-"
+    pdf.cell(col_width, 8, f'Deadline: {deadline_str}', border=1, fill=True, align='C')
+    pdf.cell(col_width, 8, f'Versi: v{dso.version}', border=1, fill=True, align='C')
+    pdf.ln(12)
+    
+    # Helper function
+    def add_row(label, value):
+        pdf.set_font('Helvetica', 'B', 10)
+        pdf.cell(50, 6, label, border=0)
+        pdf.set_font('Helvetica', '', 10)
+        pdf.cell(0, 6, str(value or '-'), border=0, ln=True)
+    
+    # Section: Informasi Produk
+    pdf.set_font('Helvetica', 'B', 12)
+    pdf.set_text_color(25, 118, 210)
+    pdf.cell(0, 8, 'Informasi Produk', ln=True)
+    pdf.set_text_color(0, 0, 0)
+    add_row('Jenis:', dso.jenis)
+    add_row('Bahan:', dso.bahan)
+    add_row('Warna:', dso.warna)
+    add_row('Sablon:', dso.sablon)
+    add_row('Posisi:', dso.posisi)
+    pdf.ln(5)
+    
+    # Section: Aksesoris
+    pdf.set_font('Helvetica', 'B', 12)
+    pdf.set_text_color(25, 118, 210)
+    pdf.cell(0, 8, 'Aksesoris', ln=True)
+    pdf.set_text_color(0, 0, 0)
+    add_row('Aksesoris 1:', dso.acc_1)
+    add_row('Aksesoris 2:', dso.acc_2)
+    add_row('Kancing:', dso.kancing)
+    add_row('Saku:', dso.saku)
+    pdf.ln(5)
+    
+    # Section: Size Chart Dewasa
+    pdf.set_font('Helvetica', 'B', 12)
+    pdf.set_text_color(25, 118, 210)
+    pdf.cell(0, 8, 'Size Chart - Dewasa', ln=True)
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font('Helvetica', 'B', 9)
+    pdf.set_fill_color(227, 242, 253)
+    col_w = 19
+    for s in ['Tipe', 'XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL', 'Total']:
+        pdf.cell(col_w, 7, s, border=1, fill=True, align='C')
+    pdf.ln()
+    pdf.set_font('Helvetica', '', 9)
+    pdf.cell(col_w, 7, 'Pendek', border=1, align='C')
+    for v in [dewasa.pendek_xs if dewasa else 0, dewasa.pendek_s if dewasa else 0, 
+              dewasa.pendek_m if dewasa else 0, dewasa.pendek_l if dewasa else 0,
+              dewasa.pendek_xl if dewasa else 0, dewasa.pendek_xxl if dewasa else 0,
+              dewasa.pendek_x3l if dewasa else 0, dewasa.pendek_x4l if dewasa else 0,
+              dewasa.jum_pendek if dewasa else 0]:
+        pdf.cell(col_w, 7, str(v), border=1, align='C')
+    pdf.ln()
+    pdf.cell(col_w, 7, 'Panjang', border=1, align='C')
+    for v in [dewasa.panjang_xs if dewasa else 0, dewasa.panjang_s if dewasa else 0,
+              dewasa.panjang_m if dewasa else 0, dewasa.panjang_l if dewasa else 0,
+              dewasa.panjang_xl if dewasa else 0, dewasa.panjang_xxl if dewasa else 0,
+              dewasa.panjang_x3l if dewasa else 0, dewasa.panjang_x4l if dewasa else 0,
+              dewasa.jum_panjang if dewasa else 0]:
+        pdf.cell(col_w, 7, str(v), border=1, align='C')
+    pdf.ln()
+    pdf.set_fill_color(255, 243, 224)
+    pdf.set_font('Helvetica', 'B', 9)
+    pdf.cell(col_w * 8, 7, 'Total Dewasa', border=1, fill=True, align='R')
+    pdf.cell(col_w * 2, 7, f'{dewasa.total if dewasa else 0} pcs', border=1, fill=True, align='C')
+    pdf.ln(10)
+    
+    # Section: Catatan
+    pdf.set_font('Helvetica', 'B', 12)
+    pdf.set_text_color(25, 118, 210)
+    pdf.cell(0, 8, 'Catatan', ln=True)
+    pdf.set_text_color(0, 0, 0)
+    add_row('Label:', dso.label)
+    add_row('Catatan 1:', dso.catatan_customer_1)
+    add_row('Catatan 2:', dso.catatan_customer_2)
+    
+    # Output to buffer
     pdf_buffer = io.BytesIO()
-    HTML(string=html_content).write_pdf(pdf_buffer)
+    pdf.output(pdf_buffer)
     pdf_buffer.seek(0)
     
     return pdf_buffer

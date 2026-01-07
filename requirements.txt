@@ -18,6 +18,7 @@ httpx>=0.24.0,<0.26.0
 
 # PDF Generation
 WeasyPrint==60.2
+fpdf2==2.8.5
 
 # Utilities
 docx2pdf==0.1.8
