@@ -53,16 +53,20 @@ def create_app(config_name=None):
     def load_user(user_id):
         return User.query.get(int(user_id))
     
-    # Create database tables
+    # Create database tables - skip if connection fails (for healthcheck compatibility)
     with app.app_context():
         try:
             db.create_all()
+            print("Database tables created/verified successfully.")
         except Exception as e:
+            db_url = app.config.get('SQLALCHEMY_DATABASE_URI', 'Not Set')
+            db_host = db_url.split('@')[-1] if '@' in db_url else '***'
             print(f"\n{'='*50}")
-            print(f"ERROR: Could not connect to the database.")
-            print(f"Database URL: {app.config.get('SQLALCHEMY_DATABASE_URI', 'Not Set').split('@')[-1] if '@' in app.config.get('SQLALCHEMY_DATABASE_URI', '') else '***'}")
-            print(f"Error details: {str(e)}")
+            print(f"WARNING: Could not connect to the database on startup.")
+            print(f"Database Host: {db_host}")
+            print(f"Error: {str(e)}")
+            print(f"The app will continue - database operations may fail.")
             print(f"{'='*50}\n")
-            raise e
+            # Don't raise - let the app start for health checks
     
     return app

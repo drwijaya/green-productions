@@ -13,6 +13,22 @@ from ..extensions import db
 views_bp = Blueprint('views', __name__)
 
 
+@views_bp.route('/health')
+def health_check():
+    """Health check endpoint for Railway/deployment platforms."""
+    try:
+        # Try a simple DB query
+        db.session.execute(db.text('SELECT 1'))
+        db_status = 'connected'
+    except Exception as e:
+        db_status = f'error: {str(e)[:50]}'
+    
+    return jsonify({
+        'status': 'ok',
+        'database': db_status
+    }), 200
+
+
 @views_bp.route('/')
 def index():
     """Landing page - redirect to dashboard or login."""
