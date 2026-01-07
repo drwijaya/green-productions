@@ -1,0 +1,380 @@
+{% extends "base.html" %}
+
+{% block title %}{% if material_request %}Edit{% else %}Buat{% endif %} Material Request{% endblock %}
+{% block page_title %}{% if material_request %}Edit{% else %}Buat{% endif %} Material Request{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+    <a href="{{ url_for('views.materials_list') }}" class="btn btn-sm btn-outline">
+        <i class="fas fa-arrow-left"></i> Kembali
+    </a>
+</div>
+
+<div class="form-container">
+    <form id="materialRequestForm">
+        <input type="hidden" id="requestId" value="{{ material_request.id if material_request else '' }}">
+
+        <!-- Vendor & Order Section -->
+        <div class="form-section">
+            <h3 class="section-title"><i class="fas fa-building"></i> Info Vendor</h3>
+            <div class="form-grid-2">
+                <div class="form-group">
+                    <label class="form-label required">Vendor</label>
+                    <select class="form-select" id="vendorId" required>
+                        <option value="">-- Pilih Vendor --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Link ke Order (Optional)</label>
+                    <select class="form-select" id="orderId">
+                        <option value="">-- Tidak ada --</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-grid-2">
+                <div class="form-group">
+                    <label class="form-label">Expected Arrival</label>
+                    <input type="date" class="form-input" id="expectedArrival"
+                        value="{{ material_request.expected_arrival.isoformat() if material_request and material_request.expected_arrival else '' }}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Catatan</label>
+                    <input type="text" class="form-input" id="notes" placeholder="Catatan..."
+                        value="{{ material_request.notes if material_request else '' }}">
+                </div>
+            </div>
+        </div>
+
+        <!-- Material Items Section -->
+        <div class="form-section">
+            <div class="section-header">
+                <h3 class="section-title"><i class="fas fa-boxes"></i> Material Items</h3>
+                <button type="button" class="btn btn-sm btn-primary" onclick="addItem()">
+                    <i class="fas fa-plus"></i> Tambah Item
+                </button>
+            </div>
+
+            <div class="items-container" id="itemsContainer">
+                <!-- Items will be added here -->
+            </div>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="window.history.back()">Batal</button>
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-save"></i> {% if material_request %}Update{% else %}Simpan{% endif %} Request
+            </button>
+        </div>
+    </form>
+</div>
+
+<style>
+    .form-container {
+        background: var(--white);
+        border-radius: var(--radius-lg);
+        padding: 2rem;
+        box-shadow: var(--shadow);
+    }
+
+    .form-section {
+        margin-bottom: 2rem;
+        padding-bottom: 2rem;
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .section-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--gray-800);
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .section-header .section-title {
+        margin-bottom: 0;
+    }
+
+    .form-grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+    }
+
+    .form-group {
+        margin-bottom: 1rem;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        font-size: 0.875rem;
+        color: var(--gray-700);
+    }
+
+    .form-label.required::after {
+        content: ' *';
+        color: #EF4444;
+    }
+
+    .form-input,
+    .form-select {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid var(--gray-300);
+        border-radius: var(--radius);
+        font-size: 0.95rem;
+    }
+
+    .form-input:focus,
+    .form-select:focus {
+        border-color: var(--primary);
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .items-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .item-card {
+        background: var(--gray-50);
+        border-radius: var(--radius);
+        padding: 1.25rem;
+        border: 1px solid var(--gray-200);
+    }
+
+    .item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .item-number {
+        font-weight: 600;
+        color: var(--gray-600);
+    }
+
+    .item-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .item-grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    @media (max-width: 768px) {
+
+        .form-grid-2,
+        .item-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<script>
+    let itemIndex = 0;
+    const existingItems = {{ material_request.items.all() | map(attribute = 'to_dict') | list | tojson | safe if material_request else '[]' }};
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadVendors();
+        loadOrders();
+
+        // Add existing items or one empty item
+        if (existingItems.length > 0) {
+            existingItems.forEach(item => addItem(item));
+        } else {
+            addItem();
+        }
+
+        // Form submit
+        document.getElementById('materialRequestForm').addEventListener('submit', handleSubmit);
+    });
+
+    async function loadVendors() {
+        try {
+            const response = await api.get('/vendors?status=active');
+            const vendors = response.vendors || [];
+            const select = document.getElementById('vendorId');
+
+            vendors.forEach(v => {
+                const option = document.createElement('option');
+                option.value = v.id;
+                option.textContent = `${v.code} - ${v.name}`;
+                select.appendChild(option);
+            });
+
+            {% if material_request and material_request.vendor_id %}
+            select.value = '{{ material_request.vendor_id }}';
+            {% endif %}
+        } catch (error) {
+            console.error('Error loading vendors:', error);
+        }
+    }
+
+    async function loadOrders() {
+        try {
+            const response = await api.get('/orders?status=in_production');
+            const orders = response.orders || [];
+            const select = document.getElementById('orderId');
+
+            orders.forEach(o => {
+                const option = document.createElement('option');
+                option.value = o.id;
+                option.textContent = `${o.order_code} - ${o.model}`;
+                select.appendChild(option);
+            });
+
+            {% if material_request and material_request.order_id %}
+            select.value = '{{ material_request.order_id }}';
+            {% endif %}
+        } catch (error) {
+            console.error('Error loading orders:', error);
+        }
+    }
+
+    function addItem(data = null) {
+        itemIndex++;
+        const container = document.getElementById('itemsContainer');
+        const itemHtml = `
+            <div class="item-card" id="item-${itemIndex}">
+                <div class="item-header">
+                    <span class="item-number">Item #${itemIndex}</span>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem(${itemIndex})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+                <div class="item-grid">
+                    <div class="form-group">
+                        <label class="form-label required">Nama Material</label>
+                        <input type="text" class="form-input item-name" placeholder="Nama material..." 
+                            value="${data ? data.material_name : ''}" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Jenis</label>
+                        <select class="form-select item-type">
+                            <option value="">-- Jenis --</option>
+                            <option value="kain" ${data && data.material_type === 'kain' ? 'selected' : ''}>Kain</option>
+                            <option value="benang" ${data && data.material_type === 'benang' ? 'selected' : ''}>Benang</option>
+                            <option value="kancing" ${data && data.material_type === 'kancing' ? 'selected' : ''}>Kancing</option>
+                            <option value="resleting" ${data && data.material_type === 'resleting' ? 'selected' : ''}>Resleting</option>
+                            <option value="label" ${data && data.material_type === 'label' ? 'selected' : ''}>Label</option>
+                            <option value="aksesoris" ${data && data.material_type === 'aksesoris' ? 'selected' : ''}>Aksesoris</option>
+                            <option value="lainnya" ${data && data.material_type === 'lainnya' ? 'selected' : ''}>Lainnya</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">Qty</label>
+                        <input type="number" class="form-input item-qty" min="1" placeholder="Qty" 
+                            value="${data ? data.qty_ordered : ''}" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Unit</label>
+                        <select class="form-select item-unit">
+                            <option value="pcs" ${!data || data.unit === 'pcs' ? 'selected' : ''}>Pcs</option>
+                            <option value="meter" ${data && data.unit === 'meter' ? 'selected' : ''}>Meter</option>
+                            <option value="kg" ${data && data.unit === 'kg' ? 'selected' : ''}>Kg</option>
+                            <option value="roll" ${data && data.unit === 'roll' ? 'selected' : ''}>Roll</option>
+                            <option value="pack" ${data && data.unit === 'pack' ? 'selected' : ''}>Pack</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Warna</label>
+                        <input type="text" class="form-input item-color" placeholder="Warna..." 
+                            value="${data ? data.color || '' : ''}">
+                    </div>
+                </div>
+                <div class="item-grid-2">
+                    <div class="form-group">
+                        <label class="form-label">Ukuran/Size</label>
+                        <input type="text" class="form-input item-size" placeholder="Ukuran..." 
+                            value="${data ? data.size || '' : ''}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Spesifikasi</label>
+                        <input type="text" class="form-input item-specs" placeholder="Spesifikasi..." 
+                            value="${data ? data.specifications || '' : ''}">
+                    </div>
+                </div>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', itemHtml);
+    }
+
+    function removeItem(index) {
+        const item = document.getElementById(`item-${index}`);
+        if (item) {
+            item.remove();
+        }
+    }
+
+    async function handleSubmit(e) {
+        e.preventDefault();
+
+        const items = [];
+        document.querySelectorAll('.item-card').forEach(card => {
+            items.push({
+                material_name: card.querySelector('.item-name').value,
+                material_type: card.querySelector('.item-type').value,
+                qty_ordered: parseInt(card.querySelector('.item-qty').value),
+                unit: card.querySelector('.item-unit').value,
+                color: card.querySelector('.item-color').value,
+                size: card.querySelector('.item-size').value,
+                specifications: card.querySelector('.item-specs').value
+            });
+        });
+
+        if (items.length === 0) {
+            showToast('Minimal harus ada 1 item material', 'error');
+            return;
+        }
+
+        const data = {
+            vendor_id: parseInt(document.getElementById('vendorId').value),
+            order_id: document.getElementById('orderId').value ? parseInt(document.getElementById('orderId').value) : null,
+            expected_arrival: document.getElementById('expectedArrival').value || null,
+            notes: document.getElementById('notes').value,
+            items: items
+        };
+
+        try {
+            const requestId = document.getElementById('requestId').value;
+            if (requestId) {
+                await api.put(`/materials/${requestId}`, data);
+                showToast('Material request berhasil diupdate', 'success');
+            } else {
+                await api.post('/materials', data);
+                showToast('Material request berhasil dibuat', 'success');
+            }
+            setTimeout(() => window.location.href = '{{ url_for("views.materials_list") }}', 1000);
+        } catch (error) {
+            showToast('Gagal menyimpan: ' + error.message, 'error');
+        }
+    }
+</script>
+{% endblock %}

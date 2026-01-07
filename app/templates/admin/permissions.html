@@ -1,0 +1,426 @@
+{% extends "base.html" %}
+{% block title %}Manage Permissions - {{ user.username }}{% endblock %}
+{% block page_title %}Manage Permissions{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+    <div class="page-header-left">
+        <a href="{{ url_for('views.users') }}" class="btn btn-sm btn-outline mb-2">
+            <i class="fas fa-arrow-left"></i> Kembali ke Users
+        </a>
+        <div class="user-header">
+            <div class="user-avatar-lg">{{ user.full_name[:2].upper() }}</div>
+            <div class="user-header-info">
+                <h2>{{ user.full_name }}</h2>
+                <p class="text-muted">@{{ user.username }} •
+                    <span class="role-badge role-{{ user.role }}">{{ user.role.replace('_', ' ').title() }}</span>
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="page-header-right">
+        <button class="btn btn-secondary" onclick="resetToDefaults()">
+            <i class="fas fa-undo"></i> Reset ke Default
+        </button>
+        <button class="btn btn-primary" onclick="savePermissions()">
+            <i class="fas fa-save"></i> Simpan
+        </button>
+    </div>
+</div>
+
+{% if user.role == 'admin' %}
+<div class="alert alert-info mb-4">
+    <i class="fas fa-info-circle"></i>
+    User dengan role <strong>Admin</strong> otomatis memiliki akses ke semua menu. Pengaturan di bawah tidak berlaku
+    untuk Admin.
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-key"></i> Menu & Permissions</h3>
+        <p class="text-muted mt-1">Centang menu yang dapat diakses oleh user ini</p>
+    </div>
+    <div class="card-body">
+        <div class="permissions-grid" id="permissionsGrid">
+            <!-- Will be loaded via JS -->
+            <div class="loading-state">
+                <div class="spinner"></div>
+                <p>Loading permissions...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .page-header-right {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .user-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-top: 0.5rem;
+    }
+
+    .user-avatar-lg {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 1.25rem;
+    }
+
+    .user-header-info h2 {
+        margin: 0;
+        font-size: 1.5rem;
+    }
+
+    .user-header-info p {
+        margin: 0.25rem 0 0;
+    }
+
+    .role-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 9999px;
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+
+    .role-admin {
+        background: #DBEAFE;
+        color: #1E40AF;
+    }
+
+    .role-owner {
+        background: #F3E8FF;
+        color: #7C3AED;
+    }
+
+    .role-admin_produksi {
+        background: #FEF3C7;
+        color: #D97706;
+    }
+
+    .role-qc_line {
+        background: #D1FAE5;
+        color: #059669;
+    }
+
+    .role-operator {
+        background: #F3F4F6;
+        color: #374151;
+    }
+
+    .permissions-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 1rem;
+    }
+
+    .permission-card {
+        background: var(--gray-50);
+        border-radius: var(--radius-lg);
+        padding: 1.25rem;
+        border: 2px solid transparent;
+        transition: all 0.2s ease;
+    }
+
+    .permission-card.enabled {
+        background: #F0FDF4;
+        border-color: #10B981;
+    }
+
+    .permission-card-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .permission-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        background: var(--gray-200);
+        color: var(--gray-500);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        transition: all 0.2s ease;
+    }
+
+    .permission-card.enabled .permission-icon {
+        background: #10B981;
+        color: white;
+    }
+
+    .permission-info {
+        flex: 1;
+    }
+
+    .permission-name {
+        font-weight: 600;
+        font-size: 1rem;
+        color: var(--gray-800);
+    }
+
+    .permission-desc {
+        font-size: 0.8rem;
+        color: var(--gray-500);
+        margin-top: 0.125rem;
+    }
+
+    .permission-toggle {
+        position: relative;
+    }
+
+    .toggle-switch {
+        position: relative;
+        width: 52px;
+        height: 28px;
+        background: var(--gray-300);
+        border-radius: 14px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .toggle-switch.active {
+        background: #10B981;
+    }
+
+    .toggle-switch::after {
+        content: '';
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 22px;
+        height: 22px;
+        background: white;
+        border-radius: 50%;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: all 0.2s ease;
+    }
+
+    .toggle-switch.active::after {
+        left: 27px;
+    }
+
+    .permission-options {
+        display: none;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--gray-200);
+    }
+
+    .permission-card.enabled .permission-options {
+        display: block;
+    }
+
+    .option-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .option-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        font-size: 0.875rem;
+    }
+
+    .option-checkbox input {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+
+    .alert {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem;
+        border-radius: var(--radius);
+        background: #DBEAFE;
+        color: #1E40AF;
+    }
+
+    .loading-state {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 3rem;
+        color: var(--gray-500);
+    }
+
+    @media (max-width: 768px) {
+        .page-header {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .page-header-right {
+            flex-direction: column;
+        }
+
+        .permissions-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<script>
+    const userId = {{ user.id }};
+    let availablePermissions = {};
+    let userPermissions = {};
+
+    document.addEventListener('DOMContentLoaded', function () {
+        loadPermissions();
+    });
+
+    async function loadPermissions() {
+        try {
+            const res = await api.get('/permissions/user/' + userId);
+            const data = res.data;
+
+            availablePermissions = data.available;
+            userPermissions = data.permissions;
+
+            renderPermissions();
+        } catch (e) {
+            showToast('Gagal memuat permissions', 'error');
+        }
+    }
+
+    function renderPermissions() {
+        const grid = document.getElementById('permissionsGrid');
+
+        let html = '';
+
+        for (const [key, perm] of Object.entries(availablePermissions)) {
+            const isEnabled = userPermissions[key] && userPermissions[key].can_view;
+            const canCreate = userPermissions[key]?.can_create || false;
+            const canEdit = userPermissions[key]?.can_edit || false;
+            const canDelete = userPermissions[key]?.can_delete || false;
+
+            html += `
+                <div class="permission-card ${isEnabled ? 'enabled' : ''}" data-key="${key}">
+                    <div class="permission-card-header">
+                        <div class="permission-icon">
+                            <i class="fas ${perm.icon}"></i>
+                        </div>
+                        <div class="permission-info">
+                            <div class="permission-name">${perm.label}</div>
+                            <div class="permission-desc">${perm.description}</div>
+                        </div>
+                        <div class="permission-toggle">
+                            <div class="toggle-switch ${isEnabled ? 'active' : ''}" onclick="togglePermission('${key}')"></div>
+                        </div>
+                    </div>
+                    <div class="permission-options">
+                        <div class="option-group">
+                            <label class="option-checkbox">
+                                <input type="checkbox" data-action="create" ${canCreate ? 'checked' : ''}>
+                                <span>Dapat Membuat</span>
+                            </label>
+                            <label class="option-checkbox">
+                                <input type="checkbox" data-action="edit" ${canEdit ? 'checked' : ''}>
+                                <span>Dapat Edit</span>
+                            </label>
+                            <label class="option-checkbox">
+                                <input type="checkbox" data-action="delete" ${canDelete ? 'checked' : ''}>
+                                <span>Dapat Hapus</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        grid.innerHTML = html;
+    }
+
+    function togglePermission(key) {
+        const card = document.querySelector(`.permission-card[data-key="${key}"]`);
+        const toggle = card.querySelector('.toggle-switch');
+
+        const isNowEnabled = !toggle.classList.contains('active');
+
+        card.classList.toggle('enabled', isNowEnabled);
+        toggle.classList.toggle('active', isNowEnabled);
+
+        // Update local state
+        if (isNowEnabled) {
+            userPermissions[key] = {
+                permission_key: key,
+                can_view: true,
+                can_create: false,
+                can_edit: false,
+                can_delete: false
+            };
+        } else {
+            delete userPermissions[key];
+        }
+    }
+
+    async function savePermissions() {
+        // Collect all enabled permissions
+        const permissions = {};
+
+        document.querySelectorAll('.permission-card').forEach(card => {
+            const key = card.dataset.key;
+            const isEnabled = card.classList.contains('enabled');
+
+            if (isEnabled) {
+                permissions[key] = {
+                    can_view: true,
+                    can_create: card.querySelector('[data-action="create"]')?.checked || false,
+                    can_edit: card.querySelector('[data-action="edit"]')?.checked || false,
+                    can_delete: card.querySelector('[data-action="delete"]')?.checked || false
+                };
+            }
+        });
+
+        try {
+            await api.put('/permissions/user/' + userId, { permissions });
+            showToast('Permissions berhasil disimpan!', 'success');
+        } catch (e) {
+            showToast(e.message || 'Gagal menyimpan permissions', 'error');
+        }
+    }
+
+    async function resetToDefaults() {
+        if (!confirm('Reset permissions ke default berdasarkan role user? Semua pengaturan custom akan dihapus.')) {
+            return;
+        }
+
+        try {
+            await api.post('/permissions/user/' + userId + '/reset');
+            showToast('Permissions direset ke default', 'success');
+            loadPermissions();
+        } catch (e) {
+            showToast(e.message || 'Gagal reset permissions', 'error');
+        }
+    }
+</script>
+{% endblock %}

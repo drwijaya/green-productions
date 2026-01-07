@@ -115,32 +115,32 @@
         </div>
         <div class="card-body">
             <div class="quick-actions">
-                <a href="{{ url_for('views.orders') }}?action=new" class="quick-action-btn">
+                <a href="{{ url_for('views.orders') }}" class="quick-action-btn">
                     <div class="quick-action-icon primary">
-                        <i class="fas fa-plus"></i>
+                        <i class="fas fa-file-invoice"></i>
                     </div>
-                    <span>Invoice Baru</span>
+                    <span>Invoices</span>
                 </a>
 
-                <a href="{{ url_for('views.qc_list') }}" class="quick-action-btn">
-                    <div class="quick-action-icon success">
-                        <i class="fas fa-clipboard-check"></i>
-                    </div>
-                    <span>QC Inspect</span>
-                </a>
-
-                <a href="{{ url_for('views.barcode_center') }}" class="quick-action-btn">
-                    <div class="quick-action-icon info">
-                        <i class="fas fa-qrcode"></i>
-                    </div>
-                    <span>Scan Barcode</span>
-                </a>
-
-                <a href="{{ url_for('views.reports') }}" class="quick-action-btn">
+                <a href="{{ url_for('views.dso_management') }}" class="quick-action-btn">
                     <div class="quick-action-icon warning">
-                        <i class="fas fa-chart-line"></i>
+                        <i class="fas fa-drafting-compass"></i>
                     </div>
-                    <span>Reports</span>
+                    <span>DSO Management</span>
+                </a>
+
+                <a href="{{ url_for('views.production') }}" class="quick-action-btn">
+                    <div class="quick-action-icon success">
+                        <i class="fas fa-industry"></i>
+                    </div>
+                    <span>Monitor Produksi</span>
+                </a>
+
+                <a href="{{ url_for('views.qc_monitoring') }}" class="quick-action-btn">
+                    <div class="quick-action-icon info">
+                        <i class="fas fa-microscope"></i>
+                    </div>
+                    <span>QC Monitoring</span>
                 </a>
             </div>
         </div>

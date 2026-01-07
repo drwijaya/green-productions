@@ -55,6 +55,14 @@ def create_app(config_name=None):
     
     # Create database tables
     with app.app_context():
-        db.create_all()
+        try:
+            db.create_all()
+        except Exception as e:
+            print(f"\n{'='*50}")
+            print(f"ERROR: Could not connect to the database.")
+            print(f"Database URL: {app.config.get('SQLALCHEMY_DATABASE_URI', 'Not Set').split('@')[-1] if '@' in app.config.get('SQLALCHEMY_DATABASE_URI', '') else '***'}")
+            print(f"Error details: {str(e)}")
+            print(f"{'='*50}\n")
+            raise e
     
     return app

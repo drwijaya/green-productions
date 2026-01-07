@@ -8,47 +8,218 @@
         <p class="text-muted">Kelola status produksi untuk setiap invoice</p>
     </div>
     <div class="page-header-right">
-        <div class="status-legend">
-            <span class="legend-item"><span class="dot pending"></span> Pending</span>
-            <span class="legend-item"><span class="dot assigned"></span> Assigned</span>
-            <span class="legend-item"><span class="dot in_progress"></span> In Progress</span>
-            <span class="legend-item"><span class="dot completed"></span> Completed</span>
+        <div class="legend-groups">
+            <div class="legend-group">
+                <span class="legend-title">Produksi:</span>
+                <div class="status-legend">
+                    <span class="legend-item"><span class="dot pending"></span> Pending</span>
+                    <span class="legend-item"><span class="dot assigned"></span> Assigned</span>
+                    <span class="legend-item"><span class="dot in_progress"></span> In Progress</span>
+                    <span class="legend-item"><span class="dot completed"></span> Completed</span>
+                </div>
+            </div>
+            <div class="legend-group">
+                <span class="legend-title">QC:</span>
+                <div class="status-legend">
+                    <span class="legend-item"><span class="dot qc-pending"></span> Pending</span>
+                    <span class="legend-item"><span class="dot qc-pass"></span> Pass</span>
+                    <span class="legend-item"><span class="dot qc-fail"></span> Fail</span>
+                    <span class="legend-item"><span class="dot qc-conditional"></span> Conditional</span>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
-<div class="orders-production-list">
+<div class="prod-grid-controls mb-4">
+    <!-- Filter Tabs -->
+    <div class="status-tabs">
+        <div class="status-tab active" data-filter="all">
+            <i class="fas fa-th-large"></i> All
+        </div>
+        <div class="status-tab" data-filter="pending">
+            <span class="dot pending"></span> Pending
+        </div>
+        <div class="status-tab" data-filter="assigned">
+            <span class="dot assigned"></span> Assigned
+        </div>
+        <div class="status-tab" data-filter="in_production">
+            <span class="dot in_progress"></span> In Progress
+        </div>
+        <div class="status-tab" data-filter="completed">
+            <span class="dot completed"></span> Completed
+        </div>
+    </div>
+
+    <!-- Search Bar and View Toggle -->
+    <div class="search-row">
+        <div class="search-group">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" class="search-input" id="prodSearchInput"
+                placeholder="Cari Invoice, Customer, atau Model..." onkeyup="filterProduction()">
+        </div>
+        <div class="view-toggle">
+            <button class="view-btn active" data-view="list" onclick="switchView('list')">
+                <i class="fas fa-th-list"></i> List
+            </button>
+            <button class="view-btn" data-view="timeline" onclick="switchView('timeline')">
+                <i class="fas fa-calendar-alt"></i> Timeline
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="prod-grid" id="productionGrid">
     {% for order in orders %}
-    <div class="production-card" data-order-id="{{ order.id }}">
-        <!-- Order Header -->
-        <div class="production-header" onclick="toggleExpand({{ order.id }})">
-            <div class="order-info">
-                <div class="order-badge">
-                    <span class="customer-name">{{ order.customer.name if order.customer else '-' }}</span>
+    <div class="prod-card" data-order-card="{{order.id}}"
+        data-status="{% if order.status == 'draft' %}pending{% elif order.status in ['qc_pending', 'completed'] %}completed{% else %}{{ order.status }}{% endif %}"
+        data-search="{{ order.order_code.lower() }} {{ order.model.lower() }} {{ order.customer.name.lower() if order.customer else '' }}">
+
+        <!-- Compact Header -->
+        <div class="prod-header">
+            <div>
+                <div class="prod-invoice">
+                    {{ order.order_code }}
+                    {% if order.status == 'qc_pending' %}
+                    <span class="badge badge-warning ms-2" style="font-size: 0.6rem; vertical-align: middle;">QC
+                        PENDING</span>
+                    {% elif order.status == 'completed' %}
+                    <span class="badge badge-success ms-2"
+                        style="font-size: 0.6rem; vertical-align: middle;">COMPLETED</span>
+                    {% endif %}
                 </div>
-                <div class="order-main">
-                    <span class="order-code">{{ order.order_code }}</span>
-                    <h3 class="order-model">{{ order.model }}</h3>
-                </div>
-                <div class="order-qty">
-                    <span class="qty-value">{{ order.qty_total }}</span>
-                    <span class="qty-label">pcs</span>
-                </div>
+                <div class="prod-model">{{ order.model }}</div>
             </div>
-            <div class="order-status-area">
-                <div class="deadline-badge {% if order.deadline and order.deadline < now %}overdue{% endif %}">
-                    <i class="fas fa-calendar-alt"></i>
-                    {{ order.deadline.strftime('%d %b %Y') if order.deadline else 'No deadline' }}
-                </div>
-                <div class="progress-ring">
-                    <span class="progress-value">{{ order.get_production_progress() }}%</span>
-                </div>
-                <i class="fas fa-chevron-down expand-icon"></i>
+            <div class="prod-progress-badge">
+                <i class="fas fa-chart-pie"></i>
+                {{order.get_production_progress()}}%
             </div>
         </div>
 
-        <!-- Production Tasks - 5 Step Process -->
-        <div class="production-tasks" id="tasks-{{ order.id }}">
+        <!-- Body Info -->
+        <div class="prod-card-body">
+            <div class="prod-info-grid">
+                <div class="prod-info-item">
+                    <span class="prod-info-label">Customer</span>
+                    <span class="prod-info-value">{{ order.customer.name if order.customer else '-' }}</span>
+                </div>
+                <div class="prod-info-item">
+                    <span class="prod-info-label">Qty Total</span>
+                    <span class="prod-info-value" style="color: var(--primary); font-weight: 700;">{{ order.qty_total }}
+                        pcs</span>
+                </div>
+                <div class="prod-info-item">
+                    <span class="prod-info-label">Deadline</span>
+                    <span
+                        class="prod-info-value {% if order.deadline and order.deadline < now %}text-danger{% endif %}">
+                        {{ order.deadline.strftime('%d %b %Y') if order.deadline else '-' }}
+                    </span>
+                </div>
+                <div class="prod-info-item">
+                    <span class="prod-info-label">Status</span>
+                    <span class="prod-info-value text-capitalize">{{ order.status.replace('_', ' ') }}</span>
+                </div>
+            </div>
+
+            <!-- Visual Steps Summary -->
+            {% if order.production_tasks.count() > 0 %}
+            <div class="dual-status-grid">
+                <!-- Production Status -->
+                <div class="status-column">
+                    <div class="prod-status-label">Production Status</div>
+                    <div class="prod-steps-summary">
+                        {% for task in order.production_tasks.order_by('sequence').all() %}
+                        {% set icon_class = 'fa-tasks' %}
+                        {% if 'cutting' in task.process.lower() %} {% set icon_class = 'fa-cut' %}
+                        {% elif 'sewing' in task.process.lower() %} {% set icon_class = 'fa-tshirt' %}
+                        {% elif 'finishing' in task.process.lower() %} {% set icon_class = 'fa-magic' %}
+                        {% elif 'packing' in task.process.lower() %} {% set icon_class = 'fa-box-open' %}
+                        {% elif 'qc' in task.process.lower() %} {% set icon_class = 'fa-clipboard-check' %}
+                        {% endif %}
+
+                        {% set status_class = 'step-pending' %}
+                        {% set status_icon = 'fa-clock' %}
+
+                        {% if task.status == 'completed' %}
+                        {% set status_class = 'step-completed' %}
+                        {% set status_icon = 'fa-check' %}
+                        {% elif task.status == 'in_progress' %}
+                        {% set status_class = 'step-progress' %}
+                        {% set status_icon = 'fa-spinner fa-spin' %}
+                        {% elif task.status == 'assigned' %}
+                        {% set status_class = 'step-assigned' %}
+                        {% set status_icon = 'fa-user-clock' %}
+                        {% endif %}
+
+                        <div class="step-icon-box {{ status_class }}"
+                            title="{{ task.process.title() }}: {{ task.status.replace('_',' ').title() }}">
+                            <div class="step-main-icon"><i class="fas {{ icon_class }}"></i></div>
+                            <div class="step-status-indicator"><i class="fas {{ status_icon }}"></i></div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- QC Status -->
+                <div class="status-column">
+                    <div class="prod-status-label">QC Status</div>
+                    <div class="prod-steps-summary qc-steps">
+                        {% for task in order.production_tasks.order_by('sequence').all() %}
+                        {% set icon_class = 'fa-tasks' %}
+                        {% if 'cutting' in task.process.lower() %} {% set icon_class = 'fa-cut' %}
+                        {% elif 'sewing' in task.process.lower() %} {% set icon_class = 'fa-tshirt' %}
+                        {% elif 'finishing' in task.process.lower() %} {% set icon_class = 'fa-magic' %}
+                        {% elif 'packing' in task.process.lower() %} {% set icon_class = 'fa-box-open' %}
+                        {% elif 'qc' in task.process.lower() %} {% set icon_class = 'fa-clipboard-check' %}
+                        {% endif %}
+
+                        {% set ns = namespace(is_submitted=false) %}
+
+                        {% for sheet in task.qc_sheets.all() %}
+                        {% if sheet.result %}
+                        {% set result_val = sheet.result.value if sheet.result.value is defined else sheet.result %}
+                        {% if result_val and result_val != 'pending' %}
+                        {% set ns.is_submitted = true %}
+                        {% endif %}
+                        {% endif %}
+                        {% endfor %}
+
+                        {% if ns.is_submitted %}
+                        <div class="step-icon-box step-qc-submitted" title="{{ task.process.title() }} QC: Submitted">
+                            <div class="step-main-icon"><i class="fas {{ icon_class }}"></i></div>
+                            <div class="step-status-indicator"><i class="fas fa-check"></i></div>
+                        </div>
+                        {% else %}
+                        <div class="step-icon-box step-qc-pending" title="{{ task.process.title() }} QC: Not Submitted">
+                            <div class="step-main-icon"><i class="fas {{ icon_class }}"></i></div>
+                            <div class="step-status-indicator"><i class="fas fa-clock"></i></div>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="prod-card-footer">
+            <button class="btn btn-primary btn-sm" onclick="viewProduction({{order.id}})">
+                <i class="fas fa-tasks me-1"></i> Lihat Status Produksi
+            </button>
+            <button class="btn btn-outline-success btn-sm"
+                onclick="viewQCChecklists({{order.id}}, '{{ order.order_code }}', '{{ order.model }}', '{{ order.customer.name if order.customer else '-' }}'); event.stopPropagation();">
+                <i class="fas fa-clipboard-check me-1"></i> QC Checklist
+            </button>
+        </div>
+    </div>
+
+    <!-- Hidden Details Container (Preserves original structure for Modal) -->
+    <div id="details-{{order.id}}" class="d-none" style="display: none !important;">
+        <div class="production-tasks"> <!-- Content to be moved to modal -->
+
+            <!-- Original Content Start -->
             <div class="process-flow">
                 {% for task in order.production_tasks.order_by('sequence').all() %}
                 <div class="process-step status-{{ task.status }}" data-task-id="{{ task.id }}">
@@ -74,30 +245,45 @@
 
                     <!-- Workers Section -->
                     <div class="step-workers">
-                        <div class="workers-label">
-                            <i class="fas fa-users"></i> Workers
+                        <div class="workers-header">
+                            <div class="workers-label">
+                                <i class="fas fa-users"></i> Workers
+                            </div>
+                            {% if task.status in ['pending', 'assigned'] %}
+                            <button class="btn btn-xs btn-outline-primary add-worker-btn"
+                                onclick="addWorker({{ task.id }}); event.stopPropagation();">
+                                <i class="fas fa-user-plus"></i> Tambah
+                            </button>
+                            {% endif %}
                         </div>
                         <div class="workers-list">
                             {% for log in task.worker_logs.all() %}
                             <div class="worker-item" data-log-id="{{ log.id }}">
-                                <span class="worker-name">{{ log.employee.name if log.employee else '?' }}</span>
+                                <div class="worker-info">
+                                    <span class="worker-avatar">{{ log.employee.name[0].upper() if log.employee else '?'
+                                        }}</span>
+                                    <span class="worker-name">{{ log.employee.name if log.employee else '?' }}</span>
+                                </div>
                                 {% if task.status == 'in_progress' %}
-                                <input type="number" class="qty-input" value="{{ log.qty_completed }}" min="0"
-                                    placeholder="qty" onchange="updateWorkerQty({{ log.id }}, this.value)">
+                                <div class="worker-qty-controls">
+                                    <input type="number" class="qty-input" id="qty-{{ log.id }}"
+                                        value="{{ log.qty_completed }}" min="0" placeholder="qty">
+                                    <button class="btn btn-xs btn-confirm-qty"
+                                        onclick="confirmWorkerQty({{ log.id }}); event.stopPropagation();"
+                                        title="Simpan">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                </div>
                                 {% elif task.status == 'completed' %}
-                                <span class="worker-qty">{{ log.qty_completed }}</span>
+                                <span class="worker-qty-badge">{{ log.qty_completed }} pcs</span>
                                 {% endif %}
                             </div>
                             {% else %}
-                            <span class="no-workers">Belum ada worker</span>
+                            <div class="no-workers-msg">
+                                <i class="fas fa-info-circle"></i> Belum ada worker ditugaskan
+                            </div>
                             {% endfor %}
                         </div>
-                        {% if task.status in ['pending', 'assigned'] %}
-                        <button class="btn btn-xs btn-outline add-worker-btn"
-                            onclick="addWorker({{ task.id }}); event.stopPropagation();">
-                            <i class="fas fa-user-plus"></i> Tambah Worker
-                        </button>
-                        {% endif %}
                     </div>
 
                     <!-- Action Buttons - Contextual based on status -->
@@ -117,26 +303,30 @@
                             <i class="fas fa-check"></i> Selesai
                         </button>
                         {% elif task.status == 'completed' %}
-                        <div class="completed-badge">
-                            <i class="fas fa-check-circle"></i> Completed
+                        <div class="completed-actions">
+                            <div class="completed-badge">
+                                <i class="fas fa-check-circle"></i> Completed
+                            </div>
+                            <a href="{{ url_for('views.qc_inspect', task_id=task.id) }}" class="btn btn-qc-checklist">
+                                <i class="fas fa-clipboard-check"></i> QC Checklist
+                            </a>
                         </div>
-                        <a href="{{ url_for('views.qc_inspect', task_id=task.id) }}"
-                            class="btn btn-xs btn-outline-info">
-                            <i class="fas fa-clipboard-check"></i> QC Checklist
-                        </a>
                         {% endif %}
                     </div>
                 </div>
 
+                <!-- Connector Removed for cleaner modal look or keep it? Keep it if CSS supports it -->
                 {% if not loop.last %}
-                <div class="connector-line"></div>
+                <!-- <div class="connector-line"></div> -->
                 {% endif %}
                 {% endfor %}
             </div>
+            <!-- Original Content End -->
+
         </div>
     </div>
     {% else %}
-    <div class="empty-state">
+    <div class="empty-state" style="grid-column: 1 / -1;">
         <div class="empty-state-icon">
             <i class="fas fa-industry"></i>
         </div>
@@ -145,6 +335,48 @@
         <a href="{{ url_for('views.orders') }}" class="btn btn-primary">Lihat Invoices</a>
     </div>
     {% endfor %}
+</div>
+
+<!-- Timeline View Container -->
+<div class="timeline-view-container" id="timelineContainer" style="display: none;">
+    <!-- Timeline Navigation -->
+    <div class="timeline-nav">
+        <button class="timeline-nav-btn" onclick="navigateTimeline(-7)">
+            <i class="fas fa-chevron-left"></i> Minggu Sebelum
+        </button>
+        <div class="timeline-current-range" id="timelineRange">-</div>
+        <button class="timeline-nav-btn" onclick="navigateTimeline(7)">
+            Minggu Berikutnya <i class="fas fa-chevron-right"></i>
+        </button>
+    </div>
+
+    <!-- Scrollable Timeline -->
+    <div class="timeline-scroll-wrapper" id="timelineScrollWrapper">
+        <div class="timeline-grid" id="timelineGrid">
+            <!-- Date columns will be generated by JavaScript -->
+        </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="timeline-legend">
+        <span class="legend-label">Klik card untuk melihat detail produksi</span>
+    </div>
+</div>
+
+<!-- Main Production Detail Modal -->
+<div class="modal-backdrop" id="productionDetailModal">
+    <div class="modal modal-lg"> <!-- Large modal -->
+        <div class="modal-header">
+            <h3 class="modal-title" id="detailModalTitle"><i class="fas fa-tasks"></i> Detail Produksi</h3>
+            <button class="modal-close" onclick="closeProductionDetailModal()">&times;</button>
+        </div>
+        <div class="modal-body bg-light p-4">
+            <!-- Content will be injected here via JS -->
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeProductionDetailModal()">Tutup</button>
+        </div>
+    </div>
 </div>
 
 <!-- Add Worker Modal -->
@@ -208,7 +440,28 @@
     </div>
 </div>
 
+<!-- QC Checklists Modal -->
+<div class="modal-backdrop" id="qcChecklistsModal">
+    <div class="modal modal-lg">
+        <div class="modal-header">
+            <h3 class="modal-title" id="qcChecklistsModalTitle">
+                <i class="fas fa-clipboard-list"></i> QC Checklists
+            </h3>
+            <button class="modal-close" onclick="closeModal('qcChecklistsModal')">&times;</button>
+        </div>
+        <div class="modal-body" id="qcChecklistsModalBody">
+            <!-- Checklists will be populated here -->
+        </div>
+    </div>
+</div>
+
 <style>
+    /* Modal Transition Fix */
+    .modal-body {
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+
     /* Status Legend */
     .status-legend {
         display: flex;
@@ -228,6 +481,7 @@
         border-radius: 50%;
     }
 
+    /* Use same color vars as DSO management */
     .dot.pending {
         background: var(--gray-400);
     }
@@ -244,144 +498,518 @@
         background: #10B981;
     }
 
-    /* Production Card */
-    .orders-production-list {
-        display: flex;
-        flex-direction: column;
-        gap: 1.5rem;
+    /* QC Status Dots */
+    .dot.qc-pending {
+        background: var(--gray-400);
     }
 
-    .production-card {
-        background: var(--bg-primary);
-        border-radius: var(--radius-lg);
-        box-shadow: var(--shadow);
+    .dot.qc-pass {
+        background: #10B981;
+    }
+
+    .dot.qc-fail {
+        background: #EF4444;
+    }
+
+    .dot.qc-conditional {
+        background: #F59E0B;
+    }
+
+    /* Legend Groups */
+    .legend-groups {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .legend-group {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .legend-title {
+        font-weight: 600;
+        font-size: 0.75rem;
+        color: var(--gray-600);
+        min-width: 55px;
+    }
+
+    /* Dual Status Grid */
+    .dual-status-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .status-column {
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Step Icon Box - base structure for QC Status icons */
+    .step-icon-box {
+        width: 48px;
+        height: 48px;
+        border-radius: var(--radius);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        transition: all var(--transition);
+    }
+
+    .step-icon-box .step-main-icon {
+        font-size: 1.25rem;
+    }
+
+    .step-icon-box .step-status-indicator {
+        position: absolute;
+        bottom: -4px;
+        right: -4px;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.6rem;
+        border: 2px solid white;
+    }
+
+    /* QC Step Icon Colors - matching Production Status style, using higher specificity */
+    .step-icon-box.step-qc-pending {
+        background: var(--gray-100) !important;
+    }
+
+    .step-icon-box.step-qc-pending .step-main-icon {
+        color: var(--gray-400);
+    }
+
+    .step-icon-box.step-qc-pending .step-status-indicator {
+        background: var(--gray-400);
+        color: white;
+    }
+
+    /* QC Submitted Status */
+    .step-icon-box.step-qc-submitted {
+        background: #D1FAE5 !important;
+    }
+
+    .step-icon-box.step-qc-submitted .step-main-icon {
+        color: #059669;
+    }
+
+    .step-icon-box.step-qc-submitted .step-status-indicator {
+        background: #10B981;
+        color: white;
+    }
+
+    /* Keep legacy styles for compatibility */
+    .step-icon-box.step-qc-pass {
+        background: #D1FAE5 !important;
+    }
+
+    .step-icon-box.step-qc-pass .step-main-icon {
+        color: #059669;
+    }
+
+    .step-icon-box.step-qc-pass .step-status-indicator {
+        background: #10B981;
+        color: white;
+    }
+
+    .step-icon-box.step-qc-fail {
+        background: #D1FAE5 !important;
+    }
+
+    .step-icon-box.step-qc-fail .step-main-icon {
+        color: #059669;
+    }
+
+    .step-icon-box.step-qc-fail .step-status-indicator {
+        background: #10B981;
+        color: white;
+    }
+
+    .step-icon-box.step-qc-conditional {
+        background: #D1FAE5 !important;
+    }
+
+    .step-icon-box.step-qc-conditional .step-main-icon {
+        color: #059669;
+    }
+
+    .step-icon-box.step-qc-conditional .step-status-indicator {
+        background: #10B981;
+        color: white;
+    }
+
+    /* Button Outline Success */
+    .btn-outline-success {
+        background: transparent;
+        border: 1px solid #10B981;
+        color: #10B981;
+    }
+
+    .btn-outline-success:hover {
+        background: #10B981;
+        color: white;
+    }
+
+    /* QC Checklists Modal Styles */
+    .checklists-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .checklist-item {
+        background: white;
+        border-radius: var(--radius);
+        border-left: 4px solid var(--gray-300);
+        border: 1px solid var(--gray-200);
+        transition: all var(--transition);
         overflow: hidden;
     }
 
-    /* Order Header */
-    .production-header {
+    .checklist-item:hover {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .checklist-item.status-pending {
+        border-left: 4px solid var(--gray-400);
+    }
+
+    .checklist-item.status-pass {
+        border-left: 4px solid #10B981;
+    }
+
+    .checklist-item.status-fail {
+        border-left: 4px solid #EF4444;
+    }
+
+    .checklist-item.status-conditional_pass {
+        border-left: 4px solid #F59E0B;
+    }
+
+    .checklist-item.status-submitted {
+        border-left: 4px solid #10B981;
+    }
+
+    .checklist-main {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 1.25rem;
-        cursor: pointer;
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-        border-bottom: 1px solid var(--gray-200);
-        transition: background var(--transition);
+        padding: 1rem;
     }
 
-    .production-header:hover {
-        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-    }
-
-    .order-info {
-        display: flex;
-        align-items: center;
-        gap: 1.5rem;
-    }
-
-    .order-badge {
-        background: linear-gradient(135deg, #10B981 0%, #059669 100%);
-        color: white;
-        padding: 0.5rem 1rem;
-        border-radius: var(--radius);
-        font-weight: 600;
-        font-size: 0.875rem;
-    }
-
-    .order-main {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .order-code {
-        font-size: 0.75rem;
-        color: var(--gray-500);
-        font-weight: 600;
-    }
-
-    .order-model {
-        font-size: 1.25rem;
-        font-weight: 700;
-        margin: 0;
-    }
-
-    .order-qty {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 0.5rem 1rem;
-        background: var(--gray-100);
-        border-radius: var(--radius);
-    }
-
-    .qty-value {
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: var(--primary);
-    }
-
-    .qty-label {
-        font-size: 0.7rem;
-        color: var(--gray-500);
-    }
-
-    .order-status-area {
+    .checklist-info {
         display: flex;
         align-items: center;
         gap: 1rem;
     }
 
-    .deadline-badge {
+    .checklist-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .checklist-footer {
+        background: #10B981;
+        padding: 0.5rem 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .report-link {
+        color: white;
+        font-size: 0.8125rem;
+        font-weight: 500;
         display: flex;
         align-items: center;
         gap: 0.5rem;
-        padding: 0.5rem 1rem;
-        background: var(--gray-100);
-        border-radius: var(--radius);
-        font-size: 0.875rem;
     }
 
-    .deadline-badge.overdue {
-        background: #FEE2E2;
+    .report-link i {
+        font-size: 0.75rem;
+    }
+
+    .qc-stats-inline {
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    .stat-badge {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .stat-badge.success {
+        background: rgba(255, 255, 255, 0.9);
+        color: #059669;
+    }
+
+    .stat-badge.danger {
+        background: rgba(255, 255, 255, 0.9);
         color: #DC2626;
     }
 
-    .progress-ring {
-        width: 50px;
-        height: 50px;
-        background: linear-gradient(135deg, #10B981 0%, #059669 100%);
-        border-radius: 50%;
+    .stat-badge i {
+        font-size: 0.625rem;
+    }
+
+    .btn-outline-primary {
+        background: transparent;
+        border: 1px solid var(--primary);
+        color: var(--primary);
+    }
+
+    .btn-outline-primary:hover {
+        background: var(--primary);
+        color: white;
+    }
+
+    .process-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: var(--radius);
         display: flex;
         align-items: center;
         justify-content: center;
+        font-size: 1.25rem;
     }
 
-    .progress-value {
-        color: white;
+    .process-icon.cutting {
+        background: #DBEAFE;
+        color: #1E40AF;
+    }
+
+    .process-icon.sewing {
+        background: #FEF3C7;
+        color: #92400E;
+    }
+
+    .process-icon.sablon {
+        background: #FCE7F3;
+        color: #9D174D;
+    }
+
+    .process-icon.finishing {
+        background: #E0E7FF;
+        color: #3730A3;
+    }
+
+    .process-icon.packing {
+        background: #D1FAE5;
+        color: #065F46;
+    }
+
+    .checklist-name {
+        font-weight: 600;
+    }
+
+    .checklist-status {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .qc-stats {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        font-size: 0.8125rem;
+        text-align: right;
+    }
+
+    .stat-item {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.35rem;
+        color: var(--gray-600);
+    }
+
+    .stat-item i {
+        font-size: 0.75rem;
+    }
+
+    .result-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .result-badge.pending {
+        background: var(--gray-200);
+        color: var(--gray-600);
+    }
+
+    .result-badge.submitted {
+        background: #D1FAE5;
+        color: #065F46;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .result-badge.submitted i {
+        font-size: 0.625rem;
+    }
+
+    .result-badge.pass {
+        background: #D1FAE5;
+        color: #065F46;
+    }
+
+    .result-badge.fail {
+        background: #FEE2E2;
+        color: #991B1B;
+    }
+
+    .result-badge.conditional_pass {
+        background: #FEF3C7;
+        color: #92400E;
+    }
+
+    /* Loading State */
+    .loading-state {
+        text-align: center;
+        padding: 2rem;
+        color: var(--gray-500);
+    }
+
+    /* Production Grid Layout */
+    .prod-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+        gap: 1.25rem;
+    }
+
+    .prod-card {
+        background: var(--white);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--gray-200);
+        overflow: hidden;
+        transition: all 0.2s ease;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .prod-card:hover {
+        box-shadow: var(--shadow-lg);
+        transform: translateY(-2px);
+    }
+
+    .prod-header {
+        padding: 1.25rem;
+        border-bottom: 1px solid var(--gray-100);
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        background: linear-gradient(180deg, #ffffff 0%, #fcfcfc 100%);
+    }
+
+    .prod-invoice {
+        font-size: 1.1rem;
         font-weight: 700;
-        font-size: 0.875rem;
+        color: var(--gray-900);
+        margin-bottom: 0.25rem;
+        display: flex;
+        align-items: center;
     }
 
-    .expand-icon {
-        color: var(--gray-400);
-        transition: transform var(--transition);
+    .badge {
+        display: inline-block;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
     }
 
-    .production-card.expanded .expand-icon {
-        transform: rotate(180deg);
+    .badge-warning {
+        background: #FEF3C7;
+        color: #D97706;
     }
 
-    /* Production Tasks - Process Flow */
-    .production-tasks {
-        display: none;
-        padding: 1.5rem;
+    .badge-success {
+        background: #D1FAE5;
+        color: #059669;
     }
 
-    .production-card.expanded .production-tasks {
-        display: block;
+    .prod-model {
+        color: var(--gray-500);
+        font-size: 0.9rem;
     }
 
+    .prod-progress-badge {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.375rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        background: #F0F9FF;
+        color: #0284C7;
+        border: 1px solid #BAE6FD;
+    }
+
+    .prod-card-body {
+        padding: 1.25rem;
+        flex: 1;
+        /* Push footer down */
+    }
+
+    .prod-info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .prod-info-item {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .prod-info-label {
+        font-size: 0.75rem;
+        color: var(--gray-500);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.25rem;
+    }
+
+    .prod-info-value {
+        font-weight: 500;
+        color: var(--gray-800);
+        font-size: 0.9rem;
+    }
+
+    .prod-card-footer {
+        padding: 1rem 1.25rem;
+        background: var(--gray-50);
+        border-top: 1px solid var(--gray-100);
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    .prod-card-footer .btn {
+        flex: 1;
+        justify-content: center;
+    }
+
+    /* Reuse existing Process Flow Styles but ensure they work in modal */
     .process-flow {
         display: flex;
         flex-direction: column;
@@ -394,8 +1022,10 @@
         padding: 1.25rem;
         border-left: 4px solid var(--gray-300);
         transition: all var(--transition);
+        margin-bottom: 0.5rem;
     }
 
+    /* Rest of existing styles (colors etc) are preserved below implicitly or we keep them */
     .process-step.status-pending {
         border-left-color: var(--gray-400);
     }
@@ -415,14 +1045,6 @@
         background: #ECFDF5;
     }
 
-    .connector-line {
-        width: 2px;
-        height: 20px;
-        background: var(--gray-300);
-        margin-left: 2rem;
-    }
-
-    /* Step Header */
     .step-header {
         display: flex;
         align-items: center;
@@ -436,10 +1058,12 @@
         background: var(--gray-200);
         border-radius: 50%;
         display: flex;
-        align-items: center;
+        align-items:
+            center;
         justify-content: center;
         font-weight: 700;
         font-size: 0.875rem;
+        flex-shrink: 0;
     }
 
     .status-completed .step-number {
@@ -468,26 +1092,6 @@
         font-size: 1rem;
     }
 
-    .process-name.cutting {
-        color: #1E40AF;
-    }
-
-    .process-name.sewing {
-        color: #92400E;
-    }
-
-    .process-name.sablon {
-        color: #9D174D;
-    }
-
-    .process-name.finishing {
-        color: #3730A3;
-    }
-
-    .process-name.packing {
-        color: #065F46;
-    }
-
     .status-badge {
         padding: 0.25rem 0.5rem;
         border-radius: var(--radius-sm);
@@ -496,27 +1100,6 @@
         text-transform: uppercase;
     }
 
-    .status-badge.pending {
-        background: var(--gray-200);
-        color: var(--gray-600);
-    }
-
-    .status-badge.assigned {
-        background: #FEF3C7;
-        color: #92400E;
-    }
-
-    .status-badge.in_progress {
-        background: #DBEAFE;
-        color: #1E40AF;
-    }
-
-    .status-badge.completed {
-        background: #D1FAE5;
-        color: #065F46;
-    }
-
-    /* Step Progress */
     .step-progress {
         display: flex;
         align-items: center;
@@ -526,154 +1109,925 @@
 
     .progress-bar-container {
         flex: 1;
-        height: 8px;
-        background: var(--gray-200);
+        height: 6px;
+        background: transparent;
+        border: 1px solid var(--gray-300);
         border-radius: 4px;
         overflow: hidden;
     }
 
     .progress-bar-fill {
         height: 100%;
-        background: linear-gradient(90deg, #3B82F6 0%, #10B981 100%);
-        border-radius: 4px;
-        transition: width var(--transition);
+        background: var(--primary);
+        border-radius: 3px;
+        transition: width 0.3s;
     }
 
-    .step-progress .progress-text {
-        font-weight: 600;
-        font-size: 0.875rem;
-        min-width: 60px;
+    .progress-text {
+        font-size: 0.8125rem;
+        color: var(--gray-500);
+        font-weight: 500;
+        min-width: 70px;
         text-align: right;
     }
 
-    /* Workers Section */
     .step-workers {
         background: white;
-        border-radius: var(--radius);
-        padding: 0.75rem;
+        border-radius: 12px;
+        padding: 1rem;
         margin-bottom: 1rem;
+        border: 1px solid var(--gray-200);
+    }
+
+    .workers-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
     }
 
     .workers-label {
-        font-size: 0.75rem;
-        color: var(--gray-500);
-        margin-bottom: 0.5rem;
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: var(--gray-600);
         display: flex;
         align-items: center;
-        gap: 0.25rem;
+        gap: 0.5rem;
+    }
+
+    .workers-label i {
+        margin-right: 0.25rem;
+    }
+
+    .add-worker-btn {
+        font-size: 0.75rem;
+        padding: 0.35rem 0.75rem;
+    }
+
+    .btn-outline-primary {
+        background: transparent;
+        border: 1px solid var(--primary);
+        color: var(--primary);
+    }
+
+    .btn-outline-primary:hover {
+        background: var(--primary);
+        color: white;
     }
 
     .workers-list {
         display: flex;
-        flex-wrap: wrap;
+        flex-direction: column;
         gap: 0.5rem;
-        margin-bottom: 0.5rem;
     }
 
     .worker-item {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
-        padding: 0.25rem 0.75rem;
+        justify-content: space-between;
+        padding: 0.5rem 0.75rem;
+        background: var(--gray-50);
+        border-radius: 8px;
+        font-size: 0.875rem;
+        border: 1px solid var(--gray-100);
+        transition: all 0.2s;
+    }
+
+    .worker-item:hover {
         background: var(--gray-100);
-        border-radius: var(--radius);
-        font-size: 0.8125rem;
+    }
+
+    .worker-info {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .worker-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: var(--primary);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 0.875rem;
     }
 
     .worker-name {
         font-weight: 500;
+        color: var(--gray-800);
+    }
+
+    .worker-qty-controls {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
     }
 
     .qty-input {
-        width: 60px;
-        padding: 0.25rem;
+        width: 70px;
+        padding: 0.4rem 0.5rem;
         border: 1px solid var(--gray-300);
-        border-radius: var(--radius-sm);
+        border-radius: 6px;
         text-align: center;
-        font-size: 0.8125rem;
+        font-weight: 500;
+        font-size: 0.875rem;
     }
 
-    .worker-qty {
-        background: #D1FAE5;
-        color: #065F46;
-        padding: 0.125rem 0.5rem;
-        border-radius: var(--radius-sm);
-        font-weight: 600;
-        font-size: 0.75rem;
+    .qty-input:focus {
+        border-color: var(--primary);
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
     }
 
-    .no-workers {
-        color: var(--gray-400);
-        font-style: italic;
-        font-size: 0.8125rem;
-    }
-
-    .add-worker-btn {
-        margin-top: 0.5rem;
-    }
-
-    /* Step Actions */
-    .step-actions {
+    .btn-confirm-qty {
+        background: #10B981;
+        color: white;
+        border: none;
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
         display: flex;
         align-items: center;
-        gap: 1rem;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
     }
 
-    .action-hint {
+    .btn-confirm-qty:hover {
+        background: #059669;
+        transform: scale(1.05);
+    }
+
+    .worker-qty-badge {
+        background: #D1FAE5;
+        color: #065F46;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .no-workers-msg {
         color: var(--gray-500);
         font-size: 0.8125rem;
+        padding: 0.5rem;
         display: flex;
         align-items: center;
         gap: 0.5rem;
     }
 
-    .btn-action {
-        padding: 0.75rem 1.5rem;
-        font-weight: 600;
+    /* Completed Actions */
+    .completed-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
     }
 
     .completed-badge {
+        background: #D1FAE5;
+        color: #065F46;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
         display: flex;
         align-items: center;
         gap: 0.5rem;
-        color: #10B981;
+        font-size: 0.875rem;
+    }
+
+    .completed-badge i {
+        margin-right: 0.25rem;
+    }
+
+    .btn-qc-checklist {
+        background: var(--primary);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s;
+        text-decoration: none;
+    }
+
+    .btn-qc-checklist:hover {
+        background: var(--primary-dark, #1d4ed8);
+        color: white;
+    }
+
+    .btn-qc-checklist i {
+        margin-right: 0.25rem;
+    }
+
+    /* Filter & Search Styles */
+    .status-tabs {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+    }
+
+    .status-tab {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.875rem 1.25rem;
+        background: var(--white);
+        border: 2px solid var(--gray-200);
+        border-radius: var(--radius-lg);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-weight: 500;
+        color: var(--gray-600);
+    }
+
+    .status-tab:hover {
+        border-color: var(--primary);
+        color: var(--primary);
+    }
+
+    .status-tab.active {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: white;
+    }
+
+    .status-tab i {
+        font-size: 1.1rem;
+    }
+
+    .search-row {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .search-group {
+        flex: 1;
+        position: relative;
+    }
+
+    .search-icon {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--gray-400);
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 1rem 1rem 1rem 3rem;
+        border: 1px solid var(--gray-200);
+        border-radius: var(--radius-lg);
+        font-size: 0.95rem;
+        transition: all 0.2s ease;
+    }
+
+    .search-input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        outline: none;
+    }
+
+    @media (max-width: 768px) {
+        .prod-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .status-tab {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+
+    /* View Toggle Styles */
+    .view-toggle {
+        display: flex;
+        gap: 0.5rem;
+        background: var(--gray-100);
+        padding: 0.25rem;
+        border-radius: var(--radius);
+    }
+
+    .view-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border: none;
+        background: transparent;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        font-weight: 500;
+        font-size: 0.875rem;
+        color: var(--gray-600);
+        transition: all 0.2s;
+    }
+
+    .view-btn:hover {
+        color: var(--primary);
+    }
+
+    .view-btn.active {
+        background: var(--white);
+        color: var(--primary);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .search-row {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .search-group {
+        flex: 1;
+    }
+
+    /* Timeline View Styles */
+    .timeline-view-container {
+        background: var(--white);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+    }
+
+    /* ========================================
+       TIMELINE VIEW - ROBUST & MOBILE-FRIENDLY
+       ======================================== */
+
+    /* Main Timeline Container - Clear Section */
+    .timeline-view-container {
+        width: 100%;
+        /* Force max-width relative to viewport to prevent page overflowing */
+        max-width: calc(100vw - 320px);
+        min-width: 0;
+        margin: 0;
+        box-sizing: border-box;
+        background: var(--white);
+        border-radius: 16px;
+        border: 2px solid var(--gray-200);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    @media (max-width: 1024px) {
+        .timeline-view-container {
+            max-width: calc(100vw - 4rem);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .timeline-view-container {
+            max-width: calc(100vw - 2rem);
+        }
+    }
+
+    /* Navigation Header */
+    .timeline-nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.25rem;
+        background: linear-gradient(135deg, var(--gray-50) 0%, var(--white) 100%);
+        border-bottom: 2px solid var(--gray-200);
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .timeline-nav-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.625rem 1rem;
+        border: 2px solid var(--gray-300);
+        background: var(--white);
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: var(--gray-700);
+        transition: all 0.2s ease;
+        min-height: 44px;
+        /* Touch-friendly minimum */
+    }
+
+    .timeline-nav-btn:hover,
+    .timeline-nav-btn:active {
+        border-color: var(--primary);
+        color: var(--primary);
+        background: rgba(16, 185, 129, 0.05);
+        transform: translateY(-1px);
+    }
+
+    .timeline-current-range {
+        font-weight: 700;
+        color: var(--gray-800);
+        font-size: 1rem;
+        text-align: center;
+        flex: 1;
+        min-width: 150px;
+    }
+
+    /* Scrollable Timeline Area */
+    .timeline-scroll-wrapper {
+        flex: 1;
+        overflow-x: auto;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        /* Smooth scrolling on iOS */
+        scroll-behavior: smooth;
+        padding: 1.25rem;
+        background: var(--gray-50);
+        min-height: 400px;
+        max-height: calc(100vh - 320px);
+    }
+
+    /* Styled Scrollbars */
+    .timeline-scroll-wrapper::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+
+    .timeline-scroll-wrapper::-webkit-scrollbar-track {
+        background: var(--gray-100);
+        border-radius: 5px;
+    }
+
+    .timeline-scroll-wrapper::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, var(--gray-400) 0%, var(--gray-500) 100%);
+        border-radius: 5px;
+        border: 2px solid var(--gray-100);
+    }
+
+    .timeline-scroll-wrapper::-webkit-scrollbar-thumb:hover {
+        background: var(--primary);
+    }
+
+    /* Firefox scrollbar */
+    .timeline-scroll-wrapper {
+        scrollbar-width: thin;
+        scrollbar-color: var(--gray-400) var(--gray-100);
+    }
+
+    /* Timeline Grid */
+    .timeline-grid {
+        display: flex;
+        gap: 1rem;
+        min-width: max-content;
+        padding-bottom: 0.5rem;
+    }
+
+    /* Date Column */
+    .timeline-column {
+        width: 280px;
+        min-width: 280px;
+        flex-shrink: 0;
+        background: var(--white);
+        border-radius: 12px;
+        border: 1px solid var(--gray-200);
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+
+    /* Date Header */
+    .timeline-date-header {
+        padding: 1rem;
+        background: var(--gray-100);
+        text-align: center;
+        border-bottom: 2px solid var(--gray-200);
+    }
+
+    .timeline-date-header.is-today {
+        background: linear-gradient(135deg, var(--primary) 0%, #059669 100%);
+        color: white;
+        border-bottom-color: transparent;
+    }
+
+    .timeline-date-header.is-past {
+        background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%);
+        color: #991B1B;
+        border-bottom-color: #FECACA;
+    }
+
+    .timeline-weekday {
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        opacity: 0.85;
+    }
+
+    .timeline-day {
+        font-size: 2rem;
+        font-weight: 800;
+        line-height: 1.1;
+        margin: 0.125rem 0;
+    }
+
+    .timeline-month {
+        font-size: 0.8rem;
+        font-weight: 600;
+        opacity: 0.85;
+    }
+
+    /* Cards Container */
+    .timeline-cards {
+        padding: 0.75rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        min-height: 120px;
+    }
+
+    /* Production Card */
+    .timeline-card {
+        background: var(--white);
+        border-radius: 10px;
+        border: 2px solid var(--gray-200);
+        overflow: hidden;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .timeline-card:hover,
+    .timeline-card:active {
+        border-color: var(--primary);
+        box-shadow: 0 6px 16px rgba(16, 185, 129, 0.15);
+        transform: translateY(-2px);
+    }
+
+    .timeline-card-main {
+        padding: 0.875rem;
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .timeline-card-info {
+        flex: 1;
+        min-width: 0;
+        /* Allow text truncation */
+    }
+
+    .timeline-card-invoice {
+        font-weight: 700;
+        font-size: 0.9rem;
+        color: var(--gray-900);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .timeline-card-model {
+        font-size: 0.8rem;
+        color: var(--gray-600);
+        margin-top: 0.125rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .timeline-card-customer {
+        font-size: 0.75rem;
+        color: var(--gray-500);
+        margin-top: 0.375rem;
+    }
+
+    .timeline-card-customer strong {
+        display: block;
+        font-size: 0.625rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--gray-400);
+        margin-bottom: 0.125rem;
+    }
+
+    /* Action Buttons */
+    .timeline-card-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.375rem;
+    }
+
+    .timeline-action-btn {
+        width: 40px;
+        height: 40px;
+        min-width: 40px;
+        min-height: 40px;
+        border-radius: 8px;
+        border: 2px solid var(--primary);
+        background: var(--white);
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-size: 1rem;
+    }
+
+    .timeline-action-btn:hover,
+    .timeline-action-btn:active {
+        background: var(--primary);
+        color: var(--white);
+        transform: scale(1.05);
+    }
+
+    /* Card Footer */
+    .timeline-card-footer {
+        background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+        padding: 0.5rem 0.875rem;
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: white;
+        text-align: center;
+        letter-spacing: 0.02em;
+    }
+
+    /* Empty State */
+    .timeline-empty {
+        padding: 2rem 1rem;
+        text-align: center;
+        color: var(--gray-400);
+        font-size: 0.8rem;
+        font-style: italic;
+    }
+
+    /* Legend */
+    .timeline-legend {
+        padding: 0.875rem 1.25rem;
+        border-top: 2px solid var(--gray-200);
+        background: var(--white);
+        text-align: center;
+    }
+
+    .timeline-legend .legend-label {
+        color: var(--gray-500);
+        font-size: 0.8rem;
+    }
+
+    /* ========================================
+       MOBILE RESPONSIVE STYLES
+       ======================================== */
+    @media (max-width: 768px) {
+        .timeline-view-container {
+            border-radius: 12px;
+            border-width: 1px;
+        }
+
+        .timeline-nav {
+            flex-direction: column;
+            padding: 1rem;
+            gap: 0.75rem;
+        }
+
+        .timeline-nav-btn {
+            width: 100%;
+            justify-content: center;
+            padding: 0.75rem 1rem;
+        }
+
+        .timeline-current-range {
+            order: -1;
+            width: 100%;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--gray-200);
+            margin-bottom: 0.25rem;
+        }
+
+        .timeline-scroll-wrapper {
+            padding: 1rem;
+            min-height: 350px;
+            max-height: calc(100vh - 400px);
+        }
+
+        .timeline-column {
+            width: 260px;
+            min-width: 260px;
+        }
+
+        .timeline-date-header {
+            padding: 0.75rem;
+        }
+
+        .timeline-day {
+            font-size: 1.75rem;
+        }
+
+        .timeline-card-main {
+            padding: 0.75rem;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .timeline-card-actions {
+            flex-direction: row;
+            width: 100%;
+            justify-content: flex-end;
+        }
+
+        .timeline-action-btn {
+            width: 44px;
+            height: 44px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .timeline-column {
+            width: 240px;
+            min-width: 240px;
+        }
+
+        .timeline-nav-btn {
+            font-size: 0.8rem;
+        }
+
+        .timeline-card-invoice {
+            font-size: 0.85rem;
+        }
+
+        .timeline-card-footer {
+            font-size: 0.65rem;
+            padding: 0.375rem 0.75rem;
+        }
+    }
+
+    }
+
+
+    /* Production Steps Summary (Visual Icons) */
+    .prod-status-label {
+        font-size: 0.75rem;
+        color: var(--gray-500);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
         font-weight: 600;
     }
 
-    /* Form Row */
-    .form-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1rem;
+    .prod-steps-summary {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
     }
 
-    /* Responsive */
-    @media (max-width: 768px) {
-        .order-info {
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
+    .step-icon-box {
+        position: relative;
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--gray-100);
+        color: var(--gray-500);
+        transition: all 0.2s;
+    }
 
-        .order-status-area {
-            flex-wrap: wrap;
-        }
+    .step-icon-box .step-main-icon {
+        font-size: 1.25rem;
+    }
 
-        .status-legend {
-            display: none;
-        }
+    .step-status-indicator {
+        position: absolute;
+        bottom: -6px;
+        right: -6px;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.65rem;
+        border: 2px solid white;
+        background: var(--gray-400);
+        color: white;
+    }
 
-        .form-row {
-            grid-template-columns: 1fr;
-        }
+    /* Status Colors for Steps */
+    .step-completed {
+        background: #D1FAE5;
+        /* Green Light */
+        color: #059669;
+        /* Green Dark */
+    }
+
+    .step-completed .step-status-indicator {
+        background: #10B981;
+    }
+
+    .step-progress {
+        background: #DBEAFE;
+        /* Blue Light */
+        color: #2563EB;
+        /* Blue Dark */
+    }
+
+    .step-progress .step-status-indicator {
+        background: #3B82F6;
+    }
+
+    .step-assigned {
+        background: #FEF3C7;
+        /* Yellow Light */
+        color: #D97706;
+        /* Yellow Dark */
+    }
+
+    .step-assigned .step-status-indicator {
+        background: #F59E0B;
+    }
+
+    .step-pending {
+        background: var(--gray-100);
+        color: var(--gray-400);
     }
 </style>
 
+
+<!-- DATA ISLAND: JSON Data for Timeline (Safe from JS Auto-formatters) -->
+<script id="timeline-orders-data" type="application/json">
+[
+    {% for order in orders %}
+    {
+        "id": {{order.id}},
+        "order_code": "{{order.order_code}}",
+        "model": "{{order.model}}", 
+        "customer_name": "{{order.customer.name if order.customer else '-'}}",
+        "deadline": {% if order.deadline %}"{{order.deadline.strftime('%Y-%m-%d')}}"{% else %}null{% endif %},
+        "production_progress": {{order.get_production_progress()}},
+        "tasks_total": {{order.production_tasks.count()}},
+        "tasks_completed": {{order.production_tasks.filter_by(status='completed').count()}},
+        "qc_total": {{order.production_tasks.count()}},
+        "qc_submitted": 0
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+]
+</script>
+
 <script>
     let employeesData = [];
+    let currentDetailOrderId = null; // Track currently open detail
+    let activeStatusFilter = 'all';
 
     document.addEventListener('DOMContentLoaded', () => {
         loadEmployees();
+        setupFilters();
     });
+
+    function setupFilters() {
+        const tabs = document.querySelectorAll('.status-tab');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Remove active class from all
+                tabs.forEach(t => t.classList.remove('active'));
+                // Add to clicked
+                tab.classList.add('active');
+
+                // Update filter
+                activeStatusFilter = tab.getAttribute('data-filter');
+                filterProduction();
+            });
+        });
+    }
+
+    function filterProduction() {
+        const searchTerm = document.getElementById('prodSearchInput').value.toLowerCase();
+        const cards = document.querySelectorAll('.prod-card');
+
+        cards.forEach(card => {
+            const status = card.getAttribute('data-status');
+            const searchData = card.getAttribute('data-search');
+
+            // Check Status Match
+            const statusMatch = activeStatusFilter === 'all' || status === activeStatusFilter;
+
+            // Check Search Match
+            const searchMatch = searchData.includes(searchTerm);
+
+            if (statusMatch && searchMatch) {
+                card.style.display = 'flex';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+
 
     async function loadEmployees() {
         try {
@@ -686,16 +2040,75 @@
     }
 
     function updateEmployeeSelect() {
+        // Since the select is in a global modal (workerModal), find it by ID
         const select = document.getElementById('workerEmployeeId');
-        select.innerHTML = '<option value="">-- Pilih Karyawan --</option>';
-        employeesData.forEach(emp => {
-            select.innerHTML += `<option value="${emp.id}">${emp.name} - ${emp.position || 'Staff'}</option>`;
-        });
+        if (select) {
+            select.innerHTML = '<option value="">-- Pilih Karyawan --</option>';
+            employeesData.forEach(emp => {
+                select.innerHTML += `<option value="${emp.id}">${emp.name} - ${emp.position || 'Staff'}</option>`;
+            });
+        }
     }
 
-    function toggleExpand(orderId) {
-        const card = document.querySelector(`[data-order-id="${orderId}"]`);
-        card.classList.toggle('expanded');
+    function viewProduction(orderId) {
+        const modal = document.getElementById('productionDetailModal');
+        const modalBody = modal.querySelector('.modal-body');
+        const container = document.getElementById(`details-${orderId}`);
+
+        // Move content to modal
+        if (container && modalBody) {
+            currentDetailOrderId = orderId;
+            // Append child moves it from original location to new location (preserving event listeners)
+            // But we need to make sure we don't have existing content in modal
+            // First time open: modalBody is empty (or has header/footer we want to keep? No, modal-body is for content)
+
+            // If there's content in modalBody (from previous view), move it back first!
+            const existingContent = modalBody.firstElementChild;
+            if (existingContent && existingContent.getAttribute('data-original-id')) {
+                const originalId = existingContent.getAttribute('data-original-id');
+                const originalContainer = document.getElementById(`details-${originalId}`);
+                if (originalContainer) originalContainer.appendChild(existingContent);
+            } else {
+                modalBody.innerHTML = ''; // Safety clear if somehow plain text
+            }
+
+            // Now move the new content
+            const content = container.firstElementChild; // The .production-tasks div
+            if (content) {
+                // Tag it so we know where to return it
+                content.setAttribute('data-original-id', orderId);
+                modalBody.appendChild(content);
+
+                // Update Modal Title (Optional)
+                const titleEl = document.getElementById('detailModalTitle');
+                if (titleEl) {
+                    const orderCode = document.querySelector(`[data-order-card="${orderId}"] .prod-invoice`).textContent;
+                    titleEl.textContent = `Produksi: ${orderCode}`;
+                }
+
+                openModal('productionDetailModal');
+            }
+        }
+    }
+
+    // Hook into close modal logic to return content?
+    // Actually, "closeModal" function just hides the modal. It doesn't destroy content.
+    // So the content stays in modal until next "viewProduction" swaps it out.
+    // This is fine. But safer to return it on close.
+    // I'll override the default close for this modal or add a specific close handler.
+
+    function closeProductionDetailModal() {
+        const modal = document.getElementById('productionDetailModal');
+        const modalBody = modal.querySelector('.modal-body');
+        const content = modalBody.firstElementChild;
+
+        if (content && content.getAttribute('data-original-id')) {
+            const originalId = content.getAttribute('data-original-id');
+            const originalContainer = document.getElementById(`details-${originalId}`);
+            if (originalContainer) originalContainer.appendChild(content);
+        }
+
+        closeModal('productionDetailModal');
     }
 
     function addWorker(taskId) {
@@ -741,12 +2154,14 @@
 
     function completeTask(taskId) {
         document.getElementById('completeTaskId').value = taskId;
-        // Get current qty from the task row
+        // Get current qty from the DOM. Since content is moved to modal, queries should work on document
         const taskRow = document.querySelector(`[data-task-id="${taskId}"]`);
-        const progressText = taskRow.querySelector('.progress-text');
-        if (progressText) {
-            const [completed, target] = progressText.textContent.split('/');
-            document.getElementById('completeQty').value = target.trim();
+        if (taskRow) {
+            const progressText = taskRow.querySelector('.progress-text');
+            if (progressText) {
+                const [completed, target] = progressText.textContent.split('/');
+                document.getElementById('completeQty').value = target.trim();
+            }
         }
         document.getElementById('completeDefect').value = 0;
         openModal('completeModal');
@@ -770,6 +2185,47 @@
         }
     }
 
+    async function confirmWorkerQty(logId) {
+        const input = document.getElementById(`qty-${logId}`);
+        const qty = parseInt(input.value) || 0;
+
+        if (!confirm(`Simpan progress ${qty} pcs untuk worker ini?\n\nProgress bar akan otomatis terupdate.`)) {
+            return;
+        }
+
+        try {
+            const response = await api.put(`/production/workers/${logId}`, {
+                qty_completed: qty
+            });
+
+            showToast('Progress berhasil disimpan!', 'success');
+
+            // Update progress bar if task info is returned
+            if (response.data && response.data.task_progress !== undefined) {
+                const workerItem = document.querySelector(`[data-log-id="${logId}"]`);
+                if (workerItem) {
+                    const processStep = workerItem.closest('.process-step');
+                    if (processStep) {
+                        const progressFill = processStep.querySelector('.progress-bar-fill');
+                        const progressText = processStep.querySelector('.progress-text');
+
+                        if (progressFill) {
+                            progressFill.style.width = `${response.data.task_progress}%`;
+                        }
+                        if (progressText && response.data.qty_completed !== undefined) {
+                            progressText.textContent = `${response.data.qty_completed}/${response.data.qty_target}`;
+                        }
+                    }
+                }
+            } else {
+                // Fallback: reload to show updated progress
+                setTimeout(() => location.reload(), 500);
+            }
+        } catch (error) {
+            showToast(error.message || 'Gagal update progress', 'error');
+        }
+    }
+
     async function updateWorkerQty(logId, qty) {
         try {
             await api.put(`/production/workers/${logId}`, {
@@ -779,6 +2235,260 @@
         } catch (error) {
             showToast(error.message || 'Gagal update progress', 'error');
         }
+    }
+
+    // QC Functions
+    const qcProcessIcons = {
+        'cutting': 'fa-cut',
+        'sewing': 'fa-tshirt',
+        'sablon': 'fa-paint-roller',
+        'finishing': 'fa-magic',
+        'packing': 'fa-box'
+    };
+
+    async function viewQCChecklists(orderId, orderCode, model, customerName) {
+        document.getElementById('qcChecklistsModalTitle').innerHTML = `
+            <i class="fas fa-clipboard-list"></i> 
+            QC Checklists - ${orderCode}
+        `;
+
+        const body = document.getElementById('qcChecklistsModalBody');
+        body.innerHTML = '<div class="loading-state"><i class="fas fa-spinner fa-spin"></i> Memuat...</div>';
+        openModal('qcChecklistsModal');
+
+        try {
+            const response = await api.get(`/orders/${orderId}`);
+            const order = response.data;
+            const tasks = order.production_tasks || [];
+
+            const qcResponse = await api.get(`/qc/sheets?order_id=${orderId}`);
+            const qcSheets = qcResponse.data.sheets || [];
+
+            const taskQCMap = {};
+            qcSheets.forEach(sheet => {
+                if (sheet.production_task_id) {
+                    const key = String(sheet.production_task_id);
+                    const existing = taskQCMap[key];
+                    if (!existing || (existing.result === 'pending' && sheet.result !== 'pending')) {
+                        taskQCMap[key] = sheet;
+                    }
+                    else if (existing.result !== 'pending' && sheet.result !== 'pending' && sheet.id > existing.id) {
+                        taskQCMap[key] = sheet;
+                    }
+                }
+            });
+
+            body.innerHTML = `
+                <div class="order-summary" style="margin-bottom: 1.5rem; padding: 1rem; background: var(--gray-50); border-radius: var(--radius);">
+                    <strong>${customerName}</strong> - ${model}<br>
+                    <small class="text-muted">${order.qty_total} pcs | Deadline: ${order.deadline ? new Date(order.deadline).toLocaleDateString('id-ID') : '-'}</small>
+                </div>
+                <div class="checklists-grid">
+                    ${tasks.map(task => {
+                const sheet = taskQCMap[String(task.id)];
+                const isSubmitted = sheet && sheet.result && sheet.result !== 'pending';
+                const totalChecked = sheet ? (sheet.qty_inspected || 0) : 0;
+                const totalNG = sheet ? (sheet.qty_failed || 0) : 0;
+
+                return `
+                            <div class="checklist-item ${isSubmitted ? 'status-submitted' : 'status-pending'}">
+                                <div class="checklist-main">
+                                    <div class="checklist-info">
+                                        <div class="process-icon ${task.process}">
+                                            <i class="fas ${qcProcessIcons[task.process] || 'fa-check'}"></i>
+                                        </div>
+                                        <div>
+                                            <div class="checklist-name">Checklist ${capitalizeFirst(task.process)}</div>
+                                            <small class="text-muted">Task #${task.id} ${sheet ? `- ${sheet.inspection_code}` : ''}</small>
+                                        </div>
+                                    </div>
+                                    <div class="checklist-actions">
+                                        ${isSubmitted ? `
+                                            <span class="result-badge submitted"><i class="fas fa-check"></i> Submitted</span>
+                                        ` : `
+                                            <span class="result-badge pending">Belum diisi</span>
+                                        `}
+                                        <a href="/production/qc/${task.id}" class="btn btn-sm ${isSubmitted ? 'btn-outline-primary' : 'btn-primary'}">
+                                            ${isSubmitted ? '<i class="fas fa-eye"></i> Lihat/Perbarui' : '<i class="fas fa-edit"></i> Isi'}
+                                        </a>
+                                    </div>
+                                </div>
+                                ${isSubmitted ? `
+                                <div class="checklist-footer">
+                                    <div class="report-link">
+                                        <i class="fas fa-file-alt"></i> Report Checklist ${capitalizeFirst(task.process)} - ${order.order_code}
+                                    </div>
+                                    <div class="qc-stats-inline">
+                                        <span class="stat-badge success"><i class="fas fa-check-circle"></i> ${totalChecked} diperiksa</span>
+                                        <span class="stat-badge danger"><i class="fas fa-times-circle"></i> ${totalNG} NG</span>
+                                    </div>
+                                </div>
+                                ` : ''}
+                            </div>
+                        `;
+            }).join('')}
+                </div>
+            `;
+        } catch (error) {
+            body.innerHTML = `<div class="empty-state"><p>Gagal memuat: ${error.message}</p></div>`;
+        }
+    }
+
+    function capitalizeFirst(str) {
+        return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    function formatQCResult(result) {
+        const labels = {
+            'pending': 'Belum diisi',
+            'pass': '✅ Pass',
+            'fail': '❌ Fail',
+            'conditional_pass': '⚠️ Conditional',
+            'rework': '🔄 Rework'
+        };
+        return labels[result] || result;
+    }
+
+    // ===== TIMELINE VIEW FUNCTIONALITY =====
+
+    // Store orders data for timeline view
+
+    // Store orders data for timeline view - Load from JSON island to avoid Jinja syntax errors
+    let ordersData = [];
+    try {
+        const rawJson = document.getElementById('timeline-orders-data').textContent;
+        // Clean up any potential Jinja whitespace artifacts if they still sneak in
+        // but JSON block is usually safer.
+        ordersData = JSON.parse(rawJson);
+    } catch (e) {
+        console.error("Failed to parse timeline data:", e);
+        ordersData = [];
+    }
+
+
+    let timelineStartDate = new Date();
+    timelineStartDate.setHours(0, 0, 0, 0);
+    // Start from beginning of current week (Sunday)
+    timelineStartDate.setDate(timelineStartDate.getDate() - timelineStartDate.getDay());
+
+    const TIMELINE_DAYS = 14; // Show 2 weeks
+
+    function switchView(view) {
+        const listView = document.getElementById('productionGrid');
+        const timelineView = document.getElementById('timelineContainer');
+        const viewBtns = document.querySelectorAll('.view-btn');
+
+        viewBtns.forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.view === view);
+        });
+
+        if (view === 'timeline') {
+            listView.style.display = 'none';
+            timelineView.style.display = 'block';
+            renderTimeline();
+        } else {
+            listView.style.display = 'grid';
+            timelineView.style.display = 'none';
+        }
+    }
+
+    function navigateTimeline(days) {
+        timelineStartDate.setDate(timelineStartDate.getDate() + days);
+        renderTimeline();
+    }
+
+    function renderTimeline() {
+        const grid = document.getElementById('timelineGrid');
+        const rangeDisplay = document.getElementById('timelineRange');
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const endDate = new Date(timelineStartDate);
+        endDate.setDate(endDate.getDate() + TIMELINE_DAYS - 1);
+
+        // Update range display
+        const formatDate = (d) => d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+        rangeDisplay.textContent = `${formatDate(timelineStartDate)} - ${formatDate(endDate)}`;
+
+        // Group orders by deadline
+        const ordersByDate = {};
+        ordersData.forEach(order => {
+            if (order.deadline) {
+                const deadline = order.deadline;
+                if (!ordersByDate[deadline]) {
+                    ordersByDate[deadline] = [];
+                }
+                ordersByDate[deadline].push(order);
+            }
+        });
+
+        // Generate columns
+        let columnsHTML = '';
+        const weekdays = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'];
+
+        for (let i = 0; i < TIMELINE_DAYS; i++) {
+            const currentDate = new Date(timelineStartDate);
+            currentDate.setDate(currentDate.getDate() + i);
+
+            // Fix timezone issue: use local date components instead of toISOString() (which is UTC)
+            const year = currentDate.getFullYear();
+            const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+            const day = String(currentDate.getDate()).padStart(2, '0');
+            const dateStr = `${year}-${month}-${day}`;
+            const isToday = currentDate.getTime() === today.getTime();
+            const isPast = currentDate.getTime() < today.getTime();
+
+            const ordersForDate = ordersByDate[dateStr] || [];
+
+            let headerClass = '';
+            if (isToday) headerClass = 'is-today';
+            else if (isPast) headerClass = 'is-past';
+
+            columnsHTML += `
+                <div class="timeline-column">
+                    <div class="timeline-date-header ${headerClass}">
+                        <div class="timeline-weekday">${weekdays[currentDate.getDay()]}</div>
+                        <div class="timeline-day">${currentDate.getDate()}</div>
+                        <div class="timeline-month">${months[currentDate.getMonth()]}</div>
+                    </div>
+                    <div class="timeline-cards">
+                        ${ordersForDate.length > 0 ? ordersForDate.map(order => renderTimelineCard(order)).join('') : '<div class="timeline-empty">Tidak ada deadline</div>'}
+                    </div>
+                </div>
+            `;
+        }
+
+        grid.innerHTML = columnsHTML;
+    }
+
+    function renderTimelineCard(order) {
+        return `
+            <div class="timeline-card" onclick="viewProduction(${order.id})">
+                <div class="timeline-card-main">
+                    <div class="timeline-card-info">
+                        <div class="timeline-card-invoice">${order.order_code}</div>
+                        <div class="timeline-card-model">${order.model}</div>
+                        <div class="timeline-card-customer">
+                            <strong>CUSTOMER</strong>
+                            ${order.customer_name}
+                        </div>
+                    </div>
+                    <div class="timeline-card-actions">
+                        <button class="timeline-action-btn" onclick="viewProduction(${order.id}); event.stopPropagation();" title="Lihat Status Produksi">
+                            <i class="fas fa-tasks"></i>
+                        </button>
+                        <button class="timeline-action-btn" onclick="viewQCChecklists(${order.id}, '${order.order_code}', '${order.model}', '${order.customer_name}'); event.stopPropagation();" title="QC Checklist">
+                            <i class="fas fa-clipboard-check"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="timeline-card-footer">
+                    Production Status: ${order.tasks_completed}/${order.tasks_total} - QC Checklist: ${order.qc_submitted}/${order.qc_total}
+                </div>
+            </div>
+        `;
     }
 </script>
 {% endblock %}

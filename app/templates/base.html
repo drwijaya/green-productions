@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Green Production ERP - Quality Control System">
     <title>{% block title %}ERP QC{% endblock %} | Green Production</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -37,58 +38,83 @@
             <nav class="sidebar-nav">
                 <div class="nav-section">
                     <div class="nav-section-title">Menu Utama</div>
+                    {% if current_user.has_permission('dashboard') %}
                     <a href="{{ url_for('views.dashboard') }}"
                         class="nav-link {% if request.endpoint == 'views.dashboard' %}active{% endif %}">
                         <i class="fas fa-chart-pie"></i>
                         <span>Dashboard</span>
                     </a>
+                    {% endif %}
+                    {% if current_user.has_permission('invoices') %}
                     <a href="{{ url_for('views.orders') }}"
                         class="nav-link {% if 'orders' in request.endpoint %}active{% endif %}">
                         <i class="fas fa-file-invoice"></i>
                         <span>Invoices</span>
                     </a>
+                    {% endif %}
+                    {% if current_user.has_permission('dso_management') %}
+                    <a href="{{ url_for('views.dso_management') }}"
+                        class="nav-link {% if request.endpoint == 'views.dso_management' %}active{% endif %}">
+                        <i class="fas fa-drafting-compass"></i>
+                        <span>DSO Management</span>
+                    </a>
+                    {% endif %}
+                    <a href="{{ url_for('views.materials_list') }}"
+                        class="nav-link {% if 'materials' in request.endpoint %}active{% endif %}">
+                        <i class="fas fa-boxes"></i>
+                        <span>Materials Management</span>
+                    </a>
+                    {% if current_user.has_permission('production') %}
                     <a href="{{ url_for('views.production') }}"
                         class="nav-link {% if 'production' in request.endpoint %}active{% endif %}">
                         <i class="fas fa-industry"></i>
                         <span>Production Monitoring</span>
                     </a>
-                    <a href="{{ url_for('views.qc_list') }}"
-                        class="nav-link {% if 'qc' in request.endpoint %}active{% endif %}">
-                        <i class="fas fa-check-circle"></i>
+                    {% endif %}
+
+                    {% if current_user.has_permission('qc') %}
+                    <a href="{{ url_for('views.qc_monitoring') }}"
+                        class="nav-link {% if 'qc/monitoring' in request.endpoint %}active{% endif %}">
+                        <i class="fas fa-microscope"></i>
                         <span>QC Monitoring</span>
                     </a>
+                    {% endif %}
                 </div>
 
                 <div class="nav-section">
-                    <div class="nav-section-title">Resources</div>
+                    <div class="nav-section-title">Master Data</div>
+                    {% if current_user.has_permission('sop') %}
+                    <a href="{{ url_for('views.sop_list') }}"
+                        class="nav-link {% if 'sop' in request.endpoint %}active{% endif %}">
+                        <i class="fas fa-book"></i>
+                        <span>SOP Management</span>
+                    </a>
+                    {% endif %}
+
+                    {% if current_user.has_permission('customers') %}
                     <a href="{{ url_for('views.customers') }}"
                         class="nav-link {% if 'customers' in request.endpoint %}active{% endif %}">
                         <i class="fas fa-users"></i>
                         <span>Customers</span>
                     </a>
+                    {% endif %}
+                    <a href="{{ url_for('views.vendors_list') }}"
+                        class="nav-link {% if 'vendors' in request.endpoint %}active{% endif %}">
+                        <i class="fas fa-building"></i>
+                        <span>Vendors</span>
+                    </a>
+                    {% if current_user.has_permission('employees') %}
                     <a href="{{ url_for('views.employees') }}"
                         class="nav-link {% if 'employees' in request.endpoint %}active{% endif %}">
                         <i class="fas fa-id-badge"></i>
                         <span>Employees</span>
                     </a>
-                    <a href="{{ url_for('views.sop_list') }}"
-                        class="nav-link {% if 'sop' in request.endpoint %}active{% endif %}">
-                        <i class="fas fa-book"></i>
-                        <span>SOP Documents</span>
-                    </a>
+                    {% endif %}
                 </div>
 
-                <div class="nav-section">
-                    <div class="nav-section-title">Tools</div>
 
-                    <a href="{{ url_for('views.reports') }}"
-                        class="nav-link {% if 'reports' in request.endpoint %}active{% endif %}">
-                        <i class="fas fa-chart-bar"></i>
-                        <span>Reports</span>
-                    </a>
-                </div>
 
-                {% if current_user.role == 'admin' %}
+                {% if current_user.has_permission('user_management') %}
                 <div class="nav-section">
                     <div class="nav-section-title">Admin</div>
                     <a href="{{ url_for('views.users') }}"

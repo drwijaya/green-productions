@@ -119,7 +119,7 @@ class ProductionTask(db.Model):
         return data
     
     def __repr__(self):
-        return f'<ProductionTask {self.process.value} Order:{self.order_id}>'
+        return f'<ProductionTask {self.process} Order:{self.order_id}>'
 
 
 class ProductionWorkerLog(db.Model):

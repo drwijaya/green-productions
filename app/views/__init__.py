@@ -120,41 +120,87 @@ def dso_detail(dso_id):
     return render_template('dso/detail.html', dso=dso)
 
 
+@views_bp.route('/dso')
+@login_required
+def dso_management():
+    """DSO Management page - view all DSOs by status."""
+    # Get counts for each status
+    from sqlalchemy import func
+    
+    not_created_count = Order.query.filter_by(dso_status='not_created').count()
+    draft_count = Order.query.filter_by(dso_status='draft').count()
+    created_count = Order.query.filter_by(dso_status='created').count()
+    
+    return render_template('dso/management.html',
+        not_created_count=not_created_count,
+        draft_count=draft_count,
+        created_count=created_count
+    )
+
+
 @views_bp.route('/production')
 @login_required
 def production():
     """Production timeline page."""
     from datetime import date
-    # Get orders with active production (draft or in production)
+    from sqlalchemy import case
+    # Get orders with production history (draft, in_production, qc_pending, or completed)
+    # Rank statuses: in_production (1), qc_pending (2), draft (3), completed (4)
+    status_order = case(
+        {
+            'in_production': 1,
+            'qc_pending': 2,
+            'draft': 3,
+            'completed': 4
+        },
+        value=Order.status,
+        else_=5
+    )
+    
     orders = Order.query.filter(
-        Order.status.in_(['draft', 'in_production'])
-    ).order_by(Order.deadline.asc()).all()
+        Order.status.in_(['draft', 'in_production', 'qc_pending', 'completed'])
+    ).order_by(status_order, Order.deadline.asc()).all()
     return render_template('production/timeline.html', orders=orders, now=date.today())
 
 
-@views_bp.route('/qc')
+@views_bp.route('/production/qc')
 @login_required
 def qc_list():
-    """QC Reports page - optional quality documentation."""
+    """QC Reports page - integrated into Production."""
     # QC is now optional - page loads reports via JavaScript
     return render_template('qc/list.html')
 
 
-@views_bp.route('/qc/<int:task_id>')
+@views_bp.route('/production/qc/<int:task_id>')
 @login_required
 def qc_inspect(task_id):
     """QC inspection/checklist page for a task."""
     from datetime import datetime
     task = ProductionTask.query.get_or_404(task_id)
-    return render_template('qc/inspect.html', task=task, now=datetime.now())
+    
+    # Get assigned workers for this task
+    workers = task.worker_logs.all()
+    operator_names = [log.employee.name for log in workers if log.employee] if workers else []
+    
+    return render_template('qc/inspect.html', 
+                           task=task, 
+                           now=datetime.now(),
+                           operator_names=operator_names)
 
 
-@views_bp.route('/qc/inspect/<int:sheet_id>')
+@views_bp.route('/production/qc/inspect/<int:sheet_id>')
 @login_required
 def qc_sheet_detail(sheet_id):
     """View existing QC sheet detail."""
     sheet = QCSheet.query.get_or_404(sheet_id)
     return render_template('qc/sheet_detail.html', sheet=sheet)
+
+
+@views_bp.route('/qc/monitoring')
+@login_required
+def qc_monitoring():
+    """QC Monitoring Dashboard."""
+    return render_template('qc/monitoring.html')
 
 
 @views_bp.route('/customers')
@@ -179,13 +225,25 @@ def employees():
 @login_required
 def users():
     """Users management - Admin only."""
-    if current_user.role != UserRole.ADMIN:
+    if current_user.role != 'admin':
         flash('Access denied', 'error')
         return redirect(url_for('views.dashboard'))
     
     page = request.args.get('page', 1, type=int)
     users = User.query.order_by(User.created_at.desc()).paginate(page=page, per_page=20)
     return render_template('admin/users.html', users=users)
+
+
+@views_bp.route('/admin/users/<int:user_id>/permissions')
+@login_required
+def user_permissions(user_id):
+    """Manage permissions for a specific user."""
+    if current_user.role != 'admin':
+        flash('Access denied', 'error')
+        return redirect(url_for('views.dashboard'))
+    
+    user = User.query.get_or_404(user_id)
+    return render_template('admin/permissions.html', user=user)
 
 
 @views_bp.route('/reports')
@@ -219,3 +277,91 @@ def sop_list():
     page = request.args.get('page', 1, type=int)
     documents = SOPDocument.query.filter_by(is_active=True).order_by(SOPDocument.title).paginate(page=page, per_page=20)
     return render_template('sop/list.html', documents=documents)
+
+
+@views_bp.route('/sop/<int:sop_id>/view')
+@login_required
+def sop_view(sop_id):
+    """View SOP document (inline)."""
+    from ..models.sop import SOPDocument
+    from ..services.storage_service import create_signed_url
+    from flask import send_from_directory, current_app
+    import os
+    
+    sop = SOPDocument.query.get_or_404(sop_id)
+    
+    if not sop.file_url:
+        flash('Dokumen tidak memiliki file', 'warning')
+        return redirect(url_for('views.sop_list'))
+    
+    # Check if remote URL
+    if sop.file_url.startswith('http'):
+        # Try to get a signed URL for secure access
+        signed_url = create_signed_url(sop.file_url)
+        if signed_url:
+            return redirect(signed_url)
+        return redirect(sop.file_url)
+    
+    # Serve local file
+    if sop.file_url.startswith('/static/'):
+        # Extract relative path from /static/
+        # e.g. /static/uploads/sop/file.pdf -> uploads/sop/file.pdf
+        rel_path = sop.file_url.replace('/static/', '', 1)
+        return send_from_directory(
+            os.path.join(current_app.root_path, 'static'),
+            rel_path,
+            as_attachment=False  # Encode as inline to view in browser
+        )
+        
+    return redirect(sop.file_url)
+
+
+# Materials Management Routes
+@views_bp.route('/materials')
+@login_required
+def materials_list():
+    """Materials list page."""
+    return render_template('materials/list.html')
+
+
+@views_bp.route('/materials/new')
+@login_required
+def materials_new():
+    """Create new material request."""
+    return render_template('materials/form.html', material_request=None)
+
+
+@views_bp.route('/materials/<int:request_id>')
+@login_required
+def materials_detail(request_id):
+    """Material request detail page."""
+    from ..models.material import MaterialRequest
+    material_request = MaterialRequest.query.get_or_404(request_id)
+    return render_template('materials/detail.html', material_request=material_request)
+
+
+@views_bp.route('/materials/<int:request_id>/edit')
+@login_required
+def materials_edit(request_id):
+    """Edit material request."""
+    from ..models.material import MaterialRequest
+    material_request = MaterialRequest.query.get_or_404(request_id)
+    return render_template('materials/form.html', material_request=material_request)
+
+
+@views_bp.route('/materials/<int:request_id>/qc')
+@login_required
+def materials_qc(request_id):
+    """Material QC checklist page."""
+    from datetime import datetime
+    from ..models.material import MaterialRequest
+    material_request = MaterialRequest.query.get_or_404(request_id)
+    return render_template('materials/qc.html', material_request=material_request, now=datetime.now())
+
+
+# Vendors Management Routes
+@views_bp.route('/vendors')
+@login_required
+def vendors_list():
+    """Vendors list page."""
+    return render_template('vendors/list.html')

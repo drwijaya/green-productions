@@ -33,6 +33,49 @@ class User(UserMixin, db.Model):
     # Relationships
     employee = db.relationship('Employee', backref='user', uselist=False, lazy='joined')
     activity_logs = db.relationship('ActivityLog', backref='user', lazy='dynamic')
+    permissions = db.relationship('UserPermission', backref='user', lazy='dynamic', cascade='all, delete-orphan')
+    
+    def has_permission(self, permission_key, action='view'):
+        """Check if user has a specific permission.
+        
+        Args:
+            permission_key: The menu/feature key (e.g., 'dashboard', 'invoices')
+            action: 'view', 'create', 'edit', or 'delete'
+        
+        Returns:
+            bool: True if user has the permission
+        """
+        # Admin always has all permissions
+        if self.role == 'admin':
+            return True
+        
+        from .permission import UserPermission
+        perm = UserPermission.query.filter_by(user_id=self.id, permission_key=permission_key).first()
+        
+        if not perm:
+            return False
+        
+        if action == 'view':
+            return perm.can_view
+        elif action == 'create':
+            return perm.can_create
+        elif action == 'edit':
+            return perm.can_edit
+        elif action == 'delete':
+            return perm.can_delete
+        
+        return False
+    
+    def get_menu_permissions(self):
+        """Get list of menu keys this user can access."""
+        # Admin gets all menus
+        if self.role == 'admin':
+            from .permission import AVAILABLE_PERMISSIONS
+            return list(AVAILABLE_PERMISSIONS.keys())
+        
+        from .permission import UserPermission
+        perms = UserPermission.query.filter_by(user_id=self.id, can_view=True).all()
+        return [p.permission_key for p in perms]
     
     def set_password(self, password):
         """Hash and set the user's password."""
@@ -59,9 +102,10 @@ class User(UserMixin, db.Model):
             'view_reports': [UserRole.ADMIN, UserRole.OWNER, UserRole.ADMIN_PRODUKSI],
             'view_dso': [UserRole.ADMIN, UserRole.OWNER, UserRole.ADMIN_PRODUKSI, UserRole.QC_LINE, UserRole.OPERATOR],
             'edit_dso': [UserRole.ADMIN, UserRole.ADMIN_PRODUKSI],
+            'manage_sop': [UserRole.ADMIN, UserRole.OWNER, UserRole.ADMIN_PRODUKSI],
         }
         allowed_roles = permissions.get(permission, [])
-        return self.role in allowed_roles
+        return self.role in [r.value if hasattr(r, 'value') else r for r in allowed_roles]
     
     def to_dict(self):
         """Convert user to dictionary for API response."""
@@ -70,7 +114,7 @@ class User(UserMixin, db.Model):
             'email': self.email,
             'username': self.username,
             'full_name': self.full_name,
-            'role': self.role.value,
+            'role': self.role,  # Already string
             'is_active': self.is_active,
             'last_login': self.last_login.isoformat() if self.last_login else None,
             'created_at': self.created_at.isoformat() if self.created_at else None

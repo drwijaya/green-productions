@@ -99,3 +99,43 @@ def get_public_url(file_path):
         return supabase.storage.from_(BUCKET_NAME).get_public_url(file_path)
     except Exception:
         return None
+
+
+def create_signed_url(file_path, expires_in=3600):
+    """Create signed URL for private file access."""
+    try:
+        supabase = get_supabase()
+        if not supabase:
+            return None
+            
+        # Extract path if full URL provided
+        if file_path.startswith('http'):
+            if f'{BUCKET_NAME}/' in file_path:
+                file_path = file_path.split(f'{BUCKET_NAME}/')[-1]
+            # Handle case where 'public' is in path (common in Supabase public URLs)
+            # Remove 'public/' prefix if it shouldn't be there for signing?
+            # Actually, for signing, we usually need the path exactly as stored.
+            # get_public_url adds /public/ in the URL structure usually, but the file is stored in root of bucket?
+            # Inspecting storage: .from_(BUCKET).upload(path) -> stored at path.
+            # Public URL: /object/public/BUCKET/path
+            # Signed URL needs 'path'.
+            
+        # Clean path just in case
+        # If the URL is https://.../object/public/erp-files/sop/file.pdf
+        # Split by BUCKET_NAME/ gives 'sop/file.pdf'. Correct.
+        
+        res = supabase.storage.from_(BUCKET_NAME).create_signed_url(file_path, expires_in)
+        # res is typically {'signedURL': '...'} or similar depending on library version
+        # supabase-py might return the string or dict.
+        # Looking at docs: returns strict JSON/dict usually OR content.
+        # Let's assume it returns a dict or the URL string.
+        
+        if isinstance(res, dict) and 'signedURL' in res:
+            return res['signedURL']
+        elif isinstance(res, str):
+            return res
+            
+        return None
+    except Exception as e:
+        print(f"Error signing URL: {e}")
+        return None

@@ -796,8 +796,14 @@ a:hover {
     width: 90%;
     max-height: 90vh;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
     transform: scale(0.95);
     transition: transform var(--transition);
+}
+
+.modal-lg {
+    max-width: 700px;
 }
 
 .modal-backdrop.active .modal {
@@ -828,6 +834,8 @@ a:hover {
 
 .modal-body {
     padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
 }
 
 .modal-footer {

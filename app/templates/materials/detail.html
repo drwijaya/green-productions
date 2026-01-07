@@ -1,0 +1,474 @@
+{% extends "base.html" %}
+
+{% block title %}Detail Material Request - {{ material_request.request_code }}{% endblock %}
+{% block page_title %}Detail Material Request{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+    <a href="{{ url_for('views.materials_list') }}" class="btn btn-sm btn-outline">
+        <i class="fas fa-arrow-left"></i> Kembali
+    </a>
+    <div class="page-header-right">
+        {% if material_request.status == 'requested' %}
+        <a href="{{ url_for('views.materials_edit', request_id=material_request.id) }}" class="btn btn-outline">
+            <i class="fas fa-edit"></i> Edit
+        </a>
+        {% endif %}
+        {% if material_request.status in ['arrived', 'qc_pending'] %}
+        <a href="{{ url_for('views.materials_qc', request_id=material_request.id) }}" class="btn btn-success">
+            <i class="fas fa-clipboard-check"></i> QC Checklist
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="detail-container">
+    <!-- Header Card -->
+    <div class="detail-card">
+        <div class="detail-header">
+            <div>
+                <h2 class="request-code">{{ material_request.request_code }}</h2>
+                <p class="vendor-name">
+                    <i class="fas fa-building"></i> {{ material_request.vendor.name if material_request.vendor else '-'
+                    }}
+                </p>
+            </div>
+            <span class="status-badge {{ material_request.status }}">{{ material_request.status.replace('_', '
+                ').title() }}</span>
+        </div>
+
+        <!-- Status Timeline -->
+        <div class="status-timeline">
+            <div
+                class="timeline-step {{ 'active' if material_request.status in ['requested', 'in_transit', 'arrived', 'qc_pending', 'qc_passed', 'stored'] else '' }}">
+                <div class="timeline-icon"><i class="fas fa-file-alt"></i></div>
+                <span>Requested</span>
+            </div>
+            <div
+                class="timeline-line {{ 'active' if material_request.status in ['in_transit', 'arrived', 'qc_pending', 'qc_passed', 'stored'] else '' }}">
+            </div>
+            <div
+                class="timeline-step {{ 'active' if material_request.status in ['in_transit', 'arrived', 'qc_pending', 'qc_passed', 'stored'] else '' }}">
+                <div class="timeline-icon"><i class="fas fa-truck"></i></div>
+                <span>In Transit</span>
+            </div>
+            <div
+                class="timeline-line {{ 'active' if material_request.status in ['arrived', 'qc_pending', 'qc_passed', 'stored'] else '' }}">
+            </div>
+            <div
+                class="timeline-step {{ 'active' if material_request.status in ['arrived', 'qc_pending', 'qc_passed', 'stored'] else '' }}">
+                <div class="timeline-icon"><i class="fas fa-box"></i></div>
+                <span>Arrived</span>
+            </div>
+            <div class="timeline-line {{ 'active' if material_request.status in ['qc_passed', 'stored'] else '' }}">
+            </div>
+            <div class="timeline-step {{ 'active' if material_request.status in ['qc_passed', 'stored'] else '' }}">
+                <div class="timeline-icon"><i class="fas fa-clipboard-check"></i></div>
+                <span>QC</span>
+            </div>
+            <div class="timeline-line {{ 'active' if material_request.status == 'stored' else '' }}"></div>
+            <div class="timeline-step {{ 'active' if material_request.status == 'stored' else '' }}">
+                <div class="timeline-icon"><i class="fas fa-warehouse"></i></div>
+                <span>Stored</span>
+            </div>
+        </div>
+
+        <!-- Info Grid -->
+        <div class="info-grid">
+            <div class="info-item">
+                <label>Tanggal Request</label>
+                <span>{{ material_request.request_date.strftime('%d/%m/%Y') if material_request.request_date else '-'
+                    }}</span>
+            </div>
+            <div class="info-item">
+                <label>Expected Arrival</label>
+                <span>{{ material_request.expected_arrival.strftime('%d/%m/%Y') if material_request.expected_arrival
+                    else '-' }}</span>
+            </div>
+            <div class="info-item">
+                <label>Actual Arrival</label>
+                <span>{{ material_request.actual_arrival.strftime('%d/%m/%Y %H:%M') if material_request.actual_arrival
+                    else '-' }}</span>
+            </div>
+            <div class="info-item">
+                <label>Linked Order</label>
+                <span>{{ material_request.order.order_code if material_request.order else '-' }}</span>
+            </div>
+        </div>
+
+        {% if material_request.notes %}
+        <div class="notes-section">
+            <label>Catatan</label>
+            <p>{{ material_request.notes }}</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Items Table -->
+    <div class="detail-card">
+        <h3 class="card-title"><i class="fas fa-boxes"></i> Material Items</h3>
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th>No</th>
+                    <th>Nama Material</th>
+                    <th>Jenis</th>
+                    <th>Warna</th>
+                    <th>Ukuran</th>
+                    <th>Qty Order</th>
+                    <th>Qty Diterima</th>
+                    <th>Qty Reject</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in material_request.items.all() %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ item.material_name }}</td>
+                    <td>{{ item.material_type or '-' }}</td>
+                    <td>{{ item.color or '-' }}</td>
+                    <td>{{ item.size or '-' }}</td>
+                    <td>{{ item.qty_ordered }} {{ item.unit }}</td>
+                    <td>{{ item.qty_received }} {{ item.unit }}</td>
+                    <td>{{ item.qty_rejected }} {{ item.unit }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- QC Result (if exists) -->
+    {% if material_request.qc_sheet %}
+    <div class="detail-card">
+        <h3 class="card-title"><i class="fas fa-clipboard-check"></i> QC Result</h3>
+        <div class="qc-result">
+            <div class="qc-result-header">
+                <div>
+                    <span class="qc-code">{{ material_request.qc_sheet.inspection_code }}</span>
+                    <span class="qc-date">{{ material_request.qc_sheet.inspected_at.strftime('%d/%m/%Y %H:%M') if
+                        material_request.qc_sheet.inspected_at else '-' }}</span>
+                </div>
+                <span class="result-badge {{ material_request.qc_sheet.result }}">{{
+                    material_request.qc_sheet.result.upper() }}</span>
+            </div>
+            <div class="qc-stats">
+                <div class="stat-item">
+                    <span class="stat-value">{{ material_request.qc_sheet.total_received }}</span>
+                    <span class="stat-label">Total Diterima</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value text-danger">{{ material_request.qc_sheet.total_ng }}</span>
+                    <span class="stat-label">Total NG</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value text-success">{{ material_request.qc_sheet.get_pass_rate() }}%</span>
+                    <span class="stat-label">Pass Rate</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Action Buttons -->
+    <div class="detail-actions">
+        {% if material_request.status == 'requested' %}
+        <button class="btn btn-primary" onclick="updateStatus('in_transit')">
+            <i class="fas fa-truck"></i> Tandai In Transit
+        </button>
+        {% elif material_request.status == 'in_transit' %}
+        <button class="btn btn-primary" onclick="updateStatus('arrived')">
+            <i class="fas fa-check"></i> Tandai Sudah Sampai
+        </button>
+        {% elif material_request.status == 'qc_passed' %}
+        <button class="btn btn-success" onclick="updateStatus('stored')">
+            <i class="fas fa-warehouse"></i> Tandai Sudah Disimpan
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .detail-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .detail-card {
+        background: var(--white);
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+    }
+
+    .detail-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1.5rem;
+    }
+
+    .request-code {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .vendor-name {
+        color: var(--gray-500);
+        margin: 0.25rem 0 0;
+    }
+
+    .status-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 9999px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .status-badge.requested {
+        background: #F3F4F6;
+        color: #374151;
+    }
+
+    .status-badge.in_transit {
+        background: #DBEAFE;
+        color: #1D4ED8;
+    }
+
+    .status-badge.arrived {
+        background: #EDE9FE;
+        color: #6D28D9;
+    }
+
+    .status-badge.qc_pending {
+        background: #FEF3C7;
+        color: #D97706;
+    }
+
+    .status-badge.qc_passed {
+        background: #D1FAE5;
+        color: #059669;
+    }
+
+    .status-badge.qc_failed {
+        background: #FEE2E2;
+        color: #DC2626;
+    }
+
+    .status-badge.stored {
+        background: #ECFDF5;
+        color: #047857;
+    }
+
+    .status-timeline {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 1.5rem 0;
+        border-top: 1px solid var(--gray-200);
+        border-bottom: 1px solid var(--gray-200);
+        margin-bottom: 1.5rem;
+    }
+
+    .timeline-step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        opacity: 0.4;
+    }
+
+    .timeline-step.active {
+        opacity: 1;
+    }
+
+    .timeline-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--gray-200);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--gray-500);
+    }
+
+    .timeline-step.active .timeline-icon {
+        background: var(--primary);
+        color: white;
+    }
+
+    .timeline-step span {
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .timeline-line {
+        flex: 1;
+        height: 3px;
+        background: var(--gray-200);
+        max-width: 60px;
+    }
+
+    .timeline-line.active {
+        background: var(--primary);
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.5rem;
+    }
+
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .info-item label {
+        font-size: 0.75rem;
+        color: var(--gray-500);
+        text-transform: uppercase;
+    }
+
+    .info-item span {
+        font-weight: 500;
+        color: var(--gray-800);
+    }
+
+    .notes-section {
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--gray-200);
+    }
+
+    .notes-section label {
+        font-size: 0.75rem;
+        color: var(--gray-500);
+        text-transform: uppercase;
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+
+    .card-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .items-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .items-table th,
+    .items-table td {
+        padding: 0.75rem;
+        text-align: left;
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .items-table th {
+        background: var(--gray-50);
+        font-weight: 600;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        color: var(--gray-600);
+    }
+
+    .qc-result-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .qc-code {
+        font-weight: 600;
+    }
+
+    .qc-date {
+        color: var(--gray-500);
+        margin-left: 1rem;
+    }
+
+    .result-badge {
+        padding: 0.5rem 1rem;
+        border-radius: var(--radius);
+        font-weight: 700;
+    }
+
+    .result-badge.pass {
+        background: #D1FAE5;
+        color: #059669;
+    }
+
+    .result-badge.fail {
+        background: #FEE2E2;
+        color: #DC2626;
+    }
+
+    .result-badge.conditional_pass {
+        background: #FEF3C7;
+        color: #D97706;
+    }
+
+    .qc-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+    }
+
+    .stat-item {
+        text-align: center;
+        padding: 1rem;
+        background: var(--gray-50);
+        border-radius: var(--radius);
+    }
+
+    .stat-value {
+        display: block;
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+
+    .stat-label {
+        font-size: 0.75rem;
+        color: var(--gray-500);
+        text-transform: uppercase;
+    }
+
+    .detail-actions {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+    }
+
+    @media (max-width: 768px) {
+
+        .info-grid,
+        .qc-stats {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+</style>
+
+<script>
+    async function updateStatus(newStatus) {
+        try {
+            await api.put('/materials/{{ material_request.id }}/status', { status: newStatus });
+            showToast('Status berhasil diupdate', 'success');
+            setTimeout(() => location.reload(), 1000);
+        } catch (error) {
+            showToast('Gagal mengupdate status: ' + error.message, 'error');
+        }
+    }
+</script>
+{% endblock %}

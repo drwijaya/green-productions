@@ -10,6 +10,103 @@ from ..models.user import UserRole
 from ..extensions import db
 from ..utils.decorators import require_roles, api_response, log_activity
 from ..services.storage_service import upload_file, delete_file
+from sqlalchemy import func
+
+
+@api_bp.route('/dso', methods=['GET'])
+@login_required
+def get_dso_list():
+    """Get all DSOs with filtering by order's dso_status."""
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+    dso_status = request.args.get('dso_status', '')  # not_created, draft, created
+    search = request.args.get('search', '')
+    
+    # Query orders with DSO status filter
+    query = Order.query
+    
+    if dso_status:
+        query = query.filter(Order.dso_status == dso_status)
+    
+    if search:
+        query = query.filter(
+            (Order.order_code.ilike(f'%{search}%')) |
+            (Order.model.ilike(f'%{search}%'))
+        )
+    
+    orders_paginated = query.order_by(Order.created_at.desc()).paginate(page=page, per_page=per_page)
+    
+    # Build response data with DSO info
+    result = []
+    for order in orders_paginated.items:
+        order_data = order.to_dict()
+        order_data['customer_name'] = order.customer.name if order.customer else None
+        
+        # Get all DSO versions for this order
+        dsos = order.dso.order_by(DSO.version.desc()).all()
+        order_data['dso_versions'] = [dso.to_dict() for dso in dsos]
+        order_data['dso_count'] = len(dsos)
+        
+        # Get latest DSO info
+        latest_dso = order.get_latest_dso()
+        if latest_dso:
+            order_data['latest_dso'] = {
+                'id': latest_dso.id,
+                'version': latest_dso.version,
+                'status': latest_dso.status,
+                'created_at': latest_dso.created_at.isoformat() if latest_dso.created_at else None
+            }
+        else:
+            order_data['latest_dso'] = None
+        
+        result.append(order_data)
+    
+    return api_response(data={
+        'items': result,
+        'total': orders_paginated.total,
+        'pages': orders_paginated.pages,
+        'current_page': page
+    })
+
+
+@api_bp.route('/dso/order/<int:order_id>', methods=['POST'])
+@login_required
+@require_roles(UserRole.ADMIN, UserRole.OWNER, UserRole.ADMIN_PRODUKSI)
+@log_activity('dso', 'create')
+def create_dso(order_id):
+    """Create a new DSO for an order."""
+    order = Order.query.get_or_404(order_id)
+    
+    # Check order's dso_status - if it's already draft or created, don't allow
+    # This is more reliable than checking for existing DSO records
+    if order.dso_status in ['draft', 'created']:
+        existing_dso = order.dso.first()
+        if existing_dso:
+            return api_response(
+                message='Order already has a DSO. Use new-version to create revision.',
+                status=400,
+                data={'existing_dso_id': existing_dso.id}
+            )
+    
+    # Create new DSO - get next version number
+    max_version = db.session.query(db.func.max(DSO.version)).filter(DSO.order_id == order.id).scalar() or 0
+    
+    dso = DSO(
+        order_id=order.id,
+        version=max_version + 1,
+        jenis=order.model,  # Pre-fill from order
+        status='draft',
+        created_by=current_user.id
+    )
+    
+    db.session.add(dso)
+    
+    # Update order's dso_status
+    order.dso_status = 'draft'
+    
+    db.session.commit()
+    
+    return api_response(data=dso.to_dict(include_relations=True), message='DSO created successfully', status=201)
 
 
 @api_bp.route('/dso/<int:dso_id>', methods=['GET'])
@@ -18,6 +115,54 @@ def get_dso(dso_id):
     """Get DSO by ID with full details."""
     dso = DSO.query.get_or_404(dso_id)
     return api_response(data=dso.to_dict(include_relations=True))
+
+
+@api_bp.route('/dso/<int:dso_id>/export-word', methods=['GET'])
+@login_required
+def export_dso_word(dso_id):
+    """Export DSO to Word document."""
+    from flask import send_file
+    from ..services.word_service import export_dso_to_word
+    
+    dso = DSO.query.get_or_404(dso_id)
+    
+    try:
+        buffer = export_dso_to_word(dso)
+        filename = f"DSO_{dso.order.order_code}_v{dso.version}.docx"
+        
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        )
+    except Exception as e:
+        return api_response(message=f'Error exporting: {str(e)}', status=500)
+
+
+@api_bp.route('/dso/<int:dso_id>/export-pdf', methods=['GET'])
+@login_required
+def export_dso_pdf(dso_id):
+    """Export DSO to PDF document (via Word template)."""
+    from flask import send_file
+    from ..services.word_service import export_dso_to_pdf
+    
+    dso = DSO.query.get_or_404(dso_id)
+    
+    try:
+        buffer = export_dso_to_pdf(dso)
+        filename = f"DSO_{dso.order.order_code}_v{dso.version}.pdf"
+        
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='application/pdf'
+        )
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return api_response(message=f'Error exporting PDF: {str(e)}', status=500)
 
 
 @api_bp.route('/dso/<int:dso_id>', methods=['PUT'])
@@ -79,6 +224,11 @@ def update_dso(dso_id):
             if hasattr(chart, key):
                 setattr(chart, key, value or 0)
     
+    # Handle implicit publish/approve on save if requested
+    if data.get('status') == 'published':
+        dso.status = 'approved' # Or 'pending_approval' if workflow requires check. For now assuming Admin saves = Approved.
+        dso.order.dso_status = 'created'
+    
     db.session.commit()
     
     g.record_id = dso.id
@@ -86,6 +236,28 @@ def update_dso(dso_id):
     g.data_after = dso.to_dict()
     
     return api_response(data=dso.to_dict(include_relations=True), message='DSO updated successfully')
+
+
+@api_bp.route('/dso/<int:dso_id>/upload', methods=['PUT'])
+@login_required
+@require_roles(UserRole.ADMIN, UserRole.OWNER, UserRole.ADMIN_PRODUKSI)
+def upload_dso_front_image(dso_id):
+    """Upload DSO design image."""
+    dso = DSO.query.get_or_404(dso_id)
+    
+    if 'gambar_depan' not in request.files:
+        return api_response(message='No file provided', status=400)
+    
+    file = request.files['gambar_depan']
+    result = upload_file(file, 'dso')
+    
+    if not result['success']:
+        return api_response(message=f"Upload failed: {result.get('error')}", status=500)
+    
+    dso.gambar_depan_url = result['url']
+    db.session.commit()
+    
+    return api_response(data={'url': result['url']}, message='Image uploaded')
 
 
 @api_bp.route('/dso/<int:dso_id>/submit', methods=['POST'])
@@ -120,9 +292,10 @@ def approve_dso(dso_id):
     dso.approved_by = current_user.id
     dso.approved_at = datetime.utcnow()
     
-    # Update order status
+    # Update order status and DSO status
     order = dso.order
     order.status = 'in_production'
+    order.dso_status = 'created'
     
     db.session.commit()
     

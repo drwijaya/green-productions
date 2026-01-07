@@ -126,7 +126,7 @@ def upload_sop_file(sop_id):
     result = upload_file(file, 'sop')
     
     if not result['success']:
-        return api_response(message='Upload failed', status=500)
+        return api_response(message=f"Upload failed: {result.get('error', 'Unknown error')}", status=500)
     
     sop.file_url = result['url']
     sop.file_type = file.filename.rsplit('.', 1)[-1].lower()

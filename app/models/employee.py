@@ -1,6 +1,15 @@
 """Employee model."""
 from datetime import datetime
+from enum import Enum
 from ..extensions import db
+
+
+class EmploymentType(Enum):
+    """Employment type/status."""
+    KARYAWAN = 'karyawan'           # Permanent employee
+    HARIAN_LEPAS = 'harian_lepas'   # Daily worker
+    BORONGAN = 'borongan'           # Contract/piece worker
+    MAGANG = 'magang'               # Intern
 
 
 class Employee(db.Model):
@@ -13,6 +22,7 @@ class Employee(db.Model):
     name = db.Column(db.String(150), nullable=False)
     department = db.Column(db.String(100))
     position = db.Column(db.String(100))
+    employment_type = db.Column(db.String(50), default='karyawan')  # karyawan, harian_lepas, borongan, magang
     phone = db.Column(db.String(20))
     email = db.Column(db.String(120))
     join_date = db.Column(db.Date)
@@ -33,6 +43,7 @@ class Employee(db.Model):
             'name': self.name,
             'department': self.department,
             'position': self.position,
+            'employment_type': self.employment_type,
             'phone': self.phone,
             'email': self.email,
             'join_date': self.join_date.isoformat() if self.join_date else None,

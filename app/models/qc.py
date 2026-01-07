@@ -61,6 +61,7 @@ class QCSheet(db.Model):
     # Relationships
     defects = db.relationship('DefectLog', backref='qc_sheet', lazy='dynamic', cascade='all, delete-orphan')
     order = db.relationship('Order', backref=db.backref('qc_reports', lazy='dynamic'))
+    # production_task relationship is defined via backref from ProductionTask.qc_sheets
     
     @staticmethod
     def generate_inspection_code():
@@ -97,7 +98,7 @@ class QCSheet(db.Model):
             'order_id': self.order_id,
             'inspection_code': self.inspection_code,
             'checklist_json': self.checklist_json,
-            'result': self.result.value,
+            'result': self.result.value if self.result else 'pending',
             'qty_inspected': self.qty_inspected,
             'qty_passed': self.qty_passed,
             'qty_failed': self.qty_failed,
@@ -113,13 +114,38 @@ class QCSheet(db.Model):
         
         if include_relations:
             data['defects'] = [d.to_dict() for d in self.defects.all()]
-            data['production_task'] = self.production_task.to_dict() if self.production_task else None
-            data['order'] = self.order.to_dict() if self.order else None
+            # Don't include full production_task to avoid recursion, just basic info
+            if self.production_task:
+                data['production_task'] = {
+                    'id': self.production_task.id,
+                    'process': self.production_task.process,
+                    'status': self.production_task.status
+                }
+            else:
+                data['production_task'] = None
+            # Don't include full order to avoid recursion, just basic info  
+            if self.order:
+                data['order'] = {
+                    'id': self.order.id,
+                    'order_code': self.order.order_code,
+                    'model': self.order.model
+                }
+            else:
+                data['order'] = None
         
         return data
+
     
     def __repr__(self):
         return f'<QCSheet {self.inspection_code}>'
+
+
+class DefectStatus(Enum):
+    """Defect resolution status."""
+    OPEN = 'open'
+    IN_PROGRESS = 'in_progress'
+    RESOLVED = 'resolved'
+    CLOSED = 'closed'
 
 
 class DefectLog(db.Model):
@@ -129,10 +155,10 @@ class DefectLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     qc_sheet_id = db.Column(db.Integer, db.ForeignKey('qc_sheet.id'), nullable=False)
     
+    # B. INFORMASI DEFECT
     defect_type = db.Column(db.String(100), nullable=False)
     defect_category = db.Column(db.String(100))  # e.g., Jahitan, Kain, Aksesoris
-    severity = db.Column(db.Enum(DefectSeverity), nullable=False)
-    
+    severity = db.Column(db.Enum(DefectSeverity), nullable=False, default=DefectSeverity.MINOR)
     qty_defect = db.Column(db.Integer, default=1)
     description = db.Column(db.Text)
     
@@ -140,19 +166,36 @@ class DefectLog(db.Model):
     photo_url = db.Column(db.String(500))
     photo_annotations_json = db.Column(db.JSON)  # Fabric.js annotations
     
-    # Station where defect was found
-    station = db.Column(db.String(100))
+    # Context (Where it happened)
+    station = db.Column(db.String(100)) # Specific station/machine
+    process_stage = db.Column(db.String(50)) # Cutting, Sewing, Finishing, etc.
     
-    # Action taken
+    # C. TINDAKAN PENANGANAN
     action_taken = db.Column(db.Text)
-    is_resolved = db.Column(db.Boolean, default=False)
-    resolved_at = db.Column(db.DateTime)
+    responsible_department = db.Column(db.String(100)) # Bagian Penanggung Jawab
+    target_resolution_date = db.Column(db.Date) # Target Penyelesaian
     
-    # Audit
+    # D. VERIFIKASI HASIL
+    verification_result = db.Column(db.String(20)) # Sesuai / Tidak Sesuai
+    verification_notes = db.Column(db.Text) # Catatan QC
+    status = db.Column(db.String(50), default='open') # Status Akhir
+    
+    # Audit & Timeline
     reported_by = db.Column(db.Integer, db.ForeignKey('employees.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
+    resolved_at = db.Column(db.DateTime)
+    resolved_by = db.Column(db.Integer, db.ForeignKey('employees.id'))
+    
+    # E. TANDA TANGAN (Linked to Employees)
+    rework_operator_id = db.Column(db.Integer, db.ForeignKey('employees.id'))
+    qc_operator_id = db.Column(db.Integer, db.ForeignKey('employees.id'))
+    
+    # Relationships
     reporter = db.relationship('Employee', foreign_keys=[reported_by])
+    resolver = db.relationship('Employee', foreign_keys=[resolved_by])
+    rework_operator = db.relationship('Employee', foreign_keys=[rework_operator_id])
+    qc_operator = db.relationship('Employee', foreign_keys=[qc_operator_id])
     
     def to_dict(self):
         """Convert to dictionary for API response."""
@@ -165,14 +208,21 @@ class DefectLog(db.Model):
             'qty_defect': self.qty_defect,
             'description': self.description,
             'photo_url': self.photo_url,
-            'photo_annotations_json': self.photo_annotations_json,
             'station': self.station,
+            'process_stage': self.process_stage,
             'action_taken': self.action_taken,
-            'is_resolved': self.is_resolved,
+            'responsible_department': self.responsible_department,
+            'target_resolution_date': self.target_resolution_date.isoformat() if self.target_resolution_date else None,
+            'verification_result': self.verification_result,
+            'verification_notes': self.verification_notes,
+            'status': self.status,
+            'reported_by_name': self.reporter.name if self.reporter else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
             'resolved_at': self.resolved_at.isoformat() if self.resolved_at else None,
-            'reported_by': self.reported_by,
-            'created_at': self.created_at.isoformat() if self.created_at else None
+            # Context info from parent QC Sheet
+            'order_code': self.qc_sheet.order.order_code if self.qc_sheet and self.qc_sheet.order else None,
+            'product_name': self.qc_sheet.production_task.product_name if self.qc_sheet and self.qc_sheet.production_task else None
         }
     
     def __repr__(self):
-        return f'<DefectLog {self.defect_type} ({self.severity.value})>'
+        return f'<DefectLog {self.defect_type} ({self.status})>'

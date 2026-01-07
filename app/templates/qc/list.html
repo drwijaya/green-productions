@@ -8,10 +8,47 @@
     <div class="page-header-left">
         <p class="text-muted">Checklist QC untuk setiap invoice - pilih invoice untuk melihat dan mengisi checklist</p>
     </div>
+    <div class="page-header-right">
+        <div class="status-legend">
+            <span class="legend-item"><span class="dot pending"></span> Pending</span>
+            <span class="legend-item"><span class="dot pass"></span> Pass</span>
+            <span class="legend-item"><span class="dot fail"></span> Fail</span>
+            <span class="legend-item"><span class="dot conditional"></span> Conditional</span>
+        </div>
+    </div>
 </div>
 
-<!-- Orders with QC Checklists -->
-<div class="qc-orders-list" id="qcOrdersList">
+<div class="qc-grid-controls mb-4">
+    <!-- Filter Tabs -->
+    <div class="status-tabs">
+        <div class="status-tab active" data-filter="all">
+            <i class="fas fa-th-large"></i> All
+        </div>
+        <div class="status-tab" data-filter="pending">
+            <span class="dot pending"></span> Pending
+        </div>
+        <div class="status-tab" data-filter="pass">
+            <span class="dot pass"></span> Pass
+        </div>
+        <div class="status-tab" data-filter="fail">
+            <span class="dot fail"></span> Fail
+        </div>
+        <div class="status-tab" data-filter="conditional_pass">
+            <span class="dot conditional"></span> Conditional
+        </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="search-row">
+        <div class="search-group">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" class="search-input" id="qcSearchInput"
+                placeholder="Cari Invoice, Customer, atau Model..." onkeyup="filterQC()">
+        </div>
+    </div>
+</div>
+
+<div class="qc-grid" id="qcOrdersGrid">
     <!-- Will be loaded via JavaScript -->
     <div class="loading-state">
         <i class="fas fa-spinner fa-spin"></i> Memuat data...
@@ -34,113 +71,324 @@
 </div>
 
 <style>
-    .qc-orders-list {
+    /* Status Legend */
+    .status-legend {
         display: flex;
-        flex-direction: column;
         gap: 1rem;
+        font-size: 0.8125rem;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+    }
+
+    .dot.pending {
+        background: var(--gray-400);
+    }
+
+    .dot.pass {
+        background: #10B981;
+    }
+
+    .dot.fail {
+        background: #EF4444;
+    }
+
+    .dot.conditional {
+        background: #F59E0B;
+    }
+
+    /* QC Grid Layout */
+    .qc-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+        gap: 1.25rem;
     }
 
     .loading-state {
+        grid-column: 1 / -1;
         text-align: center;
         padding: 3rem;
         color: var(--gray-500);
     }
 
-    /* Order Card */
-    .qc-order-card {
-        background: var(--bg-primary);
+    /* QC Card */
+    .qc-card {
+        background: var(--white);
         border-radius: var(--radius-lg);
-        box-shadow: var(--shadow);
+        border: 1px solid var(--gray-200);
         overflow: hidden;
-        transition: all var(--transition);
-        cursor: pointer;
-    }
-
-    .qc-order-card:hover {
-        box-shadow: var(--shadow-lg);
-        transform: translateY(-2px);
-    }
-
-    .order-card-content {
-        display: grid;
-        grid-template-columns: auto 1fr auto auto;
-        gap: 1.5rem;
-        padding: 1.25rem;
-        align-items: center;
-    }
-
-    .customer-badge {
-        background: linear-gradient(135deg, #10B981 0%, #059669 100%);
-        color: white;
-        padding: 0.75rem 1rem;
-        border-radius: var(--radius);
-        font-weight: 600;
-        text-align: center;
-        min-width: 100px;
-    }
-
-    .customer-name {
-        font-size: 0.875rem;
-    }
-
-    .order-details {
+        transition: all 0.2s ease;
         display: flex;
         flex-direction: column;
     }
 
-    .order-code {
-        font-size: 0.75rem;
-        color: var(--gray-500);
-        font-weight: 600;
+    .qc-card:hover {
+        box-shadow: var(--shadow-lg);
+        transform: translateY(-2px);
     }
 
-    .order-model {
-        font-size: 1.125rem;
-        font-weight: 700;
-        margin: 0;
-    }
-
-    .order-qty {
-        font-size: 0.875rem;
-        color: var(--gray-500);
-    }
-
-    /* QC Progress Summary */
-    .qc-progress-summary {
+    .qc-header {
+        padding: 1.25rem;
+        border-bottom: 1px solid var(--gray-100);
         display: flex;
-        gap: 0.5rem;
+        justify-content: space-between;
+        align-items: flex-start;
+        background: linear-gradient(180deg, #ffffff 0%, #fcfcfc 100%);
     }
 
-    .qc-status-dot {
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        background: var(--gray-200);
+    .qc-invoice {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--gray-900);
+        margin-bottom: 0.25rem;
+        display: flex;
+        align-items: center;
     }
 
-    .qc-status-dot.filled {
-        background: #10B981;
+    .qc-model {
+        color: var(--gray-500);
+        font-size: 0.9rem;
     }
 
-    .qc-status-dot.pending {
-        background: #F59E0B;
-    }
-
-    .view-btn {
-        padding: 0.75rem 1.5rem;
-        background: var(--primary);
-        color: white;
-        border-radius: var(--radius);
-        font-weight: 600;
+    .qc-progress-badge {
         display: flex;
         align-items: center;
         gap: 0.5rem;
-        transition: all var(--transition);
+        padding: 0.375rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        background: #F0F9FF;
+        color: #0284C7;
+        border: 1px solid #BAE6FD;
     }
 
-    .view-btn:hover {
-        background: var(--primary-dark);
-        transform: scale(1.02);
+    .qc-progress-badge.all-pass {
+        background: #D1FAE5;
+        color: #059669;
+        border-color: #A7F3D0;
+    }
+
+    .qc-progress-badge.has-fail {
+        background: #FEE2E2;
+        color: #991B1B;
+        border-color: #FECACA;
+    }
+
+    .qc-progress-badge.has-conditional {
+        background: #FEF3C7;
+        color: #D97706;
+        border-color: #FCD34D;
+    }
+
+    .qc-card-body {
+        padding: 1.25rem;
+        flex: 1;
+    }
+
+    .qc-info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .qc-info-item {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .qc-info-label {
+        font-size: 0.75rem;
+        color: var(--gray-500);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.25rem;
+    }
+
+    .qc-info-value {
+        font-weight: 500;
+        color: var(--gray-800);
+        font-size: 0.9rem;
+    }
+
+    .qc-card-footer {
+        padding: 1rem 1.25rem;
+        background: var(--gray-50);
+        border-top: 1px solid var(--gray-100);
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    .qc-card-footer .btn {
+        flex: 1;
+        justify-content: center;
+    }
+
+    /* QC Steps Summary (Visual Icons) */
+    .qc-status-label {
+        font-size: 0.75rem;
+        color: var(--gray-500);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+        margin-top: 1rem;
+        font-weight: 600;
+    }
+
+    .qc-steps-summary {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .step-icon-box {
+        position: relative;
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--gray-100);
+        color: var(--gray-500);
+        transition: all 0.2s;
+    }
+
+    .step-icon-box .step-main-icon {
+        font-size: 1.25rem;
+    }
+
+    .step-status-indicator {
+        position: absolute;
+        bottom: -6px;
+        right: -6px;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.65rem;
+        border: 2px solid white;
+        background: var(--gray-400);
+        color: white;
+    }
+
+    /* Status Colors for Steps - using higher specificity to override base styles */
+    .step-icon-box.step-pass {
+        background: #D1FAE5 !important;
+        color: #059669 !important;
+    }
+
+    .step-icon-box.step-pass .step-status-indicator {
+        background: #10B981;
+    }
+
+    .step-icon-box.step-fail {
+        background: #FEE2E2 !important;
+        color: #991B1B !important;
+    }
+
+    .step-icon-box.step-fail .step-status-indicator {
+        background: #EF4444;
+    }
+
+    .step-icon-box.step-conditional {
+        background: #FEF3C7 !important;
+        color: #D97706 !important;
+    }
+
+    .step-icon-box.step-conditional .step-status-indicator {
+        background: #F59E0B;
+    }
+
+    .step-icon-box.step-pending {
+        background: var(--gray-100);
+        color: var(--gray-400);
+    }
+
+    /* Filter & Search Styles */
+    .status-tabs {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+    }
+
+    .status-tab {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.875rem 1.25rem;
+        background: var(--white);
+        border: 2px solid var(--gray-200);
+        border-radius: var(--radius-lg);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-weight: 500;
+        color: var(--gray-600);
+    }
+
+    .status-tab:hover {
+        border-color: var(--primary);
+        color: var(--primary);
+    }
+
+    .status-tab.active {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: white;
+    }
+
+    .status-tab.active .dot {
+        background: white;
+    }
+
+    .status-tab i {
+        font-size: 1.1rem;
+    }
+
+    .search-row {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .search-group {
+        flex: 1;
+        position: relative;
+    }
+
+    .search-icon {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--gray-400);
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 1rem 1rem 1rem 3rem;
+        border: 1px solid var(--gray-200);
+        border-radius: var(--radius-lg);
+        font-size: 0.95rem;
+        transition: all 0.2s ease;
+    }
+
+    .search-input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        outline: none;
     }
 
     /* Modal Checklists */
@@ -266,6 +514,7 @@
 
     /* Empty State */
     .empty-state {
+        grid-column: 1 / -1;
         text-align: center;
         padding: 3rem;
         color: var(--gray-500);
@@ -284,16 +533,12 @@
 
     /* Responsive */
     @media (max-width: 768px) {
-        .order-card-content {
+        .qc-grid {
             grid-template-columns: 1fr;
-            gap: 1rem;
         }
 
-        .customer-badge {
-            text-align: left;
-        }
-
-        .qc-progress-summary {
+        .status-tab {
+            width: 100%;
             justify-content: center;
         }
     }
@@ -308,21 +553,56 @@
         'packing': 'fa-box'
     };
 
+    let activeQCFilter = 'all';
+    let ordersData = [];
+
     document.addEventListener('DOMContentLoaded', () => {
         loadOrders();
+        setupFilters();
     });
 
+    function setupFilters() {
+        const tabs = document.querySelectorAll('.status-tab');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                activeQCFilter = tab.getAttribute('data-filter');
+                filterQC();
+            });
+        });
+    }
+
+    function filterQC() {
+        const searchTerm = document.getElementById('qcSearchInput').value.toLowerCase();
+        const cards = document.querySelectorAll('.qc-card');
+
+        cards.forEach(card => {
+            const status = card.getAttribute('data-status');
+            const searchData = card.getAttribute('data-search');
+
+            const statusMatch = activeQCFilter === 'all' || status === activeQCFilter;
+            const searchMatch = searchData.includes(searchTerm);
+
+            if (statusMatch && searchMatch) {
+                card.style.display = 'flex';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+
     async function loadOrders() {
-        const container = document.getElementById('qcOrdersList');
+        const container = document.getElementById('qcOrdersGrid');
 
         try {
-            // Get all orders that are in_production or completed
             const response = await api.get('/orders?per_page=100&status=in_production');
             const completedResponse = await api.get('/orders?per_page=100&status=completed');
+            const qcPendingResponse = await api.get('/orders?per_page=100&status=qc_pending');
 
-            let orders = [...(response.data.orders || []), ...(completedResponse.data.orders || [])];
+            ordersData = [...(response.data.orders || []), ...(completedResponse.data.orders || []), ...(qcPendingResponse.data.orders || [])];
 
-            if (orders.length === 0) {
+            if (ordersData.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
                         <div class="empty-state-icon"><i class="fas fa-clipboard-check"></i></div>
@@ -333,28 +613,115 @@
                 return;
             }
 
-            container.innerHTML = orders.map(order => {
+            container.innerHTML = ordersData.map(order => {
+                const tasks = order.production_tasks || [];
                 const qcReports = order.qc_reports || [];
-                const filledCount = qcReports.filter(r => r.result && r.result !== 'pending').length;
+
+                let passCount = qcReports.filter(r => r.result === 'pass').length;
+                let failCount = qcReports.filter(r => r.result === 'fail').length;
+                let conditionalCount = qcReports.filter(r => r.result === 'conditional_pass').length;
+                let pendingCount = tasks.length - passCount - failCount - conditionalCount;
+
+                let overallStatus = 'pending';
+                if (failCount > 0) {
+                    overallStatus = 'fail';
+                } else if (conditionalCount > 0) {
+                    overallStatus = 'conditional_pass';
+                } else if (passCount > 0 && pendingCount === 0) {
+                    overallStatus = 'pass';
+                }
+
+                let badgeClass = '';
+                if (overallStatus === 'pass') badgeClass = 'all-pass';
+                else if (overallStatus === 'fail') badgeClass = 'has-fail';
+                else if (overallStatus === 'conditional_pass') badgeClass = 'has-conditional';
+
+                const taskQCMap = {};
+                qcReports.forEach(sheet => {
+                    if (sheet.production_task_id) {
+                        const key = String(sheet.production_task_id);
+                        const existing = taskQCMap[key];
+                        if (!existing || (existing.result === 'pending' && sheet.result !== 'pending')) {
+                            taskQCMap[key] = sheet;
+                        }
+                    }
+                });
 
                 return `
-                    <div class="qc-order-card" onclick="viewChecklists(${order.id}, '${order.order_code}', '${order.model}', '${order.customer ? order.customer.name : '-'}')">
-                        <div class="order-card-content">
-                            <div class="customer-badge">
-                                <span class="customer-name">${order.customer ? order.customer.name : '-'}</span>
+                    <div class="qc-card" data-order-id="${order.id}"
+                        data-status="${overallStatus}"
+                        data-search="${order.order_code.toLowerCase()} ${order.model.toLowerCase()} ${order.customer ? order.customer.name.toLowerCase() : ''}">
+                        
+                        <div class="qc-header">
+                            <div>
+                                <div class="qc-invoice">${order.order_code}</div>
+                                <div class="qc-model">${order.model}</div>
                             </div>
-                            <div class="order-details">
-                                <span class="order-code">${order.order_code}</span>
-                                <h4 class="order-model">${order.model}</h4>
-                                <span class="order-qty">${order.qty_total} pcs</span>
+                            <div class="qc-progress-badge ${badgeClass}">
+                                <i class="fas fa-clipboard-check"></i>
+                                ${passCount}/${tasks.length} Pass
                             </div>
-                            <div class="qc-progress-summary">
-                                ${[1, 2, 3, 4, 5].map((_, i) => `<div class="qc-status-dot ${i < filledCount ? 'filled' : (i < 5 ? 'pending' : '')}"></div>`).join('')}
+                        </div>
+
+                        <div class="qc-card-body">
+                            <div class="qc-info-grid">
+                                <div class="qc-info-item">
+                                    <span class="qc-info-label">Customer</span>
+                                    <span class="qc-info-value">${order.customer ? order.customer.name : '-'}</span>
+                                </div>
+                                <div class="qc-info-item">
+                                    <span class="qc-info-label">Qty Total</span>
+                                    <span class="qc-info-value" style="color: var(--primary); font-weight: 700;">${order.qty_total} pcs</span>
+                                </div>
+                                <div class="qc-info-item">
+                                    <span class="qc-info-label">Deadline</span>
+                                    <span class="qc-info-value">${order.deadline ? new Date(order.deadline).toLocaleDateString('id-ID') : '-'}</span>
+                                </div>
+                                <div class="qc-info-item">
+                                    <span class="qc-info-label">Order Status</span>
+                                    <span class="qc-info-value text-capitalize">${order.status.replace('_', ' ')}</span>
+                                </div>
                             </div>
-                            <div class="view-btn">
-                                <i class="fas fa-clipboard-list"></i>
-                                Lihat Checklist
+
+                            ${tasks.length > 0 ? `
+                            <div class="qc-status-label">QC Status per Process</div>
+                            <div class="qc-steps-summary">
+                                ${tasks.map(task => {
+                    const sheet = taskQCMap[String(task.id)];
+                    let result = sheet ? (sheet.result || 'pending') : 'pending';
+
+                    let statusClass = 'step-pending';
+                    let statusIcon = 'fa-clock';
+
+                    if (result === 'pass') {
+                        statusClass = 'step-pass';
+                        statusIcon = 'fa-check';
+                    } else if (result === 'fail') {
+                        statusClass = 'step-fail';
+                        statusIcon = 'fa-times';
+                    } else if (result === 'conditional_pass') {
+                        statusClass = 'step-conditional';
+                        statusIcon = 'fa-exclamation';
+                    }
+
+                    const iconClass = processIcons[task.process] || 'fa-tasks';
+
+                    return `
+                                    <div class="step-icon-box ${statusClass}" 
+                                        title="${capitalizeFirst(task.process)}: ${formatResult(result)}">
+                                        <div class="step-main-icon"><i class="fas ${iconClass}"></i></div>
+                                        <div class="step-status-indicator"><i class="fas ${statusIcon}"></i></div>
+                                    </div>
+                                    `;
+                }).join('')}
                             </div>
+                            ` : ''}
+                        </div>
+
+                        <div class="qc-card-footer">
+                            <button class="btn btn-primary btn-sm" onclick="viewChecklists(${order.id}, '${order.order_code}', '${order.model}', '${order.customer ? order.customer.name : '-'}')">
+                                <i class="fas fa-clipboard-list me-1"></i> Lihat Checklist
+                            </button>
                         </div>
                     </div>
                 `;
@@ -381,28 +748,21 @@
         openModal('checklistsModal');
 
         try {
-            // Get order detail with production tasks
             const response = await api.get(`/orders/${orderId}`);
             const order = response.data;
             const tasks = order.production_tasks || [];
 
-            // Get QC sheets for this order
             const qcResponse = await api.get(`/qc/sheets?order_id=${orderId}`);
             const qcSheets = qcResponse.data.sheets || [];
 
-            // Map QC sheets to tasks - use string keys for consistent comparison
-            // Prioritize non-pending results when multiple sheets exist for the same task
             const taskQCMap = {};
             qcSheets.forEach(sheet => {
                 if (sheet.production_task_id) {
                     const key = String(sheet.production_task_id);
                     const existing = taskQCMap[key];
-
-                    // Keep this sheet if: no existing, or existing is pending but this one isn't
                     if (!existing || (existing.result === 'pending' && sheet.result !== 'pending')) {
                         taskQCMap[key] = sheet;
                     }
-                    // Also prefer newer non-pending sheets over older non-pending ones
                     else if (existing.result !== 'pending' && sheet.result !== 'pending' && sheet.id > existing.id) {
                         taskQCMap[key] = sheet;
                     }
@@ -416,9 +776,7 @@
                 </div>
                 <div class="checklists-grid">
                     ${tasks.map(task => {
-                // Use string key for lookup
                 const sheet = taskQCMap[String(task.id)];
-                // Get result - handle various possible formats
                 let result = 'pending';
                 if (sheet) {
                     result = sheet.result || 'pending';

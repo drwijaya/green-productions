@@ -214,10 +214,17 @@ def update_worker_log(log_id):
         worker_log.completed_at = datetime.utcnow()
     
     # Update task total
-    worker_log.task.update_qty_from_workers()
+    task = worker_log.task
+    task.update_qty_from_workers()
     db.session.commit()
     
-    return api_response(data=worker_log.to_dict(), message='Worker log updated')
+    # Return updated progress info for real-time UI updates
+    response_data = worker_log.to_dict()
+    response_data['task_progress'] = task.get_progress_percentage()
+    response_data['qty_completed'] = task.qty_completed
+    response_data['qty_target'] = task.qty_target
+    
+    return api_response(data=response_data, message='Worker log updated')
 
 
 @api_bp.route('/production/workers/<int:log_id>', methods=['DELETE'])
@@ -247,4 +254,38 @@ def assign_supervisor(task_id):
     db.session.commit()
     
     return api_response(data=task.to_dict(), message='Supervisor assigned')
+
+
+@api_bp.route('/production/search-tasks', methods=['GET'])
+@login_required
+def search_production_tasks():
+    """Search tasks for Select2 dropdowns."""
+    search = request.args.get('term') # Select2 sends 'term'
+    query = ProductionTask.query.join(Order).filter(
+        ProductionTask.status != 'completed'
+    )
+    
+    if search:
+        query = query.filter(
+            db.or_(
+                Order.order_code.ilike(f'%{search}%'),
+                ProductionTask.product_name.ilike(f'%{search}%')
+            )
+        )
+    
+    tasks = query.order_by(Order.order_code.desc()).limit(20).all()
+    
+    results = []
+    for t in tasks:
+        results.append({
+            'id': t.id,
+            'text': f"[{t.order.order_code}] {t.product_name} - {t.process.value.title()}",
+            # Additional info for auto-fill
+            'customer_name': t.order.customer.name if t.order.customer else 'Unknown',
+            'order_code': t.order.order_code,
+            'product_name': t.product_name,
+            'process_stage': t.process.value.title()
+        })
+        
+    return jsonify({'results': results})
 

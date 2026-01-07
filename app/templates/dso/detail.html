@@ -1,785 +1,454 @@
 {% extends "base.html" %}
 
 {% block title %}DSO - {{ dso.order.order_code }}{% endblock %}
-{% block page_title %}Design Specification Order{% endblock %}
 
 {% block content %}
-<div class="page-header mb-4">
-    <div class="page-header-left">
-        <a href="{{ url_for('views.order_detail', order_id=dso.order_id) }}" class="btn btn-sm btn-outline">
-            <i class="fas fa-arrow-left"></i> Kembali
+<style>
+    /* Document Container to mimic paper */
+    .dso-paper-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        background: white;
+        padding: 2rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        border-radius: 8px;
+        font-family: 'Inter', sans-serif;
+    }
+
+    /* Actions Header */
+    .actions-header {
+        max-width: 1000px;
+        margin: 0 auto 1.5rem auto;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    /* Table Styles Override for Document Look */
+    .doc-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 1.5rem;
+        border: 1px solid #c0c0c0;
+    }
+
+    .doc-table th,
+    .doc-table td {
+        border: 1px solid #c0c0c0;
+        padding: 0.5rem 0.75rem;
+        vertical-align: middle;
+        font-size: 0.9rem;
+    }
+
+    .doc-table th {
+        background-color: #f8fafc;
+        font-weight: 600;
+        color: #475569;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+    }
+
+    /* Label Columns */
+    .label-col {
+        background-color: #f8fafc;
+        width: 120px;
+        font-weight: 600;
+        color: #475569;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+    }
+
+    /* Seamless Inputs */
+    .doc-input {
+        width: 100%;
+        border: none;
+        background: transparent;
+        padding: 0;
+        font-weight: 500;
+        color: #0f172a;
+        outline: none;
+        font-family: inherit;
+    }
+
+    .doc-input:focus {
+        background: #f0f9ff;
+        box-shadow: 0 2px 0 #3b82f6;
+        /* Bottom border effect */
+    }
+
+    .doc-input::placeholder {
+        color: #cbd5e1;
+        font-style: italic;
+    }
+
+    /* Header Section */
+    .doc-header-grid {
+        display: grid;
+        grid-template-columns: 200px 1fr 250px;
+        gap: 1rem;
+        align-items: center;
+        margin-bottom: 2rem;
+        border-bottom: 2px solid #0f172a;
+        padding-bottom: 1rem;
+    }
+
+    .info-box-table {
+        width: 100%;
+        border: 1px solid #000;
+    }
+
+    .info-box-table td {
+        border: 1px solid #000;
+        padding: 4px 8px;
+        font-weight: bold;
+    }
+
+    .bg-green {
+        background-color: #22c55e;
+        color: white;
+    }
+
+    .bg-red {
+        background-color: #ef4444;
+        color: white;
+    }
+
+    /* Visual Design Section */
+    .visual-section-header {
+        background: #3b82f6;
+        color: white;
+        text-align: center;
+        font-weight: bold;
+        padding: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        border: 1px solid #2563eb;
+    }
+
+    .visual-area {
+        border: 1px solid #c0c0c0;
+        border-top: none;
+        min-height: 400px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #fff;
+        position: relative;
+        margin-bottom: 1.5rem;
+    }
+
+    /* Number Cells */
+    .num-cell {
+        width: 40px;
+        text-align: center;
+        background: #f8fafc;
+        font-weight: 600;
+        color: #64748b;
+    }
+
+    .size-input-cell input {
+        text-align: center;
+    }
+
+    /* Upload Button Overlay */
+    .upload-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.8);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        opacity: 0;
+        transition: opacity 0.2s;
+        cursor: pointer;
+    }
+
+    .visual-area:hover .upload-overlay,
+    .visual-area.empty .upload-overlay {
+        opacity: 1;
+    }
+</style>
+
+<!-- Action Header (Outside Paper) -->
+<div class="actions-header">
+    <div>
+        <a href="{{ url_for('views.order_detail', order_id=dso.order_id) }}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i> Kembali
         </a>
     </div>
-    <div class="page-header-right">
-        <button class="btn btn-outline" onclick="window.print()">
-            <i class="fas fa-print"></i> Print
-        </button>
-        <button class="btn btn-primary" onclick="saveDSO()">
-            <i class="fas fa-save"></i> Simpan
+    <div class="d-flex gap-2">
+        <a href="/api/dso/{{ dso.id }}/export-word" class="btn btn-white border text-primary fw-semibold btn-sm">
+            <i class="fas fa-file-word me-1"></i> Word
+        </a>
+        <a href="/api/dso/{{ dso.id }}/export-pdf" class="btn btn-white border text-danger fw-semibold btn-sm">
+            <i class="fas fa-file-pdf me-1"></i> PDF
+        </a>
+        <button onclick="saveDSO()" class="btn btn-primary btn-sm px-4 fw-bold">
+            <i class="fas fa-save me-1"></i> SIMPAN
         </button>
     </div>
 </div>
 
-<!-- DSO Document Container -->
-<div class="dso-document" id="dsoDocument">
-    <!-- Header Section -->
-    <div class="dso-header">
-        <div class="dso-logo">
-            <div class="logo-box">
-                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Green Production"
-                    style="max-height: 60px; max-width: 100%;">
-            </div>
+<!-- The Document Paper -->
+<div class="dso-paper-container">
+
+    <!-- Header -->
+    <div class="doc-header-grid">
+        <div class="logo-area">
+            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Greens Production"
+                style="max-height: 60px;">
         </div>
-        <div class="dso-title">
-            <h1>Design Specification Order (DSO)</h1>
+        <div class="text-center">
+            <h4 class="mb-0 fw-bold text-uppercase">Design Specification Order (DSO)</h4>
         </div>
-        <div class="dso-info">
-            <table class="info-table">
+        <div>
+            <table class="info-box-table text-center" style="font-size: 0.8rem;">
                 <tr>
-                    <td class="label-inv">NO INV</td>
-                    <td class="value-inv">{{ dso.order.order_code }}</td>
+                    <td class="bg-red" style="width: 80px;">NO INV</td>
+                    <td class="text-danger">{{ dso.order.order_code }}</td>
                 </tr>
                 <tr>
-                    <td class="label-due">DUE DATE</td>
-                    <td class="value-due">
-                        <input type="date" name="due_date"
-                            value="{{ dso.order.deadline.strftime('%Y-%m-%d') if dso.order.deadline else '' }}">
+                    <td class="bg-green">DUE DATE</td>
+                    <td>{{ dso.order.deadline.strftime('%d/%m/%Y') if dso.order.deadline else '-' }}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- Specs Table Row -->
+    <div class="row g-0">
+        <!-- Left: Basic Specs & Left Acc -->
+        <div class="col-6 pe-3">
+            <table class="doc-table">
+                <tbody>
+                    <tr>
+                        <td class="label-col">MODEL</td>
+                        <td><input type="text" name="model" class="doc-input" value="{{ dso.order.model or '' }}"></td>
+                    </tr>
+                    <tr>
+                        <td class="label-col">BAHAN</td>
+                        <td><input type="text" name="bahan" class="doc-input" value="{{ dso.bahan or '' }}"></td>
+                    </tr>
+                    <tr>
+                        <td class="label-col">WARNA</td>
+                        <td><input type="text" name="warna" class="doc-input" value="{{ dso.warna or '' }}"></td>
+                    </tr>
+                    <!-- ACC Section embedded in left table as per layout often seen -->
+                    <!-- But layout shows ACC list separate. Let's follow the image structure -->
+                    <!-- Image: Table Left (Model, Bahan, Warna, ACC blocks), Table Right (Jenis, Sablon, Posisi, Kancing...) -->
+
+                    <tr>
+                        <td class="label-col align-top pt-2" rowspan="5">ACC</td>
+                        <td class="p-0 border-0">
+                            <table class="w-100 m-0 border-0">
+                                {% for i in range(1, 6) %}
+                                <tr>
+                                    <td class="num-cell py-1 border-0 border-bottom border-end" style="width: 30px;">{{
+                                        i }}</td>
+                                    <td class="py-1 border-0 border-bottom"><input type="text" name="acc_{{ i }}"
+                                            class="doc-input" value="{{ dso['acc_' ~ i] or '' }}"></td>
+                                </tr>
+                                {% endfor %}
+                            </table>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Right: Detail Specs -->
+        <div class="col-6 ps-3">
+            <table class="doc-table">
+                <tbody>
+                    <tr>
+                        <td class="label-col" style="width: 140px;">JENIS</td>
+                        <td><input type="text" name="jenis" class="doc-input" value="{{ dso.jenis or '' }}"></td>
+                    </tr>
+                    <tr>
+                        <td class="label-col">SABLON</td>
+                        <td><input type="text" name="sablon" class="doc-input" value="{{ dso.sablon or '' }}"></td>
+                    </tr>
+                    <tr>
+                        <td class="label-col">POSISI</td>
+                        <td><input type="text" name="posisi" class="doc-input" value="{{ dso.posisi or '' }}"
+                                placeholder="-"></td>
+                    </tr>
+                    <tr>
+                        <td class="label-col">KANCING</td>
+                        <td><input type="text" name="kancing" class="doc-input" value="{{ dso.kancing or '' }}"></td>
+                    </tr>
+                    <tr>
+                        <td class="label-col">SAKU</td>
+                        <td><input type="text" name="saku" class="doc-input" value="{{ dso.saku or '' }}"></td>
+                    </tr>
+                    <tr>
+                        <td class="label-col">RESLETING</td>
+                        <td><input type="text" name="resleting" class="doc-input" value="{{ dso.resleting or '' }}">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="label-col">MODEL BADAN BAWAH</td>
+                        <td style="font-size: 0.8rem;"><input type="text" name="model_badan_bawah" class="doc-input"
+                                value="{{ dso.model_badan_bawah or '' }}"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Tampak Depan -->
+    <div class="mb-4">
+        <div class="visual-section-header">TAMPAK DEPAN</div>
+        <div class="visual-area {% if not dso.gambar_depan_url %}empty{% endif %}">
+            <input type="file" id="uploadGambar" accept="image/*" class="d-none" onchange="uploadGambarDepan(this)">
+
+            {% if dso.gambar_depan_url %}
+            <img src="{{ dso.gambar_depan_url }}" id="gambarDepan"
+                style="max-width: 100%; max-height: 400px; object-fit: contain;">
+            <div class="upload-overlay" onclick="document.getElementById('uploadGambar').click()">
+                <div class="bg-white p-2 rounded shadow text-dark fw-bold border">
+                    <i class="fas fa-camera me-1"></i> Ganti Desain
+                </div>
+            </div>
+            {% else %}
+            <div class="upload-overlay" onclick="document.getElementById('uploadGambar').click()">
+                <div class="text-center text-secondary">
+                    <i class="fas fa-cloud-upload-alt fa-3x mb-2 text-primary"></i>
+                    <div class="fw-bold text-dark">UPLOAD GAMBAR DESAIN</div>
+                    <div class="small">Klik area ini untuk memilih file</div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Notes & Label Row -->
+    <div class="row mb-4">
+        <div class="col-8">
+            <table class="doc-table mb-0">
+                <tr>
+                    <td class="label-col text-center" rowspan="6" style="width: 120px;">CATATAN<br>CUSTOMER</td>
+                    <td class="num-cell" style="width: 40px !important;">1</td>
+                    <td><input type="text" name="catatan_customer_1" class="doc-input"
+                            value="{{ dso.catatan_customer_1 or '' }}"></td>
+                </tr>
+                {% for i in range(2, 7) %}
+                <tr>
+                    <td class="num-cell">{{ i }}</td>
+                    <td><input type="text" name="catatan_customer_{{ i }}" class="doc-input"
+                            value="{{ dso['catatan_customer_' ~ i] or '' }}"></td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+        <div class="col-4">
+            <table class="doc-table mb-0" style="height: 100%;">
+                <tr>
+                    <td class="label-col text-center border-bottom-0" style="height: 40px;">LABEL</td>
+                </tr>
+                <tr>
+                    <td class="p-2 border-top-0 align-top" style="height: 100%;">
+                        <textarea name="label" class="doc-input w-100 h-100 text-center"
+                            style="min-height: 150px; resize: none;" placeholder="-">{{ dso.label or '' }}</textarea>
                     </td>
                 </tr>
             </table>
         </div>
     </div>
 
-    <!-- Combined Product Info + ACC Section -->
-    <div class="dso-main-table">
-        <table class="spec-table">
-            <tbody>
-                <!-- Row 1: MODEL + JENIS | ACC 1 + KANCING -->
-                <tr>
-                    <td class="label">MODEL</td>
-                    <td><input type="text" name="model" value="{{ dso.order.model or '' }}"></td>
-                    <td class="label">JENIS</td>
-                    <td><input type="text" name="jenis" value="{{ dso.jenis or '' }}"></td>
-                    <td class="spacer"></td>
-                    <td class="label acc-label" rowspan="5">ACC</td>
-                    <td class="num">1</td>
-                    <td><input type="text" name="acc_1" value="{{ dso.acc_1 or '' }}"></td>
-                    <td class="label">KANCING</td>
-                    <td><input type="text" name="kancing" value="{{ dso.kancing or '' }}"></td>
-                </tr>
-                <!-- Row 2: BAHAN + SABLON | ACC 2 + SAKU -->
-                <tr>
-                    <td class="label">BAHAN</td>
-                    <td><input type="text" name="bahan" value="{{ dso.bahan or '' }}"></td>
-                    <td class="label">SABLON</td>
-                    <td><input type="text" name="sablon" value="{{ dso.sablon or '' }}"></td>
-                    <td class="spacer"></td>
-                    <td class="num">2</td>
-                    <td><input type="text" name="acc_2" value="{{ dso.acc_2 or '' }}"></td>
-                    <td class="label">SAKU</td>
-                    <td><input type="text" name="saku" value="{{ dso.saku or '' }}"></td>
-                </tr>
-                <!-- Row 3: WARNA + POSISI | ACC 3 + RESLETING -->
-                <tr>
-                    <td class="label">WARNA</td>
-                    <td><input type="text" name="warna" value="{{ dso.warna or '' }}"></td>
-                    <td class="label">POSISI</td>
-                    <td><input type="text" name="posisi" value="{{ dso.posisi or '' }}"></td>
-                    <td class="spacer"></td>
-                    <td class="num">3</td>
-                    <td><input type="text" name="acc_3" value="{{ dso.acc_3 or '' }}"></td>
-                    <td class="label">RESLETING</td>
-                    <td><input type="text" name="resleting" value="{{ dso.resleting or '' }}"></td>
-                </tr>
-                <!-- Row 4: Empty | ACC 4 + MODEL BADAN BAWAH -->
-                <tr>
-                    <td class="label"></td>
-                    <td></td>
-                    <td class="label"></td>
-                    <td></td>
-                    <td class="spacer"></td>
-                    <td class="num">4</td>
-                    <td><input type="text" name="acc_4" value="{{ dso.acc_4 or '' }}"></td>
-                    <td class="label">MODEL BADAN<br>BAWAH</td>
-                    <td><input type="text" name="model_badan_bawah" value="{{ dso.model_badan_bawah or '' }}"></td>
-                </tr>
-                <!-- Row 5: Empty | ACC 5 + Empty -->
-                <tr>
-                    <td class="label"></td>
-                    <td></td>
-                    <td class="label"></td>
-                    <td></td>
-                    <td class="spacer"></td>
-                    <td class="num">5</td>
-                    <td><input type="text" name="acc_5" value="{{ dso.acc_5 or '' }}"></td>
-                    <td class="label"></td>
-                    <td></td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
+    <!-- Size Charts -->
+    <div class="mb-2">
+        <div class="doc-table mt-0 mb-0 border-bottom-0 bg-light fw-bold px-2 py-1 border border-bottom-0"
+            style="font-size: 0.85rem;">S. CHART DEWASA</div>
+        <div class="table-responsive">
+            <table class="doc-table text-center mb-4">
+                <thead>
+                    <tr>
+                        <th style="width: 100px;">Ukuran</th>
+                        {% for size in ['XS','S','M','L','XL','XXL','3XL','4XL','5XL'] %}
+                        <th>{{ size }}</th>
+                        {% endfor %}
+                        <th class="bg-light text-primary">JUM</th>
+                        <th class="bg-light text-success">TOTAL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% set dewasa = dso.size_chart_dewasa %}
+                    <tr>
+                        <td class="fw-bold text-start ps-3">Pendek</td>
+                        {% for size in ['xs','s','m','l','xl','xxl','x3l','x4l','x5l'] %}
+                        <td class="size-input-cell"><input type="number" name="dewasa_pendek_{{ size }}"
+                                class="doc-input" value="{{ dewasa['pendek_' ~ size] if dewasa else 0 }}" min="0"
+                                onchange="calcDewasa()"></td>
+                        {% endfor %}
+                        <td class="fw-bold text-primary" id="jumDewasaPendek">{{ dewasa.jum_pendek if dewasa else 0 }}
+                        </td>
+                        <td class="fw-bold text-success fs-5 align-middle" rowspan="2" id="totalDewasa">{{ dewasa.total
+                            if dewasa else 0 }}</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-start ps-3">Panjang</td>
+                        {% for size in ['xs','s','m','l','xl','xxl','x3l','x4l','x5l'] %}
+                        <td class="size-input-cell"><input type="number" name="dewasa_panjang_{{ size }}"
+                                class="doc-input" value="{{ dewasa['panjang_' ~ size] if dewasa else 0 }}" min="0"
+                                onchange="calcDewasa()"></td>
+                        {% endfor %}
+                        <td class="fw-bold text-primary" id="jumDewasaPanjang">{{ dewasa.jum_panjang if dewasa else 0 }}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
 
-    <!-- TAMPAK DEPAN Section -->
-    <div class="tampak-depan-section">
-        <div class="tampak-header">TAMPAK DEPAN</div>
-        <div class="tampak-content" id="imageArea">
-            {% if dso.gambar_depan_url %}
-            <img src="{{ dso.gambar_depan_url }}" alt="Tampak Depan" id="gambarDepan">
-            <button class="btn btn-sm btn-outline change-btn" onclick="document.getElementById('uploadGambar').click()">
-                <i class="fas fa-sync"></i> Ganti
-            </button>
-            {% else %}
-            <div class="upload-placeholder" onclick="document.getElementById('uploadGambar').click()">
-                <i class="fas fa-cloud-upload-alt"></i>
-                <span>Klik untuk upload gambar desain</span>
-            </div>
-            {% endif %}
-            <input type="file" id="uploadGambar" accept="image/*" style="display:none"
-                onchange="uploadGambarDepan(this)">
+        <div class="doc-table mt-0 mb-0 border-bottom-0 bg-light fw-bold px-2 py-1 border border-bottom-0"
+            style="font-size: 0.85rem;">S. CHART ANAK</div>
+        <div class="table-responsive">
+            <table class="doc-table text-center mb-0">
+                <thead>
+                    <tr>
+                        <th style="width: 100px;">Ukuran</th>
+                        {% for size in ['XS','S','M','L','XL','XXL','3XL','4XL','5XL'] %}
+                        <th>{{ size }}</th>
+                        {% endfor %}
+                        <th class="bg-light text-primary">JUM</th>
+                        <th class="bg-light text-success">TOTAL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% set anak = dso.size_chart_anak %}
+                    <tr>
+                        <td class="fw-bold text-start ps-3">Pendek</td>
+                        {% for size in ['xs','s','m','l','xl','xxl','x3l','x4l','x5l'] %}
+                        <td class="size-input-cell"><input type="number" name="anak_pendek_{{ size }}" class="doc-input"
+                                value="{{ anak['pendek_' ~ size] if anak else 0 }}" min="0" onchange="calcAnak()"></td>
+                        {% endfor %}
+                        <td class="fw-bold text-primary" id="jumAnakPendek">{{ anak.jum_pendek if anak else 0 }}</td>
+                        <td class="fw-bold text-success fs-5 align-middle" rowspan="2" id="totalAnak">{{ anak.total if
+                            anak else 0 }}</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-start ps-3">Panjang</td>
+                        {% for size in ['xs','s','m','l','xl','xxl','x3l','x4l','x5l'] %}
+                        <td class="size-input-cell"><input type="number" name="anak_panjang_{{ size }}"
+                                class="doc-input" value="{{ anak['panjang_' ~ size] if anak else 0 }}" min="0"
+                                onchange="calcAnak()"></td>
+                        {% endfor %}
+                        <td class="fw-bold text-primary" id="jumAnakPanjang">{{ anak.jum_panjang if anak else 0 }}</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 
-    <!-- Catatan Customer & Label Section -->
-    <div class="catatan-section">
-        <table class="catatan-table">
-            <tbody>
-                <tr>
-                    <td class="label catatan-label" rowspan="6">CATATAN<br>CUSTOMER</td>
-                    <td class="num">1</td>
-                    <td class="catatan-input"><input type="text" name="catatan_customer_1"
-                            value="{{ dso.catatan_customer_1 or '' }}"></td>
-                    <td class="label label-right" rowspan="6">LABEL</td>
-                    <td class="label-input" rowspan="6"><textarea name="label" rows="6">{{ dso.label or '' }}</textarea>
-                    </td>
-                </tr>
-                <tr>
-                    <td class="num">2</td>
-                    <td class="catatan-input"><input type="text" name="catatan_customer_2"
-                            value="{{ dso.catatan_customer_2 or '' }}"></td>
-                </tr>
-                <tr>
-                    <td class="num">3</td>
-                    <td class="catatan-input"><input type="text" name="catatan_customer_3"
-                            value="{{ dso.catatan_customer_3 or '' }}"></td>
-                </tr>
-                <tr>
-                    <td class="num">4</td>
-                    <td class="catatan-input"><input type="text" name="catatan_customer_4"
-                            value="{{ dso.catatan_customer_4 or '' }}"></td>
-                </tr>
-                <tr>
-                    <td class="num">5</td>
-                    <td class="catatan-input"><input type="text" name="catatan_customer_5"
-                            value="{{ dso.catatan_customer_5 or '' }}"></td>
-                </tr>
-                <tr>
-                    <td class="num">6</td>
-                    <td class="catatan-input"><input type="text" name="catatan_customer_6"
-                            value="{{ dso.catatan_customer_6 or '' }}"></td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-
-    <!-- S. Chart Dewasa -->
-    <div class="size-chart-section">
-        <div class="chart-title">S. Chart Dewasa</div>
-        <table class="size-table" id="chartDewasa">
-            <thead>
-                <tr>
-                    <th class="col-ukuran">Ukuran</th>
-                    <th>XS</th>
-                    <th>S</th>
-                    <th>M</th>
-                    <th>L</th>
-                    <th>XL</th>
-                    <th>XXL</th>
-                    <th>X3L</th>
-                    <th>X4L</th>
-                    <th>X5L</th>
-                    <th class="col-jum">JUM</th>
-                    <th class="col-total">TOTAL</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% set dewasa = dso.size_chart_dewasa %}
-                <tr>
-                    <td class="row-label">Pendek</td>
-                    <td><input type="number" name="dewasa_pendek_xs" value="{{ dewasa.pendek_xs if dewasa else 0 }}"
-                            min="0" onchange="calcDewasa()"></td>
-                    <td><input type="number" name="dewasa_pendek_s" value="{{ dewasa.pendek_s if dewasa else 0 }}"
-                            min="0" onchange="calcDewasa()"></td>
-                    <td><input type="number" name="dewasa_pendek_m" value="{{ dewasa.pendek_m if dewasa else 0 }}"
-                            min="0" onchange="calcDewasa()"></td>
-                    <td><input type="number" name="dewasa_pendek_l" value="{{ dewasa.pendek_l if dewasa else 0 }}"
-                            min="0" onchange="calcDewasa()"></td>
-                    <td><input type="number" name="dewasa_pendek_xl" value="{{ dewasa.pendek_xl if dewasa else 0 }}"
-                            min="0" onchange="calcDewasa()"></td>
-                    <td><input type="number" name="dewasa_pendek_xxl" value="{{ dewasa.pendek_xxl if dewasa else 0 }}"
-                            min="0" onchange="calcDewasa()"></td>
-                    <td><input type="number" name="dewasa_pendek_x3l" value="{{ dewasa.pendek_x3l if dewasa else 0 }}"
-                            min="0" onchange="calcDewasa()"></td>
-                    <td><input type="number" name="dewasa_pendek_x4l" value="{{ dewasa.pendek_x4l if dewasa else 0 }}"
-                            min="0" onchange="calcDewasa()"></td>
-                    <td><input type="number" name="dewasa_pendek_x5l" value="{{ dewasa.pendek_x5l if dewasa else 0 }}"
-                            min="0" onchange="calcDewasa()"></td>
-                    <td class="jum" id="jumDewasaPendek">{{ dewasa.jum_pendek if dewasa else 0 }}</td>
-                    <td class="total" rowspan="2" id="totalDewasa">{{ dewasa.total if dewasa else 0 }}</td>
-                </tr>
-                <tr>
-                    <td class="row-label">Panjang</td>
-                    <td><input type="number" name="dewasa_panjang_xs" value="{{ dewasa.panjang_xs if dewasa else 0 }}"
-                            min="0" onchange="calcDewasa()"></td>
-                    <td><input type="number" name="dewasa_panjang_s" value="{{ dewasa.panjang_s if dewasa else 0 }}"
-                            min="0" onchange="calcDewasa()"></td>
-                    <td><input type="number" name="dewasa_panjang_m" value="{{ dewasa.panjang_m if dewasa else 0 }}"
-                            min="0" onchange="calcDewasa()"></td>
-                    <td><input type="number" name="dewasa_panjang_l" value="{{ dewasa.panjang_l if dewasa else 0 }}"
-                            min="0" onchange="calcDewasa()"></td>
-                    <td><input type="number" name="dewasa_panjang_xl" value="{{ dewasa.panjang_xl if dewasa else 0 }}"
-                            min="0" onchange="calcDewasa()"></td>
-                    <td><input type="number" name="dewasa_panjang_xxl" value="{{ dewasa.panjang_xxl if dewasa else 0 }}"
-                            min="0" onchange="calcDewasa()"></td>
-                    <td><input type="number" name="dewasa_panjang_x3l" value="{{ dewasa.panjang_x3l if dewasa else 0 }}"
-                            min="0" onchange="calcDewasa()"></td>
-                    <td><input type="number" name="dewasa_panjang_x4l" value="{{ dewasa.panjang_x4l if dewasa else 0 }}"
-                            min="0" onchange="calcDewasa()"></td>
-                    <td><input type="number" name="dewasa_panjang_x5l" value="{{ dewasa.panjang_x5l if dewasa else 0 }}"
-                            min="0" onchange="calcDewasa()"></td>
-                    <td class="jum" id="jumDewasaPanjang">{{ dewasa.jum_panjang if dewasa else 0 }}</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-
-    <!-- S. Chart Anak -->
-    <div class="size-chart-section">
-        <div class="chart-title">S. Chart Anak</div>
-        <table class="size-table" id="chartAnak">
-            <thead>
-                <tr>
-                    <th class="col-ukuran">Ukuran</th>
-                    <th>XS</th>
-                    <th>S</th>
-                    <th>M</th>
-                    <th>L</th>
-                    <th>XL</th>
-                    <th>XXL</th>
-                    <th>X3L</th>
-                    <th>X4L</th>
-                    <th>X5L</th>
-                    <th class="col-jum">JUM</th>
-                    <th class="col-total">TOTAL</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% set anak = dso.size_chart_anak %}
-                <tr>
-                    <td class="row-label">Pendek</td>
-                    <td><input type="number" name="anak_pendek_xs" value="{{ anak.pendek_xs if anak else 0 }}" min="0"
-                            onchange="calcAnak()"></td>
-                    <td><input type="number" name="anak_pendek_s" value="{{ anak.pendek_s if anak else 0 }}" min="0"
-                            onchange="calcAnak()"></td>
-                    <td><input type="number" name="anak_pendek_m" value="{{ anak.pendek_m if anak else 0 }}" min="0"
-                            onchange="calcAnak()"></td>
-                    <td><input type="number" name="anak_pendek_l" value="{{ anak.pendek_l if anak else 0 }}" min="0"
-                            onchange="calcAnak()"></td>
-                    <td><input type="number" name="anak_pendek_xl" value="{{ anak.pendek_xl if anak else 0 }}" min="0"
-                            onchange="calcAnak()"></td>
-                    <td><input type="number" name="anak_pendek_xxl" value="{{ anak.pendek_xxl if anak else 0 }}" min="0"
-                            onchange="calcAnak()"></td>
-                    <td><input type="number" name="anak_pendek_x3l" value="{{ anak.pendek_x3l if anak else 0 }}" min="0"
-                            onchange="calcAnak()"></td>
-                    <td><input type="number" name="anak_pendek_x4l" value="{{ anak.pendek_x4l if anak else 0 }}" min="0"
-                            onchange="calcAnak()"></td>
-                    <td><input type="number" name="anak_pendek_x5l" value="{{ anak.pendek_x5l if anak else 0 }}" min="0"
-                            onchange="calcAnak()"></td>
-                    <td class="jum" id="jumAnakPendek">{{ anak.jum_pendek if anak else 0 }}</td>
-                    <td class="total" rowspan="2" id="totalAnak">{{ anak.total if anak else 0 }}</td>
-                </tr>
-                <tr>
-                    <td class="row-label">Panjang</td>
-                    <td><input type="number" name="anak_panjang_xs" value="{{ anak.panjang_xs if anak else 0 }}" min="0"
-                            onchange="calcAnak()"></td>
-                    <td><input type="number" name="anak_panjang_s" value="{{ anak.panjang_s if anak else 0 }}" min="0"
-                            onchange="calcAnak()"></td>
-                    <td><input type="number" name="anak_panjang_m" value="{{ anak.panjang_m if anak else 0 }}" min="0"
-                            onchange="calcAnak()"></td>
-                    <td><input type="number" name="anak_panjang_l" value="{{ anak.panjang_l if anak else 0 }}" min="0"
-                            onchange="calcAnak()"></td>
-                    <td><input type="number" name="anak_panjang_xl" value="{{ anak.panjang_xl if anak else 0 }}" min="0"
-                            onchange="calcAnak()"></td>
-                    <td><input type="number" name="anak_panjang_xxl" value="{{ anak.panjang_xxl if anak else 0 }}"
-                            min="0" onchange="calcAnak()"></td>
-                    <td><input type="number" name="anak_panjang_x3l" value="{{ anak.panjang_x3l if anak else 0 }}"
-                            min="0" onchange="calcAnak()"></td>
-                    <td><input type="number" name="anak_panjang_x4l" value="{{ anak.panjang_x4l if anak else 0 }}"
-                            min="0" onchange="calcAnak()"></td>
-                    <td><input type="number" name="anak_panjang_x5l" value="{{ anak.panjang_x5l if anak else 0 }}"
-                            min="0" onchange="calcAnak()"></td>
-                    <td class="jum" id="jumAnakPanjang">{{ anak.jum_panjang if anak else 0 }}</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
 </div>
 
-<style>
-    /* DSO Document - Clean Professional Style */
-    .dso-document {
-        background: white;
-        max-width: 1000px;
-        margin: 0 auto;
-        padding: 2rem;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-        border-radius: 8px;
-        font-family: 'Segoe UI', Arial, sans-serif;
-    }
-
-    /* Header */
-    .dso-header {
-        display: grid;
-        grid-template-columns: 200px 1fr 200px;
-        align-items: center;
-        gap: 1rem;
-        padding-bottom: 1.5rem;
-        border-bottom: 2px solid #e5e7eb;
-        margin-bottom: 1.5rem;
-    }
-
-    .logo-box {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .logo-icon {
-        font-size: 2rem;
-    }
-
-    .logo-text {
-        display: flex;
-        flex-direction: column;
-        line-height: 1.2;
-    }
-
-    .logo-text strong {
-        font-size: 1.1rem;
-        color: #16a34a;
-        letter-spacing: 1px;
-    }
-
-    .logo-text span {
-        font-size: 0.7rem;
-        color: #6b7280;
-        letter-spacing: 2px;
-    }
-
-    .logo-text small {
-        font-size: 0.6rem;
-        color: #9ca3af;
-    }
-
-    .dso-title h1 {
-        font-size: 1rem;
-        font-weight: 600;
-        text-align: center;
-        color: #374151;
-        margin: 0;
-    }
-
-    .info-table {
-        border-collapse: collapse;
-        width: 100%;
-    }
-
-    .info-table td {
-        padding: 0.35rem 0.5rem;
-        font-size: 0.8rem;
-    }
-
-    .info-table .label-inv {
-        background: #ef4444;
-        color: white;
-        font-weight: 600;
-        text-align: center;
-        border-radius: 3px 0 0 3px;
-    }
-
-    .info-table .value-inv {
-        background: #fef2f2;
-        border: 1px solid #fecaca;
-        font-weight: 600;
-        color: #dc2626;
-    }
-
-    .info-table .label-due {
-        background: #22c55e;
-        color: white;
-        font-weight: 600;
-        text-align: center;
-        border-radius: 3px 0 0 3px;
-    }
-
-    .info-table .value-due {
-        background: #f0fdf4;
-        border: 1px solid #bbf7d0;
-    }
-
-    .info-table input {
-        border: none;
-        background: transparent;
-        width: 100%;
-        font-size: 0.8rem;
-        padding: 0;
-    }
-
-    /* Main Spec Table */
-    .dso-main-table {
-        margin-bottom: 1.5rem;
-    }
-
-    .spec-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 0.85rem;
-    }
-
-    .spec-table td {
-        border: 1px solid #d1d5db;
-        padding: 0.5rem 0.75rem;
-        height: 38px;
-    }
-
-    .spec-table td.label {
-        background: #f9fafb;
-        font-weight: 600;
-        color: #374151;
-        width: 100px;
-        text-align: center;
-    }
-
-    .spec-table td.acc-label {
-        width: 60px;
-        vertical-align: middle;
-    }
-
-    .spec-table td.num {
-        width: 30px;
-        text-align: center;
-        background: #f9fafb;
-        color: #6b7280;
-    }
-
-    .spec-table td.spacer {
-        width: 20px;
-        border: none;
-        background: transparent;
-    }
-
-    .spec-table input {
-        width: 100%;
-        border: none;
-        background: transparent;
-        padding: 0.25rem;
-        font-size: 0.85rem;
-    }
-
-    .spec-table input:focus {
-        outline: none;
-        background: #fef9c3;
-    }
-
-    /* Tampak Depan */
-    .tampak-depan-section {
-        margin-bottom: 1.5rem;
-        border: 1px solid #d1d5db;
-    }
-
-    .tampak-header {
-        background: #3b82f6;
-        color: white;
-        padding: 0.6rem 1rem;
-        font-weight: 600;
-        font-size: 0.9rem;
-        text-align: center;
-    }
-
-    .tampak-content {
-        min-height: 350px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #fafafa;
-        position: relative;
-    }
-
-    .tampak-content img {
-        max-width: 100%;
-        max-height: 350px;
-        object-fit: contain;
-    }
-
-    .tampak-content .change-btn {
-        position: absolute;
-        bottom: 10px;
-        right: 10px;
-    }
-
-    .upload-placeholder {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 0.75rem;
-        color: #9ca3af;
-        cursor: pointer;
-        padding: 3rem;
-        transition: all 0.2s;
-    }
-
-    .upload-placeholder:hover {
-        color: #3b82f6;
-    }
-
-    .upload-placeholder i {
-        font-size: 3rem;
-    }
-
-    /* Catatan Section */
-    .catatan-section {
-        margin-bottom: 1.5rem;
-    }
-
-    .catatan-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 0.85rem;
-    }
-
-    .catatan-table td {
-        border: 1px solid #d1d5db;
-        padding: 0.4rem 0.5rem;
-    }
-
-    .catatan-table .catatan-label {
-        width: 100px;
-        background: #f9fafb;
-        font-weight: 600;
-        text-align: center;
-        vertical-align: middle;
-    }
-
-    .catatan-table .num {
-        width: 30px;
-        text-align: center;
-        background: #f9fafb;
-        color: #6b7280;
-    }
-
-    .catatan-table .catatan-input {
-        width: 45%;
-    }
-
-    .catatan-table .label-right {
-        width: 80px;
-        background: #f9fafb;
-        font-weight: 600;
-        text-align: center;
-        vertical-align: middle;
-    }
-
-    .catatan-table .label-input {
-        width: 25%;
-        vertical-align: top;
-    }
-
-    .catatan-table input,
-    .catatan-table textarea {
-        width: 100%;
-        border: none;
-        background: transparent;
-        padding: 0.25rem;
-        font-size: 0.85rem;
-        font-family: inherit;
-        resize: none;
-    }
-
-    .catatan-table input:focus,
-    .catatan-table textarea:focus {
-        outline: none;
-        background: #fef9c3;
-    }
-
-    /* Size Chart */
-    .size-chart-section {
-        margin-bottom: 1.5rem;
-        border: 1px solid #d1d5db;
-        border-radius: 4px;
-        overflow: hidden;
-    }
-
-    .chart-title {
-        background: #f3f4f6;
-        padding: 0.5rem 1rem;
-        font-weight: 600;
-        font-size: 0.9rem;
-        color: #374151;
-        border-bottom: 1px solid #d1d5db;
-    }
-
-    .size-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 0.8rem;
-    }
-
-    .size-table th,
-    .size-table td {
-        border: 1px solid #d1d5db;
-        padding: 0.4rem;
-        text-align: center;
-    }
-
-    .size-table th {
-        background: #f9fafb;
-        font-weight: 600;
-        color: #374151;
-    }
-
-    .size-table .col-ukuran {
-        width: 80px;
-    }
-
-    .size-table .col-jum {
-        width: 50px;
-        background: #dbeafe;
-    }
-
-    .size-table .col-total {
-        width: 60px;
-        background: #d1fae5;
-    }
-
-    .size-table .row-label {
-        background: #f9fafb;
-        font-weight: 500;
-    }
-
-    .size-table input {
-        width: 100%;
-        border: none;
-        text-align: center;
-        padding: 0.25rem;
-        font-size: 0.8rem;
-        background: transparent;
-    }
-
-    .size-table input:focus {
-        outline: none;
-        background: #fef9c3;
-    }
-
-    .size-table input::-webkit-inner-spin-button,
-    .size-table input::-webkit-outer-spin-button {
-        -webkit-appearance: none;
-        margin: 0;
-    }
-
-    .size-table input[type=number] {
-        -moz-appearance: textfield;
-    }
-
-    .size-table .jum {
-        background: #dbeafe;
-        font-weight: 600;
-        color: #1d4ed8;
-    }
-
-    .size-table .total {
-        background: #d1fae5;
-        font-weight: 700;
-        color: #059669;
-        font-size: 1rem;
-        vertical-align: middle;
-    }
-
-    /* Print Styles */
-    @media print {
-        @page {
-            size: A4 landscape;
-            margin: 5mm;
-        }
-
-        body {
-            background: white !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-        }
-
-        .page-header,
-        .btn,
-        .change-btn,
-        .upload-placeholder {
-            display: none !important;
-        }
-
-        .dso-document {
-            box-shadow: none;
-            width: 100%;
-            max-width: 100%;
-            padding: 0;
-            margin: 0;
-        }
-
-        /* Enforce table borders visibility */
-        .spec-table td,
-        .catatan-table td,
-        .size-table td,
-        .size-table th,
-        .info-table .value-inv,
-        .info-table .value-due,
-        .tampak-depan-section,
-        .size-chart-section {
-            border-color: #9ca3af !important;
-        }
-
-        /* Remove input borders for cleaner print */
-        .spec-table input,
-        .catatan-table input,
-        .catatan-table textarea,
-        .size-table input,
-        .info-table input {
-            border: none !important;
-            background: transparent !important;
-            box-shadow: none !important;
-        }
-    }
-
-    /* Responsive */
-    @media (max-width: 900px) {
-        .dso-header {
-            grid-template-columns: 1fr;
-            text-align: center;
-            gap: 1rem;
-        }
-
-        .logo-box {
-            justify-content: center;
-        }
-
-        .dso-info {
-            display: flex;
-            justify-content: center;
-        }
-
-        .spec-table td.spacer {
-            display: none;
-        }
-    }
-</style>
-
+<!-- Scripts reused -->
 <script>
-    // Calculate Dewasa JUM and TOTAL
+    // Include same calc functions and logic
     function calcDewasa() {
         const sizes = ['xs', 's', 'm', 'l', 'xl', 'xxl', 'x3l', 'x4l', 'x5l'];
         let jumPendek = 0, jumPanjang = 0;
@@ -794,7 +463,6 @@
         document.getElementById('totalDewasa').textContent = jumPendek + jumPanjang;
     }
 
-    // Calculate Anak JUM and TOTAL
     function calcAnak() {
         const sizes = ['xs', 's', 'm', 'l', 'xl', 'xxl', 'x3l', 'x4l', 'x5l'];
         let jumPendek = 0, jumPanjang = 0;
@@ -809,117 +477,108 @@
         document.getElementById('totalAnak').textContent = jumPendek + jumPanjang;
     }
 
-    // Upload Gambar Depan
-    async function uploadGambarDepan(input) {
-        const file = input.files[0];
-        if (!file) return;
-
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('image_type', 'depan');
-
-        try {
-            showLoading('Mengupload gambar...');
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-            const response = await fetch('/api/dso/{{ dso.id }}/images', {
-                method: 'POST',
-                body: formData,
-                credentials: 'same-origin',
-                headers: csrfToken ? { 'X-CSRFToken': csrfToken } : {}
-            });
-
-            hideLoading();
-            if (response.ok) {
-                showToast('Gambar berhasil diupload!', 'success');
-                location.reload();
-            } else {
-                const err = await response.json();
-                showToast(err.message || 'Upload gagal', 'error');
+    function uploadGambarDepan(input) {
+        if (input.files && input.files[0]) {
+            // Preview only first
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const img = document.getElementById('gambarDepan');
+                if (img) {
+                    img.src = e.target.result;
+                } else {
+                    // If fresh upload
+                    const container = document.querySelector('.visual-area');
+                    container.classList.remove('empty');
+                    container.innerHTML = `
+                        <input type="file" id="uploadGambar" accept="image/*" class="d-none" onchange="uploadGambarDepan(this)">
+                        <img src="${e.target.result}" id="gambarDepan" style="max-width: 100%; max-height: 400px; object-fit: contain;">
+                        <div class="upload-overlay" onclick="document.getElementById('uploadGambar').click()">
+                             <div class="bg-white p-2 rounded shadow text-dark fw-bold border">
+                                 <i class="fas fa-camera me-1"></i> Ganti Desain
+                             </div>
+                        </div>
+                     `;
+                }
             }
-        } catch (error) {
-            hideLoading();
-            showToast('Upload gagal', 'error');
+            reader.readAsDataURL(input.files[0]);
+
+            const formData = new FormData();
+            formData.append('gambar_depan', input.files[0]);
+            showLoading();
+
+            const headers = {};
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            if (csrfToken) headers['X-CSRFToken'] = csrfToken;
+
+            fetch('/api/dso/{{ dso.id }}/upload', {
+                method: 'PUT',
+                body: formData,
+                headers: headers, // Do NOT set Content-Type here, let browser set multipart/form-data
+                credentials: 'same-origin'
+            })
+                .then(async response => {
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.message || 'Upload failed');
+                    return data;
+                })
+                .then(() => {
+                    hideLoading();
+                    showToast('Desain berhasil diupdate', 'success');
+                }).catch(err => {
+                    hideLoading();
+                    showToast(err.message || 'Upload gagal', 'error');
+                });
         }
     }
 
-    // Save DSO
     async function saveDSO() {
+        showLoading();
+        // Collect data
         const dsoData = {
+            model: document.querySelector('[name="model"]').value,
             jenis: document.querySelector('[name="jenis"]').value,
             bahan: document.querySelector('[name="bahan"]').value,
             warna: document.querySelector('[name="warna"]').value,
             sablon: document.querySelector('[name="sablon"]').value,
             posisi: document.querySelector('[name="posisi"]').value,
-            acc_1: document.querySelector('[name="acc_1"]').value,
-            acc_2: document.querySelector('[name="acc_2"]').value,
-            acc_3: document.querySelector('[name="acc_3"]').value,
-            acc_4: document.querySelector('[name="acc_4"]').value,
-            acc_5: document.querySelector('[name="acc_5"]').value,
             kancing: document.querySelector('[name="kancing"]').value,
             saku: document.querySelector('[name="saku"]').value,
             resleting: document.querySelector('[name="resleting"]').value,
             model_badan_bawah: document.querySelector('[name="model_badan_bawah"]').value,
-            catatan_customer_1: document.querySelector('[name="catatan_customer_1"]').value,
-            catatan_customer_2: document.querySelector('[name="catatan_customer_2"]').value,
-            catatan_customer_3: document.querySelector('[name="catatan_customer_3"]').value,
-            catatan_customer_4: document.querySelector('[name="catatan_customer_4"]').value,
-            catatan_customer_5: document.querySelector('[name="catatan_customer_5"]').value,
-            catatan_customer_6: document.querySelector('[name="catatan_customer_6"]').value,
             label: document.querySelector('[name="label"]').value,
-            size_chart_dewasa: {
-                pendek_xs: parseInt(document.querySelector('[name="dewasa_pendek_xs"]').value) || 0,
-                pendek_s: parseInt(document.querySelector('[name="dewasa_pendek_s"]').value) || 0,
-                pendek_m: parseInt(document.querySelector('[name="dewasa_pendek_m"]').value) || 0,
-                pendek_l: parseInt(document.querySelector('[name="dewasa_pendek_l"]').value) || 0,
-                pendek_xl: parseInt(document.querySelector('[name="dewasa_pendek_xl"]').value) || 0,
-                pendek_xxl: parseInt(document.querySelector('[name="dewasa_pendek_xxl"]').value) || 0,
-                pendek_x3l: parseInt(document.querySelector('[name="dewasa_pendek_x3l"]').value) || 0,
-                pendek_x4l: parseInt(document.querySelector('[name="dewasa_pendek_x4l"]').value) || 0,
-                pendek_x5l: parseInt(document.querySelector('[name="dewasa_pendek_x5l"]').value) || 0,
-                panjang_xs: parseInt(document.querySelector('[name="dewasa_panjang_xs"]').value) || 0,
-                panjang_s: parseInt(document.querySelector('[name="dewasa_panjang_s"]').value) || 0,
-                panjang_m: parseInt(document.querySelector('[name="dewasa_panjang_m"]').value) || 0,
-                panjang_l: parseInt(document.querySelector('[name="dewasa_panjang_l"]').value) || 0,
-                panjang_xl: parseInt(document.querySelector('[name="dewasa_panjang_xl"]').value) || 0,
-                panjang_xxl: parseInt(document.querySelector('[name="dewasa_panjang_xxl"]').value) || 0,
-                panjang_x3l: parseInt(document.querySelector('[name="dewasa_panjang_x3l"]').value) || 0,
-                panjang_x4l: parseInt(document.querySelector('[name="dewasa_panjang_x4l"]').value) || 0,
-                panjang_x5l: parseInt(document.querySelector('[name="dewasa_panjang_x5l"]').value) || 0
-            },
-            size_chart_anak: {
-                pendek_xs: parseInt(document.querySelector('[name="anak_pendek_xs"]').value) || 0,
-                pendek_s: parseInt(document.querySelector('[name="anak_pendek_s"]').value) || 0,
-                pendek_m: parseInt(document.querySelector('[name="anak_pendek_m"]').value) || 0,
-                pendek_l: parseInt(document.querySelector('[name="anak_pendek_l"]').value) || 0,
-                pendek_xl: parseInt(document.querySelector('[name="anak_pendek_xl"]').value) || 0,
-                pendek_xxl: parseInt(document.querySelector('[name="anak_pendek_xxl"]').value) || 0,
-                pendek_x3l: parseInt(document.querySelector('[name="anak_pendek_x3l"]').value) || 0,
-                pendek_x4l: parseInt(document.querySelector('[name="anak_pendek_x4l"]').value) || 0,
-                pendek_x5l: parseInt(document.querySelector('[name="anak_pendek_x5l"]').value) || 0,
-                panjang_xs: parseInt(document.querySelector('[name="anak_panjang_xs"]').value) || 0,
-                panjang_s: parseInt(document.querySelector('[name="anak_panjang_s"]').value) || 0,
-                panjang_m: parseInt(document.querySelector('[name="anak_panjang_m"]').value) || 0,
-                panjang_l: parseInt(document.querySelector('[name="anak_panjang_l"]').value) || 0,
-                panjang_xl: parseInt(document.querySelector('[name="anak_panjang_xl"]').value) || 0,
-                panjang_xxl: parseInt(document.querySelector('[name="anak_panjang_xxl"]').value) || 0,
-                panjang_x3l: parseInt(document.querySelector('[name="anak_panjang_x3l"]').value) || 0,
-                panjang_x4l: parseInt(document.querySelector('[name="anak_panjang_x4l"]').value) || 0,
-                panjang_x5l: parseInt(document.querySelector('[name="anak_panjang_x5l"]').value) || 0
-            }
         };
+
+        for (let i = 1; i <= 5; i++) dsoData[`acc_${i}`] = document.querySelector(`[name="acc_${i}"]`).value;
+        for (let i = 1; i <= 6; i++) dsoData[`catatan_customer_${i}`] = document.querySelector(`[name="catatan_customer_${i}"]`).value;
+
+        dsoData.size_chart_dewasa = {};
+        dsoData.size_chart_anak = {};
+        const sizes = ['xs', 's', 'm', 'l', 'xl', 'xxl', 'x3l', 'x4l', 'x5l'];
+        sizes.forEach(s => {
+            dsoData.size_chart_dewasa[`pendek_${s}`] = parseInt(document.querySelector(`[name="dewasa_pendek_${s}"]`)?.value) || 0;
+            dsoData.size_chart_dewasa[`panjang_${s}`] = parseInt(document.querySelector(`[name="dewasa_panjang_${s}"]`)?.value) || 0;
+            dsoData.size_chart_anak[`pendek_${s}`] = parseInt(document.querySelector(`[name="anak_pendek_${s}"]`)?.value) || 0;
+            dsoData.size_chart_anak[`panjang_${s}`] = parseInt(document.querySelector(`[name="anak_panjang_${s}"]`)?.value) || 0;
+        });
+
+        // Explicitly set status to published to approve the DSO
+        dsoData.status = 'published';
 
         try {
             await api.put('/dso/{{ dso.id }}', dsoData);
-            showToast('DSO berhasil disimpan!', 'success');
-
-            // Wait slightly for UI to settle then print
-            setTimeout(() => {
-                window.print();
-            }, 500);
-
+            hideLoading();
+            showToast('DSO berhasil disimpan dan diterbitkan!', 'success');
+            // Reload to reflect status change visually if needed
+            setTimeout(() => window.location.reload(), 1500);
         } catch (error) {
+            hideLoading();
             showToast(error.message || 'Gagal menyimpan DSO', 'error');
         }
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        calcDewasa();
+        calcAnak();
+    });
 </script>
 {% endblock %}

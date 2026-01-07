@@ -50,6 +50,16 @@ const api = {
 
         try {
             const response = await fetch(this.baseUrl + endpoint, options);
+
+            // Check if response is JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                // Server returned non-JSON (probably HTML error page)
+                const text = await response.text();
+                console.error('Non-JSON response:', text);
+                throw new Error(`Server returned ${response.status} error. Please check the console for details.`);
+            }
+
             const result = await response.json();
 
             if (!response.ok) {

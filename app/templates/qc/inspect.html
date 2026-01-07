@@ -9,8 +9,8 @@
 
 {% block content %}
 <div class="page-header mb-4">
-    <a href="{{ url_for('views.qc_list') }}" class="btn btn-sm btn-outline">
-        <i class="fas fa-arrow-left"></i> Kembali
+    <a href="{{ url_for('views.production') }}" class="btn btn-sm btn-outline">
+        <i class="fas fa-arrow-left"></i> Kembali ke Production
     </a>
 </div>
 
@@ -88,28 +88,42 @@
                     <th class="col-ng">Jumlah<br>NG</th>
                     <th class="col-status">Status Diterima</th>
                     <th class="col-notes">Keterangan</th>
+                    <th class="col-action" style="width: 40px;"></th>
                 </tr>
             </thead>
             <tbody id="checklistBody">
                 <!-- Will be populated by JavaScript based on process type -->
             </tbody>
         </table>
+
+        <!-- Add Custom Parameter Button -->
+        <div class="add-param-container" style="padding: 1rem; border-top: 1px dashed #e2e8f0;">
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="showAddParamModal()">
+                <i class="fas fa-plus-circle me-1"></i> Tambah Parameter Baru
+            </button>
+        </div>
     </div>
+
+
+
 
     <!-- Summary Section -->
     <div class="summary-section">
         <div class="summary-row">
             <div class="summary-item">
                 <label>Total Diperiksa</label>
-                <input type="number" class="form-input" id="totalInspected" value="{{ task.qty_target }}" min="0">
+                <input type="number" class="form-input" id="totalInspected" value="{{ task.qty_target }}" min="0"
+                    oninput="recalculateTotals()">
             </div>
             <div class="summary-item">
-                <label>Total Lolos</label>
-                <input type="number" class="form-input" id="totalPassed" value="0" min="0">
+                <label>Total Lolos <small class="text-muted">(auto)</small></label>
+                <input type="number" class="form-input" id="totalPassed" value="0" min="0" readonly
+                    style="background: #f0f9ff; cursor: not-allowed;">
             </div>
             <div class="summary-item">
-                <label>Total NG</label>
-                <input type="number" class="form-input" id="totalNG" value="0" min="0">
+                <label>Total NG <small class="text-muted">(auto)</small></label>
+                <input type="number" class="form-input" id="totalNG" value="0" min="0" readonly
+                    style="background: #fef2f2; color: #dc2626; cursor: not-allowed;">
             </div>
             <div class="summary-item">
                 <label>Pass Rate</label>
@@ -129,7 +143,9 @@
         <div class="signature-box">
             <label>Operator {{ task.process.title() }}</label>
             <div class="signature-area">
-                <input type="text" class="form-input" id="operatorName" placeholder="Nama operator...">
+                <input type="text" class="form-input" id="operatorName"
+                    value="{% if operator_names %}{{ operator_names|join(', ') }}{% endif %}"
+                    placeholder="Nama operator..." style="text-align: center; border: none; background: transparent;">
             </div>
         </div>
         <div class="signature-box">
@@ -141,15 +157,10 @@
     </div>
 
     <!-- Action Buttons -->
-    <div class="action-buttons">
-        <button type="button" class="btn btn-lg result-btn pass" onclick="submitChecklist('pass')">
-            <i class="fas fa-check-circle"></i> PASS - Diterima
-        </button>
-        <button type="button" class="btn btn-lg result-btn conditional" onclick="submitChecklist('conditional_pass')">
-            <i class="fas fa-exclamation-circle"></i> Conditional Pass
-        </button>
-        <button type="button" class="btn btn-lg result-btn fail" onclick="submitChecklist('fail')">
-            <i class="fas fa-times-circle"></i> FAIL - Ditolak
+    <div class="action-buttons" style="grid-template-columns: 1fr;">
+        <button type="button" class="btn btn-lg btn-primary" onclick="submitChecklist()"
+            style="padding: 1.25rem 2rem; font-size: 1.1rem; font-weight: 600; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 0.75rem;">
+            <i class="fas fa-save"></i> Simpan Checklist
         </button>
     </div>
 </div>
@@ -200,6 +211,29 @@
             <button class="btn btn-secondary" onclick="closeModal('defectModal')">Batal</button>
             <button class="btn btn-danger" onclick="saveDefectDetail()">
                 <i class="fas fa-save"></i> Simpan Defect
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Add Custom Parameter Modal -->
+<div class="modal-backdrop" id="addParamModal">
+    <div class="modal modal-sm">
+        <div class="modal-header">
+            <h3 class="modal-title"><i class="fas fa-plus-circle text-primary"></i> Tambah Parameter</h3>
+            <button class="modal-close" onclick="closeModal('addParamModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label class="form-label">Nama Parameter</label>
+                <input type="text" class="form-input" id="newParamName"
+                    placeholder="Contoh: Kualitas Bordir, Kerapian Lipatan...">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('addParamModal')">Batal</button>
+            <button class="btn btn-primary" onclick="addCustomParameter()">
+                <i class="fas fa-plus"></i> Tambah
             </button>
         </div>
     </div>
@@ -751,8 +785,7 @@
                 { id: 'ketepatan_ukuran', name: 'Ketepatan ukuran potong' },
                 { id: 'presisi_potongan', name: 'Presisi potongan' },
                 { id: 'kerapian_tepi', name: 'Kerapian tepi potongan' },
-                { id: 'kesesuaian_pola', name: 'Kesesuaian pola' },
-                { id: 'lainnya', name: 'Lainnya' }
+                { id: 'kesesuaian_pola', name: 'Kesesuaian pola' }
             ],
             defectTypes: [
                 'Jumlah tidak sesuai',
@@ -770,8 +803,7 @@
                 { id: 'kerapian_jahitan', name: 'Kerapian jahitan' },
                 { id: 'kekuatan_jahitan', name: 'Kekuatan jahitan' },
                 { id: 'simetri_produk', name: 'Simetri Produk' },
-                { id: 'bentuk_produk', name: 'Bentuk produk' },
-                { id: 'lainnya', name: 'Lainnya' }
+                { id: 'bentuk_produk', name: 'Bentuk produk' }
             ],
             defectTypes: [
                 'Ukuran tidak sesuai',
@@ -789,8 +821,7 @@
                 { id: 'pemasangan_aksesoris', name: 'Pemasangan aksesoris' },
                 { id: 'label_size_tag', name: 'Label & size tag' },
                 { id: 'kerapian_jahitan_akhir', name: 'Kerapian jahitan akhir' },
-                { id: 'kebersihan_produk', name: 'Kebersihan produk' },
-                { id: 'lainnya', name: 'Lainnya' }
+                { id: 'kebersihan_produk', name: 'Kebersihan produk' }
             ],
             defectTypes: [
                 'Kancing tidak terpasang',
@@ -808,8 +839,7 @@
                 { id: 'ukuran_sablon', name: 'Ukuran sablon' },
                 { id: 'warna_sablon', name: 'Warna sablon' },
                 { id: 'ketajaman_hasil', name: 'Ketajaman hasil' },
-                { id: 'daya_lekat', name: 'Daya lekat sablon' },
-                { id: 'lainnya', name: 'Lainnya' }
+                { id: 'daya_lekat', name: 'Daya lekat sablon' }
             ],
             defectTypes: [
                 'Posisi geser',
@@ -827,8 +857,7 @@
                 { id: 'kesesuaian_ukuran', name: 'Kesesuaian ukuran' },
                 { id: 'kondisi_kemasan', name: 'Kondisi kemasan' },
                 { id: 'kelengkapan_label', name: 'Kelengkapan label' },
-                { id: 'siap_kirim', name: 'Siap kirim' },
-                { id: 'lainnya', name: 'Lainnya' }
+                { id: 'siap_kirim', name: 'Siap kirim' }
             ],
             defectTypes: [
                 'Jumlah kurang',
@@ -887,25 +916,31 @@
                             checklistData[index].notes = item.notes || '';
 
                             // Update UI
-                            const row = document.querySelectorAll('#checklistBody tr')[index];
-                            if (row) {
-                                const inputs = row.querySelectorAll('input');
-                                if (inputs[0]) inputs[0].value = item.qty_checked || 0;
-                                if (inputs[1]) inputs[1].value = item.qty_ng || 0;
-                                if (inputs[2]) inputs[2].value = item.notes || '';
+                            const qtyCheckedInput = document.getElementById(`qty-checked-${index}`);
+                            const qtyNgInput = document.getElementById(`qty-ng-${index}`);
+                            const notesInput = document.getElementById(`notes-${index}`);
+                            const defectBtn = document.getElementById(`defect-btn-${index}`);
 
-                                // Set status buttons
-                                if (item.status === 'pass') {
-                                    setStatus(index, true, null);
-                                } else if (item.status === 'fail') {
-                                    setStatus(index, false, null);
-                                }
+                            if (qtyCheckedInput) qtyCheckedInput.value = item.qty_checked || 0;
+                            if (qtyNgInput) qtyNgInput.value = item.qty_ng || 0;
+                            if (notesInput) notesInput.value = item.notes || '';
+
+                            // Show defect button if NG > 0
+                            if (defectBtn && (item.qty_ng || 0) > 0) {
+                                defectBtn.style.display = 'inline-block';
+                            }
+
+                            // Set status buttons
+                            if (item.status === 'pass') {
+                                setStatus(index, true, null);
+                            } else if (item.status === 'fail') {
+                                setStatus(index, false, null);
                             }
                         }
                     });
                 }
 
-                updatePassRate();
+                recalculateTotals();
                 showToast('Data checklist sebelumnya dimuat', 'info');
             }
         } catch (e) {
@@ -917,47 +952,139 @@
         const config = checklistConfig[currentProcess] || checklistConfig.sewing;
         const tbody = document.getElementById('checklistBody');
         const defectSelect = document.getElementById('defectType');
+        const targetQty = {{ task.qty_target }
+    };
 
-        tbody.innerHTML = '';
-        defectSelect.innerHTML = '<option value="">Pilih tipe defect...</option>';
+    tbody.innerHTML = '';
+    checklistData = [];
+    defectSelect.innerHTML = '<option value="">Pilih tipe defect...</option>';
 
-        config.parameters.forEach((param, index) => {
-            checklistData.push({
-                id: param.id,
-                name: param.name,
-                qtyChecked: 0,
-                qtyNG: 0,
-                status: null,
-                notes: ''
-            });
+    config.parameters.forEach((param, index) => {
+        addParameterRow(param.id, param.name, targetQty, false);
+    });
 
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${index + 1}</td>
-                <td class="param-cell">${param.name}</td>
-                <td>
-                    <input type="number" min="0" value="0" onchange="updateRowData(${index}, 'qtyChecked', this.value)">
-                </td>
-                <td>
-                    <input type="number" min="0" value="0" onchange="updateRowData(${index}, 'qtyNG', this.value); checkNGValue(${index}, this.value)">
-                </td>
-                <td>
-                    <div class="status-buttons">
-                        <button type="button" class="status-btn ya" onclick="setStatus(${index}, true, this)" id="status-ya-${index}">Ya</button>
-                        <button type="button" class="status-btn tidak" onclick="setStatus(${index}, false, this)" id="status-tidak-${index}">Tidak</button>
-                    </div>
-                </td>
-                <td>
-                    <input type="text" placeholder="Keterangan..." onchange="updateRowData(${index}, 'notes', this.value)" id="notes-${index}">
-                </td>
-            `;
-            tbody.appendChild(row);
+    config.defectTypes.forEach(type => {
+        defectSelect.innerHTML += '<option value="' + type + '">' + type + '</option>';
+    });
+
+    document.getElementById('totalInspected').value = targetQty;
+    recalculateTotals();
+    }
+
+    function addParameterRow(id, name, defaultQty = {{ task.qty_target }}, isCustom = false) {
+        const tbody = document.getElementById('checklistBody');
+        const index = checklistData.length;
+
+        checklistData.push({
+            id: id,
+            name: name,
+            qtyChecked: defaultQty,
+            qtyNG: 0,
+            status: null,
+            notes: '',
+            isCustom: isCustom
         });
 
-        // Populate defect types
-        config.defectTypes.forEach(type => {
-            defectSelect.innerHTML += `<option value="${type}">${type}</option>`;
-        });
+        const row = document.createElement('tr');
+        row.id = `param-row-${index}`;
+        row.innerHTML = `
+            <td>${index + 1}</td>
+            <td class="param-cell">${name}${isCustom ? ' <span class="badge bg-info text-white" style="font-size: 0.6rem;">Custom</span>' : ''}</td>
+            <td>
+                <input type="number" min="0" value="${defaultQty}" 
+                    oninput="updateRowData(${index}, 'qtyChecked', this.value); recalculateTotals()" 
+                    id="qty-checked-${index}">
+            </td>
+            <td>
+                <div class="d-flex align-items-center gap-1">
+                    <input type="number" min="0" value="0" style="width: 60px;" 
+                        oninput="updateRowData(${index}, 'qtyNG', this.value); checkNGValue(${index}, this.value); recalculateTotals()" 
+                        id="qty-ng-${index}">
+                    <button type="button" class="defect-btn btn btn-sm btn-outline-danger" 
+                        onclick="openDefectModal(${index})" 
+                        title="Detail Defect" 
+                        id="defect-btn-${index}" 
+                        style="display: none; padding: 2px 6px; font-size: 10px;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </button>
+                </div>
+            </td>
+            <td>
+                <div class="status-buttons">
+                    <button type="button" class="status-btn ya" onclick="setStatus(${index}, true, this)" id="status-ya-${index}">Ya</button>
+                    <button type="button" class="status-btn tidak" onclick="setStatus(${index}, false, this)" id="status-tidak-${index}">Tidak</button>
+                </div>
+            </td>
+            <td>
+                <input type="text" placeholder="Keterangan..." onchange="updateRowData(${index}, 'notes', this.value)" id="notes-${index}">
+            </td>
+            <td>
+                ${isCustom ? `<button type="button" class="btn btn-sm btn-ghost text-danger" onclick="removeParameter(${index})" title="Hapus"><i class="fas fa-trash-alt"></i></button>` : ''}
+            </td>
+        `;
+        tbody.appendChild(row);
+    }
+
+    function showAddParamModal() {
+        document.getElementById('newParamName').value = '';
+        openModal('addParamModal');
+    }
+
+    function addCustomParameter() {
+        const name = document.getElementById('newParamName').value.trim();
+        if (!name) {
+            showToast('Masukkan nama parameter', 'error');
+            return;
+        }
+
+        const id = 'custom_' + Date.now();
+        const targetQty = parseInt(document.getElementById('totalInspected').value) || {{ task.qty_target }
+    };
+
+    addParameterRow(id, name, targetQty, true);
+    closeModal('addParamModal');
+    showToast(`Parameter "${name}" ditambahkan`, 'success');
+    recalculateTotals();
+    }
+
+    function removeParameter(index) {
+        if (!checklistData[index].isCustom) {
+            showToast('Parameter default tidak bisa dihapus', 'error');
+            return;
+        }
+
+        const row = document.getElementById(`param-row-${index}`);
+        if (row) {
+            row.remove();
+            checklistData[index] = null; // Mark as removed
+            updateReworkList();
+            recalculateTotals();
+            showToast('Parameter dihapus', 'info');
+        }
+    }
+
+    function updateReworkList() {
+        const reworkSection = document.getElementById('reworkSection');
+        const reworkList = document.getElementById('reworkList');
+
+        // Find items that need rework (status = false/Tidak AND qtyNG > 0)
+        const reworkItems = checklistData.filter(item => item && item.status === false && item.qtyNG > 0);
+
+        if (reworkItems.length === 0) {
+            reworkSection.style.display = 'none';
+            return;
+        }
+
+        reworkSection.style.display = 'block';
+        reworkList.innerHTML = reworkItems.map(item => `
+            <div class="rework-item" style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; margin-bottom: 0.5rem; background: #fef2f2; border-radius: 8px; border-left: 3px solid #dc2626;">
+                <div>
+                    <strong style="color: #991b1b;">${item.name}</strong>
+                    ${item.notes ? `<span class="text-muted ms-2">(${item.notes})</span>` : ''}
+                </div>
+                <span class="badge bg-danger">${item.qtyNG} pcs</span>
+            </div>
+        `).join('');
     }
 
     function updateRowData(index, field, value) {
@@ -973,18 +1100,61 @@
         document.getElementById(`status-tidak-${index}`).classList.toggle('active', !isYa);
 
         updatePassRate();
+        updateReworkList();
     }
 
     function checkNGValue(index, value) {
         const ngValue = parseInt(value) || 0;
-        if (ngValue > 0) {
-            // Auto set to Tidak if there are NG items
-            setStatus(index, false, null);
+        const qtyChecked = checklistData[index].qtyChecked || 0;
+        const defectBtn = document.getElementById(`defect-btn-${index}`);
 
-            // Open defect modal
-            document.getElementById('defectRowIndex').value = index;
-            openModal('defectModal');
+        // Calculate NG percentage for this parameter
+        const ngPercentage = qtyChecked > 0 ? (ngValue / qtyChecked) * 100 : 0;
+
+        if (ngPercentage > 2.5) {
+            // NG > 2.5% = Tidak Diterima
+            setStatus(index, false, null);
+            if (defectBtn) defectBtn.style.display = 'inline-block';
+        } else if (ngValue > 0) {
+            // Has NG but <= 2.5% = Still Diterima (Ya)
+            setStatus(index, true, null);
+            if (defectBtn) defectBtn.style.display = 'inline-block';
+        } else {
+            // No NG = Diterima (Ya)
+            setStatus(index, true, null);
+            if (defectBtn) defectBtn.style.display = 'none';
         }
+    }
+
+    function openDefectModal(index) {
+        document.getElementById('defectRowIndex').value = index;
+        openModal('defectModal');
+    }
+
+    function recalculateTotals() {
+        // Sum all NG from checklist rows
+        let totalNG = 0;
+        let totalChecked = 0;
+
+        checklistData.forEach(item => {
+            if (!item) return; // Skip removed items
+            totalNG += item.qtyNG || 0;
+            totalChecked += item.qtyChecked || 0;
+        });
+
+        // Update Total NG field
+        document.getElementById('totalNG').value = totalNG;
+
+        // Auto-calculate Total Lolos = Total Diperiksa - Total NG
+        const totalInspected = parseInt(document.getElementById('totalInspected').value) || 0;
+        const calculatedPassed = Math.max(0, totalInspected - totalNG);
+        document.getElementById('totalPassed').value = calculatedPassed;
+
+        // Update Pass Rate
+        updatePassRate();
+
+        // Update Rework List
+        updateReworkList();
     }
 
     function saveDefectDetail() {
@@ -1027,12 +1197,9 @@
         rateEl.style.color = rate >= 95 ? '#10B981' : rate >= 80 ? '#F59E0B' : '#EF4444';
     }
 
-    // Listen to summary inputs
-    document.getElementById('totalInspected').addEventListener('input', updatePassRate);
-    document.getElementById('totalPassed').addEventListener('input', updatePassRate);
-    document.getElementById('totalNG').addEventListener('input', updatePassRate);
+    // Summary inputs are now auto-calculated via recalculateTotals()
 
-    async function submitChecklist(result) {
+    async function submitChecklist() {
         const batch = document.getElementById('batchInput').value;
         const operatorName = document.getElementById('operatorName').value;
         const totalInspected = parseInt(document.getElementById('totalInspected').value) || 0;
@@ -1040,12 +1207,15 @@
         const totalNG = parseInt(document.getElementById('totalNG').value) || 0;
         const notes = document.getElementById('overallNotes').value;
 
-        // Validate checklist completion
-        const incompleteItems = checklistData.filter(item => item.status === null);
-        if (incompleteItems.length > 0 && result !== 'conditional_pass') {
-            showToast('Lengkapi semua status checklist (Ya/Tidak)', 'warning');
-            return;
+        // Auto-determine result based on NG percentage (threshold: 2.5%)
+        const ngPercentage = totalInspected > 0 ? (totalNG / totalInspected) * 100 : 0;
+        let result = 'pass';
+        if (ngPercentage > 2.5) {
+            result = 'fail'; // Tidak Diterima
         }
+
+        // Filter out null items (removed custom params)
+        const validItems = checklistData.filter(item => item !== null);
 
         // Build submission data
         const submissionData = {
@@ -1055,7 +1225,7 @@
             qty_failed: totalNG,
             notes: notes,
             barcode_scanned: true,
-            checklist: checklistData.map(item => ({
+            checklist: validItems.map(item => ({
                 parameter: item.name,
                 qty_checked: item.qtyChecked,
                 qty_ng: item.qtyNG,
@@ -1082,11 +1252,11 @@
                 await api.post('/qc/sheets/' + sheetId + '/defect', defect);
             }
 
-            const resultText = result === 'pass' ? 'PASS ✅' : result === 'conditional_pass' ? 'Conditional Pass ⚠️' : 'FAIL ❌';
-            showToast(`Checklist berhasil disimpan: ${resultText}`, result === 'pass' ? 'success' : result === 'conditional_pass' ? 'warning' : 'error');
+            const resultText = result === 'pass' ? 'PASS ✅' : 'Perlu Rework ⚠️';
+            showToast(`Checklist berhasil disimpan: ${resultText}`, result === 'pass' ? 'success' : 'warning');
 
             setTimeout(() => {
-                window.location.href = '{{ url_for("views.qc_list") }}';
+                window.location.href = '{{ url_for("views.production") }}';
             }, 1500);
 
         } catch (error) {

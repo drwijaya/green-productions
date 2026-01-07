@@ -1,0 +1,1141 @@
+{% extends "base.html" %}
+
+{% block title %}Materials Management{% endblock %}
+{% block page_title %}Materials Management{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+    <div class="page-header-left">
+        <p class="text-muted">Kelola permintaan material dan stok material</p>
+    </div>
+    <div class="page-header-right">
+        <a href="{{ url_for('views.materials_new') }}" class="btn btn-primary" id="btnNewRequest">
+            <i class="fas fa-plus"></i> Buat Request
+        </a>
+        <button class="btn btn-success" id="btnNewMaterial" style="display: none;" onclick="openMaterialModal()">
+            <i class="fas fa-plus"></i> Tambah Material
+        </button>
+        <a href="{{ url_for('views.vendors_list') }}" class="btn btn-outline">
+            <i class="fas fa-building"></i> Kelola Vendor
+        </a>
+    </div>
+</div>
+
+<!-- Main Tabs -->
+<div class="main-tabs mb-4">
+    <div class="main-tab active" data-tab="requests">
+        <i class="fas fa-truck-loading"></i> Request Material
+    </div>
+    <div class="main-tab" data-tab="inventory">
+        <i class="fas fa-boxes"></i> Stok Material
+    </div>
+</div>
+
+<!-- Request Material Tab Content -->
+<div id="requestsTab" class="tab-content active">
+    <div class="materials-controls mb-4">
+        <!-- Status Tabs -->
+        <div class="status-tabs">
+            <div class="status-tab active" data-filter="all">
+                <i class="fas fa-th-large"></i> Semua
+            </div>
+            <div class="status-tab" data-filter="requested">
+                <span class="dot requested"></span> Requested
+            </div>
+            <div class="status-tab" data-filter="in_transit">
+                <span class="dot in-transit"></span> In Transit
+            </div>
+            <div class="status-tab" data-filter="arrived">
+                <span class="dot arrived"></span> Arrived
+            </div>
+            <div class="status-tab" data-filter="qc_pending">
+                <span class="dot qc-pending"></span> QC Pending
+            </div>
+            <div class="status-tab" data-filter="qc_passed">
+                <span class="dot qc-passed"></span> QC Passed
+            </div>
+            <div class="status-tab" data-filter="stored">
+                <span class="dot stored"></span> Stored
+            </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="search-row">
+            <div class="search-group">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" class="search-input" id="searchInput" placeholder="Cari kode request atau vendor...">
+            </div>
+        </div>
+    </div>
+
+    <div class="materials-grid" id="materialsGrid">
+        <div class="loading-state">
+            <i class="fas fa-spinner fa-spin"></i> Memuat data...
+        </div>
+    </div>
+</div>
+
+<!-- Stok Material Tab Content -->
+<div id="inventoryTab" class="tab-content" style="display: none;">
+    <div class="inventory-controls mb-4">
+        <!-- Type Filter Tabs -->
+        <div class="type-tabs" id="typeTabs">
+            <div class="type-tab active" data-type="all">
+                <i class="fas fa-th-large"></i> Semua
+            </div>
+            <div class="type-tab" data-type="Kain">
+                <i class="fas fa-scroll"></i> Kain
+            </div>
+            <div class="type-tab" data-type="Benang">
+                <i class="fas fa-tape"></i> Benang
+            </div>
+            <div class="type-tab" data-type="Aksesoris">
+                <i class="fas fa-gem"></i> Aksesoris
+            </div>
+            <div class="type-tab" data-type="Bahan">
+                <i class="fas fa-box"></i> Bahan
+            </div>
+        </div>
+
+        <!-- Search and Status Filter -->
+        <div class="search-row">
+            <div class="search-group">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" class="search-input" id="inventorySearch" placeholder="Cari material...">
+            </div>
+            <select class="form-select" id="statusFilter" style="width: 180px;">
+                <option value="">Semua Status</option>
+                <option value="active">Tersedia</option>
+                <option value="low_stock">Stok Rendah</option>
+                <option value="out_of_stock">Habis</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="inventory-table-container">
+        <table class="inventory-table" id="inventoryTable">
+            <thead>
+                <tr>
+                    <th>Kode</th>
+                    <th>Nama Material</th>
+                    <th>Jenis</th>
+                    <th>Warna</th>
+                    <th>Ukuran</th>
+                    <th>Stok</th>
+                    <th>Status</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody id="inventoryBody">
+                <tr>
+                    <td colspan="8" class="loading-state">
+                        <i class="fas fa-spinner fa-spin"></i> Memuat data...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Material Modal -->
+<div class="modal-backdrop" id="materialModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 id="materialModalTitle"><i class="fas fa-box"></i> Tambah Material</h3>
+            <button class="modal-close" onclick="closeModal('materialModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="materialId">
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label required">Nama Material</label>
+                    <input type="text" class="form-input" id="materialName" placeholder="Nama material">
+                </div>
+                <div class="form-group">
+                    <label class="form-label required">Jenis</label>
+                    <select class="form-input" id="materialType">
+                        <option value="">Pilih jenis</option>
+                        <option value="Kain">Kain</option>
+                        <option value="Benang">Benang</option>
+                        <option value="Aksesoris">Aksesoris</option>
+                        <option value="Bahan">Bahan</option>
+                        <option value="Lainnya">Lainnya</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Warna</label>
+                    <input type="text" class="form-input" id="materialColor" placeholder="Warna">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Ukuran</label>
+                    <input type="text" class="form-input" id="materialSize" placeholder="Ukuran">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Stok Awal</label>
+                    <input type="number" class="form-input" id="materialStock" placeholder="0" min="0">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Min. Stok</label>
+                    <input type="number" class="form-input" id="materialMinStock" placeholder="0" min="0">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Satuan</label>
+                    <select class="form-input" id="materialUnit">
+                        <option value="pcs">Pcs</option>
+                        <option value="meter">Meter</option>
+                        <option value="kg">Kg</option>
+                        <option value="roll">Roll</option>
+                        <option value="lusin">Lusin</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Spesifikasi</label>
+                <textarea class="form-input" id="materialSpecs" rows="2"
+                    placeholder="Spesifikasi material..."></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Catatan</label>
+                <textarea class="form-input" id="materialNotes" rows="2" placeholder="Catatan..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal('materialModal')">Batal</button>
+            <button class="btn btn-primary" onclick="saveMaterial()">Simpan</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Main Tabs */
+    .main-tabs {
+        display: flex;
+        gap: 0;
+        background: var(--white);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+    }
+
+    .main-tab {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 1rem 1.5rem;
+        cursor: pointer;
+        font-weight: 600;
+        color: var(--gray-500);
+        border-bottom: 3px solid transparent;
+        transition: all 0.2s ease;
+    }
+
+    .main-tab:hover {
+        color: var(--primary);
+        background: var(--gray-50);
+    }
+
+    .main-tab.active {
+        color: var(--primary);
+        background: var(--gray-50);
+        border-bottom-color: var(--primary);
+    }
+
+    .tab-content {
+        display: none;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+
+    /* Type Tabs for Inventory */
+    .type-tabs {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+    }
+
+    .type-tab {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1rem;
+        background: var(--white);
+        border: 2px solid var(--gray-200);
+        border-radius: var(--radius-lg);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-weight: 500;
+        color: var(--gray-600);
+        font-size: 0.875rem;
+    }
+
+    .type-tab:hover {
+        border-color: var(--primary);
+        color: var(--primary);
+    }
+
+    .type-tab.active {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: white;
+    }
+
+    /* Inventory Table */
+    .inventory-table-container {
+        background: var(--white);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+    }
+
+    .inventory-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .inventory-table th,
+    .inventory-table td {
+        padding: 1rem;
+        text-align: left;
+        border-bottom: 1px solid var(--gray-100);
+    }
+
+    .inventory-table th {
+        background: var(--gray-50);
+        font-weight: 600;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        color: var(--gray-600);
+    }
+
+    .inventory-table tbody tr:hover {
+        background: var(--gray-50);
+    }
+
+    .inventory-table .material-code {
+        font-weight: 600;
+        color: var(--primary);
+    }
+
+    .inventory-table .stock-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .inventory-table .stock-badge.active {
+        background: #D1FAE5;
+        color: #059669;
+    }
+
+    .inventory-table .stock-badge.low_stock {
+        background: #FEF3C7;
+        color: #D97706;
+    }
+
+    .inventory-table .stock-badge.out_of_stock {
+        background: #FEE2E2;
+        color: #DC2626;
+    }
+
+    .form-select {
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--gray-200);
+        border-radius: var(--radius);
+        font-size: 0.95rem;
+        background: var(--white);
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+
+    .form-row:has(> :nth-child(3)) {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .status-tabs {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+    }
+
+    .status-tab {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1rem;
+        background: var(--white);
+        border: 2px solid var(--gray-200);
+        border-radius: var(--radius-lg);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-weight: 500;
+        color: var(--gray-600);
+        font-size: 0.875rem;
+    }
+
+    .status-tab:hover {
+        border-color: var(--primary);
+        color: var(--primary);
+    }
+
+    .status-tab.active {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: white;
+    }
+
+    .status-tab.active .dot {
+        background: white;
+    }
+
+    .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+    }
+
+    .dot.requested {
+        background: #6B7280;
+    }
+
+    .dot.in-transit {
+        background: #3B82F6;
+    }
+
+    .dot.arrived {
+        background: #8B5CF6;
+    }
+
+    .dot.qc-pending {
+        background: #F59E0B;
+    }
+
+    .dot.qc-passed {
+        background: #10B981;
+    }
+
+    .dot.qc-failed {
+        background: #EF4444;
+    }
+
+    .dot.stored {
+        background: #059669;
+    }
+
+    .search-row {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .search-group {
+        flex: 1;
+        position: relative;
+    }
+
+    .search-icon {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--gray-400);
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 0.875rem 1rem 0.875rem 3rem;
+        border: 1px solid var(--gray-200);
+        border-radius: var(--radius-lg);
+        font-size: 0.95rem;
+    }
+
+    .search-input:focus {
+        border-color: var(--primary);
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .materials-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+        gap: 1.25rem;
+    }
+
+    .loading-state {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 3rem;
+        color: var(--gray-500);
+    }
+
+    .material-card {
+        background: var(--white);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--gray-200);
+        overflow: hidden;
+        transition: all 0.2s ease;
+    }
+
+    .material-card:hover {
+        box-shadow: var(--shadow-lg);
+        transform: translateY(-2px);
+    }
+
+    .material-header {
+        padding: 1.25rem;
+        border-bottom: 1px solid var(--gray-100);
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+
+    .material-code {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--gray-900);
+    }
+
+    .material-vendor {
+        color: var(--gray-500);
+        font-size: 0.9rem;
+        margin-top: 0.25rem;
+    }
+
+    .status-badge {
+        padding: 0.375rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .status-badge.requested {
+        background: #F3F4F6;
+        color: #374151;
+    }
+
+    .status-badge.in_transit {
+        background: #DBEAFE;
+        color: #1D4ED8;
+    }
+
+    .status-badge.arrived {
+        background: #EDE9FE;
+        color: #6D28D9;
+    }
+
+    .status-badge.qc_pending {
+        background: #FEF3C7;
+        color: #D97706;
+    }
+
+    .status-badge.qc_passed {
+        background: #D1FAE5;
+        color: #059669;
+    }
+
+    .status-badge.qc_failed {
+        background: #FEE2E2;
+        color: #DC2626;
+    }
+
+    .status-badge.stored {
+        background: #ECFDF5;
+        color: #047857;
+    }
+
+    .material-body {
+        padding: 1.25rem;
+    }
+
+    .material-info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .material-info-item {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .material-info-label {
+        font-size: 0.75rem;
+        color: var(--gray-500);
+        text-transform: uppercase;
+        margin-bottom: 0.25rem;
+    }
+
+    .material-info-value {
+        font-weight: 500;
+        color: var(--gray-800);
+    }
+
+    .material-footer {
+        padding: 1rem 1.25rem;
+        background: var(--gray-50);
+        border-top: 1px solid var(--gray-100);
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    .material-footer .btn {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .empty-state {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 3rem;
+        color: var(--gray-500);
+    }
+
+    .empty-state-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+
+    .empty-state-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+
+    /* Mini Timeline */
+    .status-timeline-mini {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.75rem 1.25rem;
+        background: var(--gray-50);
+        border-bottom: 1px solid var(--gray-100);
+        gap: 0.25rem;
+    }
+
+    .timeline-step-mini {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0.3;
+    }
+
+    .timeline-step-mini.active {
+        opacity: 1;
+    }
+
+    .timeline-step-mini.current {
+        opacity: 1;
+    }
+
+    .timeline-icon-mini {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: var(--gray-200);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        color: var(--gray-500);
+    }
+
+    .timeline-step-mini.active .timeline-icon-mini {
+        background: var(--primary);
+        color: white;
+    }
+
+    .timeline-step-mini.current .timeline-icon-mini {
+        background: #10B981;
+        color: white;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+    }
+
+    .timeline-step-mini.qc-passed .timeline-icon-mini {
+        background: #10B981;
+        color: white;
+    }
+
+    .timeline-step-mini.qc-failed .timeline-icon-mini {
+        background: #EF4444;
+        color: white;
+    }
+
+    .timeline-line-mini {
+        width: 20px;
+        height: 2px;
+        background: var(--gray-200);
+    }
+
+    .timeline-line-mini.active {
+        background: var(--primary);
+    }
+</style>
+
+<script>
+    let activeFilter = 'all';
+    let materialsData = [];
+
+    // Status order for timeline
+    const statusOrder = ['requested', 'in_transit', 'arrived', 'qc_pending', 'qc_passed', 'stored'];
+
+    function getTimelineClass(currentStatus, step) {
+        const currentIndex = statusOrder.indexOf(currentStatus);
+
+        // Handle QC step (covers qc_pending, qc_passed, qc_failed)
+        if (step === 'qc') {
+            if (currentStatus === 'qc_pending') return 'current';
+            if (currentStatus === 'qc_passed') return 'active qc-passed';
+            if (currentStatus === 'qc_failed') return 'active qc-failed';
+            if (currentIndex >= statusOrder.indexOf('qc_pending')) return 'active';
+            return '';
+        }
+
+        let stepIndex;
+        if (step === 'requested') stepIndex = 0;
+        else if (step === 'in_transit') stepIndex = 1;
+        else if (step === 'arrived') stepIndex = 2;
+        else if (step === 'stored') stepIndex = 5;
+        else return '';
+
+        if (currentIndex > stepIndex) return 'active';
+        if (currentIndex === stepIndex) return 'current';
+        return '';
+    }
+
+    function getTimelineLineClass(currentStatus, step) {
+        const currentIndex = statusOrder.indexOf(currentStatus);
+
+        let stepIndex;
+        if (step === 'in_transit') stepIndex = 1;
+        else if (step === 'arrived') stepIndex = 2;
+        else if (step === 'qc') stepIndex = 3;
+        else if (step === 'stored') stepIndex = 5;
+        else return '';
+
+        return currentIndex >= stepIndex ? 'active' : '';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadMaterials();
+        setupFilters();
+    });
+
+    function setupFilters() {
+        const tabs = document.querySelectorAll('.status-tab');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                activeFilter = tab.getAttribute('data-filter');
+                filterMaterials();
+            });
+        });
+
+        document.getElementById('searchInput').addEventListener('keyup', filterMaterials);
+    }
+
+    function filterMaterials() {
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        const cards = document.querySelectorAll('.material-card');
+
+        cards.forEach(card => {
+            const status = card.getAttribute('data-status');
+            const searchData = card.getAttribute('data-search');
+
+            const statusMatch = activeFilter === 'all' || status === activeFilter;
+            const searchMatch = searchData.includes(searchTerm);
+
+            card.style.display = (statusMatch && searchMatch) ? 'block' : 'none';
+        });
+    }
+
+    async function loadMaterials() {
+        const container = document.getElementById('materialsGrid');
+
+        try {
+            const response = await api.get('/materials');
+            materialsData = response.material_requests || [];
+
+            if (materialsData.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon"><i class="fas fa-boxes"></i></div>
+                        <div class="empty-state-title">Belum ada material request</div>
+                        <p>Buat request material baru untuk memulai</p>
+                        <a href="{{ url_for('views.materials_new') }}" class="btn btn-primary mt-3">
+                            <i class="fas fa-plus"></i> Buat Request
+                        </a>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = materialsData.map(req => `
+                <div class="material-card" data-id="${req.id}" 
+                    data-status="${req.status}"
+                    data-search="${req.request_code.toLowerCase()} ${req.vendor ? req.vendor.name.toLowerCase() : ''}">
+                    
+                    <div class="material-header">
+                        <div>
+                            <div class="material-code">${req.request_code}</div>
+                            <div class="material-vendor">
+                                <i class="fas fa-building"></i> ${req.vendor ? req.vendor.name : '-'}
+                            </div>
+                        </div>
+                        <span class="status-badge ${req.status}">${formatStatus(req.status)}</span>
+                    </div>
+
+                    <!-- Status Timeline -->
+                    <div class="status-timeline-mini">
+                        <div class="timeline-step-mini ${getTimelineClass(req.status, 'requested')}">
+                            <div class="timeline-icon-mini"><i class="fas fa-file-alt"></i></div>
+                        </div>
+                        <div class="timeline-line-mini ${getTimelineLineClass(req.status, 'in_transit')}"></div>
+                        <div class="timeline-step-mini ${getTimelineClass(req.status, 'in_transit')}">
+                            <div class="timeline-icon-mini"><i class="fas fa-truck"></i></div>
+                        </div>
+                        <div class="timeline-line-mini ${getTimelineLineClass(req.status, 'arrived')}"></div>
+                        <div class="timeline-step-mini ${getTimelineClass(req.status, 'arrived')}">
+                            <div class="timeline-icon-mini"><i class="fas fa-box"></i></div>
+                        </div>
+                        <div class="timeline-line-mini ${getTimelineLineClass(req.status, 'qc')}"></div>
+                        <div class="timeline-step-mini ${getTimelineClass(req.status, 'qc')}">
+                            <div class="timeline-icon-mini"><i class="fas fa-clipboard-check"></i></div>
+                        </div>
+                        <div class="timeline-line-mini ${getTimelineLineClass(req.status, 'stored')}"></div>
+                        <div class="timeline-step-mini ${getTimelineClass(req.status, 'stored')}">
+                            <div class="timeline-icon-mini"><i class="fas fa-warehouse"></i></div>
+                        </div>
+                    </div>
+
+                    <div class="material-body">
+                        <div class="material-info-grid">
+                            <div class="material-info-item">
+                                <span class="material-info-label">Total Items</span>
+                                <span class="material-info-value">${req.total_items} item</span>
+                            </div>
+                            <div class="material-info-item">
+                                <span class="material-info-label">Total Qty</span>
+                                <span class="material-info-value">${req.total_qty}</span>
+                            </div>
+                            <div class="material-info-item">
+                                <span class="material-info-label">Tanggal Request</span>
+                                <span class="material-info-value">${req.request_date ? new Date(req.request_date).toLocaleDateString('id-ID') : '-'}</span>
+                            </div>
+                            <div class="material-info-item">
+                                <span class="material-info-label">Tanggal Diterima</span>
+                                <span class="material-info-value">${req.actual_arrival ? new Date(req.actual_arrival).toLocaleDateString('id-ID') : '-'}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="material-footer">
+                        <a href="/materials/${req.id}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-eye"></i> Detail
+                        </a>
+                        ${req.status === 'arrived' || req.status === 'qc_pending' ? `
+                            <a href="/materials/${req.id}/qc" class="btn btn-success btn-sm">
+                                <i class="fas fa-clipboard-check"></i> QC
+                            </a>
+                        ` : ''}
+                        ${req.status === 'requested' ? `
+                            <button class="btn btn-outline btn-sm" onclick="updateStatus(${req.id}, 'in_transit')">
+                                <i class="fas fa-truck"></i> In Transit
+                            </button>
+                        ` : ''}
+                        ${req.status === 'in_transit' ? `
+                            <button class="btn btn-outline btn-sm" onclick="updateStatus(${req.id}, 'arrived')">
+                                <i class="fas fa-check"></i> Arrived
+                            </button>
+                        ` : ''}
+                        ${req.status === 'qc_passed' ? `
+                            <button class="btn btn-success btn-sm" onclick="updateStatus(${req.id}, 'stored')">
+                                <i class="fas fa-warehouse"></i> Stored
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+        } catch (error) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                    <div class="empty-state-title">Gagal memuat data</div>
+                    <p>${error.message}</p>
+                </div>
+            `;
+        }
+    }
+
+    function formatStatus(status) {
+        const statusMap = {
+            'requested': 'Requested',
+            'in_transit': 'In Transit',
+            'arrived': 'Arrived',
+            'qc_pending': 'QC Pending',
+            'qc_passed': 'QC Passed',
+            'qc_failed': 'QC Failed',
+            'stored': 'Stored'
+        };
+        return statusMap[status] || status;
+    }
+
+    async function updateStatus(requestId, newStatus) {
+        try {
+            await api.put(`/materials/${requestId}/status`, { status: newStatus });
+            showToast('Status berhasil diupdate', 'success');
+            loadMaterials();
+        } catch (error) {
+            showToast('Gagal mengupdate status: ' + error.message, 'error');
+        }
+    }
+
+    // ===== MAIN TAB SWITCHING =====
+    document.querySelectorAll('.main-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+
+            const tabName = tab.getAttribute('data-tab');
+
+            // Toggle tab content
+            document.getElementById('requestsTab').style.display = tabName === 'requests' ? 'block' : 'none';
+            document.getElementById('inventoryTab').style.display = tabName === 'inventory' ? 'block' : 'none';
+
+            // Toggle buttons
+            document.getElementById('btnNewRequest').style.display = tabName === 'requests' ? 'inline-flex' : 'none';
+            document.getElementById('btnNewMaterial').style.display = tabName === 'inventory' ? 'inline-flex' : 'none';
+
+            // Load inventory when switching to it
+            if (tabName === 'inventory') {
+                loadInventory();
+            }
+        });
+    });
+
+    // ===== INVENTORY TAB =====
+    let inventoryData = [];
+    let activeType = 'all';
+
+    function setupInventoryFilters() {
+        // Type tabs
+        document.querySelectorAll('.type-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.type-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                activeType = tab.getAttribute('data-type');
+                filterInventory();
+            });
+        });
+
+        // Search
+        document.getElementById('inventorySearch').addEventListener('keyup', filterInventory);
+
+        // Status filter
+        document.getElementById('statusFilter').addEventListener('change', filterInventory);
+    }
+
+    function filterInventory() {
+        const searchTerm = document.getElementById('inventorySearch').value.toLowerCase();
+        const statusFilter = document.getElementById('statusFilter').value;
+
+        let filtered = inventoryData;
+
+        if (activeType !== 'all') {
+            filtered = filtered.filter(m => m.material_type === activeType);
+        }
+
+        if (statusFilter) {
+            filtered = filtered.filter(m => m.status === statusFilter);
+        }
+
+        if (searchTerm) {
+            filtered = filtered.filter(m =>
+                m.name.toLowerCase().includes(searchTerm) ||
+                m.code.toLowerCase().includes(searchTerm) ||
+                (m.color && m.color.toLowerCase().includes(searchTerm))
+            );
+        }
+
+        renderInventoryTable(filtered);
+    }
+
+    async function loadInventory() {
+        const tbody = document.getElementById('inventoryBody');
+        tbody.innerHTML = '<tr><td colspan="8" class="loading-state"><i class="fas fa-spinner fa-spin"></i> Memuat data...</td></tr>';
+
+        try {
+            const response = await api.get('/inventory');
+            inventoryData = response.materials || [];
+
+            renderInventoryTable(inventoryData);
+            setupInventoryFilters();
+        } catch (error) {
+            tbody.innerHTML = `<tr><td colspan="8" class="empty-state">Gagal memuat data: ${error.message}</td></tr>`;
+        }
+    }
+
+    function renderInventoryTable(data) {
+        const tbody = document.getElementById('inventoryBody');
+
+        if (data.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="empty-state">
+                        <div><i class="fas fa-boxes" style="font-size: 2rem; margin-bottom: 1rem;"></i></div>
+                        <div>Belum ada material. Klik "Tambah Material" untuk membuat.</div>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = data.map(m => `
+            <tr>
+                <td><span class="material-code">${m.code}</span></td>
+                <td><strong>${m.name}</strong></td>
+                <td>${m.material_type || '-'}</td>
+                <td>${m.color || '-'}</td>
+                <td>${m.size || '-'}</td>
+                <td><strong>${m.stock_qty}</strong> ${m.unit}</td>
+                <td><span class="stock-badge ${m.status}">${formatStockStatus(m.status)}</span></td>
+                <td>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-sm btn-outline" onclick="editMaterial(${m.id})">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline" onclick="adjustStock(${m.id})">
+                            <i class="fas fa-boxes"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteMaterial(${m.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function formatStockStatus(status) {
+        const statusMap = {
+            'active': 'Tersedia',
+            'low_stock': 'Stok Rendah',
+            'out_of_stock': 'Habis'
+        };
+        return statusMap[status] || status;
+    }
+
+    // ===== INVENTORY CRUD =====
+    function openMaterialModal(material = null) {
+        document.getElementById('materialModalTitle').innerHTML = material
+            ? '<i class="fas fa-box"></i> Edit Material'
+            : '<i class="fas fa-box"></i> Tambah Material';
+
+        document.getElementById('materialId').value = material ? material.id : '';
+        document.getElementById('materialName').value = material ? material.name : '';
+        document.getElementById('materialType').value = material ? material.material_type : '';
+        document.getElementById('materialColor').value = material ? material.color || '' : '';
+        document.getElementById('materialSize').value = material ? material.size || '' : '';
+        document.getElementById('materialStock').value = material ? material.stock_qty : '0';
+        document.getElementById('materialMinStock').value = material ? material.min_stock : '0';
+        document.getElementById('materialUnit').value = material ? material.unit : 'pcs';
+        document.getElementById('materialSpecs').value = material ? material.specifications || '' : '';
+        document.getElementById('materialNotes').value = material ? material.notes || '' : '';
+
+        openModal('materialModal');
+    }
+
+    function editMaterial(id) {
+        const material = inventoryData.find(m => m.id === id);
+        if (material) {
+            openMaterialModal(material);
+        }
+    }
+
+    async function saveMaterial() {
+        const id = document.getElementById('materialId').value;
+        const data = {
+            name: document.getElementById('materialName').value,
+            material_type: document.getElementById('materialType').value,
+            color: document.getElementById('materialColor').value,
+            size: document.getElementById('materialSize').value,
+            stock_qty: parseInt(document.getElementById('materialStock').value) || 0,
+            min_stock: parseInt(document.getElementById('materialMinStock').value) || 0,
+            unit: document.getElementById('materialUnit').value,
+            specifications: document.getElementById('materialSpecs').value,
+            notes: document.getElementById('materialNotes').value
+        };
+
+        if (!data.name || !data.material_type) {
+            showToast('Nama dan Jenis material wajib diisi', 'error');
+            return;
+        }
+
+        try {
+            if (id) {
+                await api.put(`/inventory/${id}`, data);
+                showToast('Material berhasil diupdate', 'success');
+            } else {
+                await api.post('/inventory', data);
+                showToast('Material berhasil ditambahkan', 'success');
+            }
+            closeModal('materialModal');
+            loadInventory();
+        } catch (error) {
+            showToast('Gagal menyimpan: ' + error.message, 'error');
+        }
+    }
+
+    async function deleteMaterial(id) {
+        if (!confirm('Yakin ingin menghapus material ini?')) return;
+
+        try {
+            await api.delete(`/inventory/${id}`);
+            showToast('Material berhasil dihapus', 'success');
+            loadInventory();
+        } catch (error) {
+            showToast('Gagal menghapus: ' + error.message, 'error');
+        }
+    }
+
+    async function adjustStock(id) {
+        const material = inventoryData.find(m => m.id === id);
+        if (!material) return;
+
+        const adjustment = prompt(`Sesuaikan stok untuk ${material.name}\nStok saat ini: ${material.stock_qty} ${material.unit}\n\nMasukkan jumlah (+ untuk tambah, - untuk kurang):`);
+
+        if (adjustment === null || adjustment === '') return;
+
+        const value = parseInt(adjustment);
+        if (isNaN(value)) {
+            showToast('Masukkan angka yang valid', 'error');
+            return;
+        }
+
+        try {
+            await api.put(`/inventory/${id}/stock`, {
+                adjustment: value,
+                reason: 'Manual adjustment'
+            });
+            showToast('Stok berhasil diupdate', 'success');
+            loadInventory();
+        } catch (error) {
+            showToast('Gagal mengupdate stok: ' + error.message, 'error');
+        }
+    }
+</script>
+{% endblock %}

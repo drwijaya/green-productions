@@ -91,9 +91,9 @@
                                     <i class="fas fa-eye"></i>
                                 </a>
                                 {% if order.dso.first() %}
-                                <a href="{{ url_for('views.dso_detail', dso_id=order.dso.first().id) }}"
-                                    class="btn btn-sm btn-outline" title="Edit DSO">
-                                    <i class="fas fa-edit"></i>
+                                <a href="{{ url_for('views.dso_management') }}?search={{ order.order_code }}"
+                                    class="btn btn-sm btn-outline" title="Manage DSO">
+                                    <i class="fas fa-drafting-compass"></i>
                                 </a>
                                 {% endif %}
                                 <button class="btn btn-sm btn-outline text-danger"

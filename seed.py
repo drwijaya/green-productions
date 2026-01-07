@@ -27,7 +27,7 @@ def seed_database():
                 email='admin@greenproduction.com',
                 username='admin',
                 full_name='System Administrator',
-                role=UserRole.ADMIN,
+                role=UserRole.ADMIN.value,
                 is_active=True
             )
             admin.set_password('admin123')
@@ -58,7 +58,7 @@ def seed_database():
                     email=email,
                     username=username,
                     full_name=full_name,
-                    role=role,
+                    role=role.value,
                     is_active=True
                 )
                 user.set_password('password123')

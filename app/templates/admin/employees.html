@@ -5,9 +5,16 @@
 {% block content %}
 <div class="page-header mb-4">
     <p class="text-muted">Kelola data karyawan</p>
-    <button class="btn btn-primary" onclick="openModal('newEmployeeModal')"><i class="fas fa-plus"></i> Tambah
+    <button class="btn btn-primary" onclick="openModal('newEmployeeModal')"><i
+            class="fas fa-plus margin-right: 8px;"></i> Tambah
         Employee</button>
 </div>
+
+<style>
+    .badge i {
+        margin-right: 6px;
+    }
+</style>
 
 <div class="card">
     <div class="card-body">
@@ -17,9 +24,10 @@
                     <tr>
                         <th>Kode</th>
                         <th>Nama</th>
-                        <th>Department</th>
-                        <th>Position</th>
+                        <th>Posisi / Stasiun Kerja</th>
+                        <th>Status Pekerja</th>
                         <th>Phone</th>
+                        <th>Login</th>
                         <th>Status</th>
                         <th></th>
                     </tr>
@@ -29,12 +37,74 @@
                     <tr>
                         <td><strong>{{ e.employee_code }}</strong></td>
                         <td>{{ e.name }}</td>
-                        <td>{{ e.department or '-' }}</td>
-                        <td>{{ e.position or '-' }}</td>
+                        <td>
+                            {% set pos = e.position or '-' %}
+                            {% if pos == 'owner' %}
+                            <span class="badge"
+                                style="background: linear-gradient(135deg, #667eea, #764ba2); color: white;"><i
+                                    class="fas fa-crown"></i> Owner</span>
+                            {% elif pos == 'admin' %}
+                            <span class="badge"
+                                style="background: linear-gradient(135deg, #11998e, #38ef7d); color: white;"><i
+                                    class="fas fa-user-shield"></i> Admin</span>
+                            {% elif pos == 'qc_line' %}
+                            <span class="badge"
+                                style="background: linear-gradient(135deg, #f093fb, #f5576c); color: white;"><i
+                                    class="fas fa-clipboard-check"></i> QC Line</span>
+                            {% elif pos == 'sewing' %}
+                            <span class="badge"
+                                style="background: linear-gradient(135deg, #4facfe, #00f2fe); color: white;"><i
+                                    class="fas fa-tshirt"></i> Sewing</span>
+                            {% elif pos == 'sablon' %}
+                            <span class="badge"
+                                style="background: linear-gradient(135deg, #fa709a, #fee140); color: white;"><i
+                                    class="fas fa-paint-brush"></i> Sablon</span>
+                            {% elif pos == 'cutting' %}
+                            <span class="badge"
+                                style="background: linear-gradient(135deg, #a8edea, #fed6e3); color: #333;"><i
+                                    class="fas fa-cut"></i> Cutting</span>
+                            {% elif pos == 'finishing' %}
+                            <span class="badge"
+                                style="background: linear-gradient(135deg, #d299c2, #fef9d7); color: #333;"><i
+                                    class="fas fa-magic"></i> Finishing</span>
+                            {% elif pos == 'packing' %}
+                            <span class="badge"
+                                style="background: linear-gradient(135deg, #89f7fe, #66a6ff); color: white;"><i
+                                    class="fas fa-box"></i> Packing</span>
+                            {% else %}
+                            <span class="badge badge-secondary">{{ pos }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% set emp_type = e.employment_type or 'karyawan' %}
+                            {% if emp_type == 'karyawan' %}
+                            <span class="badge" style="background: #28a745; color: white;"><i
+                                    class="fas fa-id-badge"></i> Karyawan</span>
+                            {% elif emp_type == 'harian_lepas' %}
+                            <span class="badge" style="background: #17a2b8; color: white;"><i
+                                    class="fas fa-calendar-day"></i> Harian Lepas</span>
+                            {% elif emp_type == 'borongan' %}
+                            <span class="badge" style="background: #fd7e14; color: white;"><i class="fas fa-tasks"></i>
+                                Borongan</span>
+                            {% elif emp_type == 'magang' %}
+                            <span class="badge" style="background: #6f42c1; color: white;"><i
+                                    class="fas fa-graduation-cap"></i> Magang</span>
+                            {% else %}
+                            <span class="badge badge-secondary">{{ emp_type }}</span>
+                            {% endif %}
+                        </td>
                         <td>{{ e.phone or '-' }}</td>
+                        <td>
+                            {% if e.user %}
+                            <span class="badge badge-success"><i class="fas fa-check"></i> {{ e.user.username }}</span>
+                            {% else %}
+                            <span class="badge badge-secondary">-</span>
+                            {% endif %}
+                        </td>
                         <td><span class="badge badge-{{ 'success' if e.is_active else 'secondary' }}">{{ 'Active' if
                                 e.is_active else 'Inactive' }}</span></td>
-                        <td><button class="btn btn-sm btn-outline"><i class="fas fa-edit"></i></button></td>
+                        <td><button class="btn btn-sm btn-outline" onclick="editEmployee({{ e.id }})"><i
+                                    class="fas fa-edit"></i></button></td>
                     </tr>
                     {% else %}
                     <tr>
@@ -47,24 +117,196 @@
     </div>
 </div>
 
+<!-- Add/Edit Employee Modal -->
 <div class="modal-backdrop" id="newEmployeeModal">
-    <div class="modal">
+    <div class="modal" style="max-width: 550px;">
         <div class="modal-header">
-            <h3 class="modal-title">Tambah Employee</h3><button class="modal-close"
-                onclick="closeModal('newEmployeeModal')">&times;</button>
+            <h3 class="modal-title" id="employeeModalTitle">Tambah Employee</h3>
+            <button class="modal-close" onclick="closeModal('newEmployeeModal')">&times;</button>
         </div>
         <div class="modal-body">
             <form id="employeeForm">
-                <div class="form-group"><label class="form-label">Nama *</label><input type="text" class="form-input"
-                        name="name" required></div>
-                <div class="form-group"><label class="form-label">Department</label><input type="text"
-                        class="form-input" name="department"></div>
-                <div class="form-group"><label class="form-label">Position</label><input type="text" class="form-input"
-                        name="position"></div>
-                <div class="form-group"><label class="form-label">Phone</label><input type="text" class="form-input"
-                        name="phone"></div>
-                <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input"
-                        name="email"></div>
+                <input type="hidden" name="id" id="employeeId">
+
+                <!-- Basic Info Section -->
+                <div style="background: var(--bg-secondary); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                    <h4 style="margin-bottom: 1rem; color: var(--primary);"><i class="fas fa-user"></i> Informasi
+                        Karyawan</h4>
+                    <div class="form-group">
+                        <label class="form-label">Nama Lengkap *</label>
+                        <input type="text" class="form-input" name="name" id="empName" required
+                            placeholder="Masukkan nama lengkap">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Posisi / Stasiun Kerja *</label>
+                        <div class="position-grid" id="positionGrid">
+                            <label class="position-card" data-value="owner">
+                                <input type="radio" name="position" value="owner">
+                                <div class="position-icon"
+                                    style="background: linear-gradient(135deg, #667eea, #764ba2);"><i
+                                        class="fas fa-crown"></i></div>
+                                <span>Owner</span>
+                            </label>
+                            <label class="position-card" data-value="admin">
+                                <input type="radio" name="position" value="admin">
+                                <div class="position-icon"
+                                    style="background: linear-gradient(135deg, #11998e, #38ef7d);"><i
+                                        class="fas fa-user-shield"></i></div>
+                                <span>Admin</span>
+                            </label>
+                            <label class="position-card" data-value="qc_line">
+                                <input type="radio" name="position" value="qc_line">
+                                <div class="position-icon"
+                                    style="background: linear-gradient(135deg, #f093fb, #f5576c);"><i
+                                        class="fas fa-clipboard-check"></i></div>
+                                <span>QC Line</span>
+                            </label>
+                            <label class="position-card" data-value="sewing">
+                                <input type="radio" name="position" value="sewing">
+                                <div class="position-icon"
+                                    style="background: linear-gradient(135deg, #4facfe, #00f2fe);"><i
+                                        class="fas fa-tshirt"></i></div>
+                                <span>Sewing</span>
+                            </label>
+                            <label class="position-card" data-value="sablon">
+                                <input type="radio" name="position" value="sablon">
+                                <div class="position-icon"
+                                    style="background: linear-gradient(135deg, #fa709a, #fee140);"><i
+                                        class="fas fa-paint-brush"></i></div>
+                                <span>Sablon</span>
+                            </label>
+                            <label class="position-card" data-value="cutting">
+                                <input type="radio" name="position" value="cutting">
+                                <div class="position-icon"
+                                    style="background: linear-gradient(135deg, #a8edea, #fed6e3);"><i
+                                        class="fas fa-cut"></i></div>
+                                <span>Cutting</span>
+                            </label>
+                            <label class="position-card" data-value="finishing">
+                                <input type="radio" name="position" value="finishing">
+                                <div class="position-icon"
+                                    style="background: linear-gradient(135deg, #d299c2, #fef9d7);"><i
+                                        class="fas fa-magic"></i></div>
+                                <span>Finishing</span>
+                            </label>
+                            <label class="position-card" data-value="packing">
+                                <input type="radio" name="position" value="packing">
+                                <div class="position-icon"
+                                    style="background: linear-gradient(135deg, #89f7fe, #66a6ff);"><i
+                                        class="fas fa-box"></i></div>
+                                <span>Packing</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Employment Type / Status Pekerja -->
+                    <div class="form-group">
+                        <label class="form-label">Status Pekerja *</label>
+                        <div class="employment-grid" id="employmentGrid">
+                            <label class="employment-card" data-value="karyawan">
+                                <input type="radio" name="employment_type" value="karyawan" checked>
+                                <div class="employment-icon" style="background: #28a745;"><i
+                                        class="fas fa-id-badge"></i></div>
+                                <span>Karyawan</span>
+                                <small>Tetap</small>
+                            </label>
+                            <label class="employment-card" data-value="harian_lepas">
+                                <input type="radio" name="employment_type" value="harian_lepas">
+                                <div class="employment-icon" style="background: #17a2b8;"><i
+                                        class="fas fa-calendar-day"></i></div>
+                                <span>Harian Lepas</span>
+                                <small>Per Hari</small>
+                            </label>
+                            <label class="employment-card" data-value="borongan">
+                                <input type="radio" name="employment_type" value="borongan">
+                                <div class="employment-icon" style="background: #fd7e14;"><i class="fas fa-tasks"></i>
+                                </div>
+                                <span>Borongan</span>
+                                <small>Per Proyek</small>
+                            </label>
+                            <label class="employment-card" data-value="magang">
+                                <input type="radio" name="employment_type" value="magang">
+                                <div class="employment-icon" style="background: #6f42c1;"><i
+                                        class="fas fa-graduation-cap"></i></div>
+                                <span>Magang</span>
+                                <small>Intern</small>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="form-group">
+                            <label class="form-label">No. Telepon</label>
+                            <input type="text" class="form-input" name="phone" id="empPhone" placeholder="08xxxxxxxxxx">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-input" name="email" id="empEmail"
+                                placeholder="email@example.com">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tanggal Bergabung</label>
+                        <input type="date" class="form-input" name="join_date" id="empJoinDate">
+                    </div>
+                </div>
+
+                <!-- Login Account Section -->
+                <div
+                    style="background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.1), rgba(var(--accent-rgb), 0.1)); padding: 1rem; border-radius: 8px; border: 1px solid var(--primary);">
+                    <div
+                        style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                        <h4 style="margin: 0; color: var(--primary);"><i class="fas fa-key"></i> Akun Login</h4>
+                        <label class="switch" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" id="createLoginCheckbox" onchange="toggleLoginFields()">
+                            <span class="slider"></span>
+                            <span style="font-size: 0.85rem;">Buat Akun Login</span>
+                        </label>
+                    </div>
+
+                    <div id="loginFields" style="display: none;">
+                        <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="form-group">
+                                <label class="form-label">Username *</label>
+                                <input type="text" class="form-input" name="username" id="empUsername"
+                                    placeholder="username untuk login">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Password *</label>
+                                <div style="position: relative;">
+                                    <input type="password" class="form-input" name="password" id="empPassword"
+                                        placeholder="Min. 6 karakter" style="padding-right: 40px;">
+                                    <button type="button" onclick="togglePassword()"
+                                        style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-secondary);">
+                                        <i class="fas fa-eye" id="togglePwdIcon"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Role Sistem *</label>
+                            <select class="form-input" name="role" id="empRole">
+                                <option value="operator">Operator (Akses Terbatas)</option>
+                                <option value="qc_line">QC Line</option>
+                                <option value="admin_produksi">Admin Produksi</option>
+                                <option value="owner">Owner</option>
+                                <option value="admin">Admin (Full Access)</option>
+                            </select>
+                        </div>
+                        <div
+                            style="background: rgba(255, 193, 7, 0.15); padding: 0.75rem; border-radius: 6px; border-left: 3px solid #ffc107;">
+                            <small style="color: var(--text-secondary);">
+                                <i class="fas fa-info-circle"></i> Password default: <strong>password123</strong> jika
+                                tidak diisi.
+                            </small>
+                        </div>
+                    </div>
+
+                    <div id="noLoginMessage" style="color: var(--text-secondary); font-size: 0.9rem;">
+                        <i class="fas fa-info-circle"></i> Aktifkan toggle di atas untuk membuat akun login bagi
+                        karyawan ini.
+                    </div>
+                </div>
             </form>
         </div>
         <div class="modal-footer">
@@ -74,19 +316,391 @@
     </div>
 </div>
 
+<style>
+    /* Position Grid */
+    .position-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.75rem;
+        margin-top: 0.5rem;
+    }
+
+    .position-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 0.75rem 0.5rem;
+        border: 2px solid var(--border-color);
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        background: var(--bg-primary);
+    }
+
+    .position-card:hover {
+        border-color: var(--primary);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .position-card input {
+        display: none;
+    }
+
+    .position-card.selected {
+        border-color: var(--primary);
+        background: rgba(var(--primary-rgb), 0.1);
+        box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.2);
+    }
+
+    .position-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .position-card span {
+        font-size: 0.8rem;
+        font-weight: 500;
+        text-align: center;
+    }
+
+    /* Employment Type Grid */
+    .employment-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.75rem;
+        margin-top: 0.5rem;
+    }
+
+    .employment-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 0.6rem 0.4rem;
+        border: 2px solid var(--border-color);
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        background: var(--bg-primary);
+    }
+
+    .employment-card:hover {
+        border-color: var(--primary);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .employment-card input {
+        display: none;
+    }
+
+    .employment-card.selected {
+        border-color: var(--primary);
+        background: rgba(var(--primary-rgb), 0.1);
+        box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.2);
+    }
+
+    .employment-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1rem;
+        margin-bottom: 0.4rem;
+    }
+
+    .employment-card span {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-align: center;
+    }
+
+    .employment-card small {
+        font-size: 0.65rem;
+        color: var(--text-secondary);
+        margin-top: 2px;
+    }
+
+    /* Toggle Switch */
+    .switch {
+        position: relative;
+        display: inline-block;
+    }
+
+    .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .slider {
+        width: 44px;
+        height: 24px;
+        background-color: var(--border-color);
+        border-radius: 24px;
+        position: relative;
+        transition: 0.3s;
+        display: inline-block;
+    }
+
+    .slider:before {
+        content: "";
+        position: absolute;
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        border-radius: 50%;
+        transition: 0.3s;
+    }
+
+    .switch input:checked+.slider {
+        background-color: var(--primary);
+    }
+
+    .switch input:checked+.slider:before {
+        transform: translateX(20px);
+    }
+
+    .form-input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.15);
+    }
+
+    @media (max-width: 600px) {
+        .position-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .employment-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+</style>
+
 <script>
+    let editingEmployeeId = null;
+
+    // Position card selection
+    document.querySelectorAll('.position-card').forEach(card => {
+        card.addEventListener('click', function () {
+            document.querySelectorAll('.position-card').forEach(c => c.classList.remove('selected'));
+            this.classList.add('selected');
+            this.querySelector('input').checked = true;
+
+            // Auto-set role based on position
+            const pos = this.dataset.value;
+            const roleMap = {
+                'owner': 'owner',
+                'admin': 'admin',
+                'qc_line': 'qc_line',
+                'sewing': 'operator',
+                'sablon': 'operator',
+                'cutting': 'operator',
+                'finishing': 'operator',
+                'packing': 'operator'
+            };
+            if (document.getElementById('createLoginCheckbox').checked) {
+                document.getElementById('empRole').value = roleMap[pos] || 'operator';
+            }
+        });
+    });
+
+    // Employment type card selection
+    document.querySelectorAll('.employment-card').forEach(card => {
+        card.addEventListener('click', function () {
+            document.querySelectorAll('.employment-card').forEach(c => c.classList.remove('selected'));
+            this.classList.add('selected');
+            this.querySelector('input').checked = true;
+        });
+    });
+
+    // Set default employment type selection
+    document.querySelector('.employment-card[data-value="karyawan"]')?.classList.add('selected');
+
+    function toggleLoginFields() {
+        const checkbox = document.getElementById('createLoginCheckbox');
+        const loginFields = document.getElementById('loginFields');
+        const noLoginMessage = document.getElementById('noLoginMessage');
+
+        if (checkbox.checked) {
+            loginFields.style.display = 'block';
+            noLoginMessage.style.display = 'none';
+            // Auto-generate username from name
+            const name = document.getElementById('empName').value;
+            if (name && !document.getElementById('empUsername').value) {
+                document.getElementById('empUsername').value = name.toLowerCase().replace(/\s+/g, '.').replace(/[^a-z.]/g, '');
+            }
+            // Auto-set role based on selected position
+            const selectedPos = document.querySelector('.position-card.selected');
+            if (selectedPos) {
+                const roleMap = {
+                    'owner': 'owner',
+                    'admin': 'admin',
+                    'qc_line': 'qc_line',
+                    'sewing': 'operator',
+                    'sablon': 'operator',
+                    'cutting': 'operator',
+                    'finishing': 'operator',
+                    'packing': 'operator'
+                };
+                document.getElementById('empRole').value = roleMap[selectedPos.dataset.value] || 'operator';
+            }
+        } else {
+            loginFields.style.display = 'none';
+            noLoginMessage.style.display = 'block';
+        }
+    }
+
+    function togglePassword() {
+        const pwdField = document.getElementById('empPassword');
+        const icon = document.getElementById('togglePwdIcon');
+        if (pwdField.type === 'password') {
+            pwdField.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            pwdField.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    }
+
+    // Auto-generate username when name changes
+    document.getElementById('empName').addEventListener('input', function () {
+        if (document.getElementById('createLoginCheckbox').checked) {
+            const username = this.value.toLowerCase().replace(/\s+/g, '.').replace(/[^a-z.]/g, '');
+            if (!editingEmployeeId) {
+                document.getElementById('empUsername').value = username;
+            }
+        }
+    });
+
+    function resetForm() {
+        document.getElementById('employeeForm').reset();
+        document.getElementById('employeeId').value = '';
+        document.getElementById('createLoginCheckbox').checked = false;
+        document.querySelectorAll('.position-card').forEach(c => c.classList.remove('selected'));
+        document.querySelectorAll('.employment-card').forEach(c => c.classList.remove('selected'));
+        // Set default employment type
+        const defaultEmpCard = document.querySelector('.employment-card[data-value="karyawan"]');
+        if (defaultEmpCard) {
+            defaultEmpCard.classList.add('selected');
+            defaultEmpCard.querySelector('input').checked = true;
+        }
+        toggleLoginFields();
+        editingEmployeeId = null;
+        document.getElementById('employeeModalTitle').textContent = 'Tambah Employee';
+    }
+
+    function openModal(id) {
+        resetForm();
+        document.getElementById(id).classList.add('active');
+    }
+
+    function editEmployee(id) {
+        editingEmployeeId = id;
+        document.getElementById('employeeModalTitle').textContent = 'Edit Employee';
+
+        fetch(`/api/employees/${id}`)
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    const e = res.data;
+                    document.getElementById('employeeId').value = e.id;
+                    document.getElementById('empName').value = e.name || '';
+                    document.getElementById('empPhone').value = e.phone || '';
+                    document.getElementById('empEmail').value = e.email || '';
+                    document.getElementById('empJoinDate').value = e.join_date || '';
+
+                    // Select position card
+                    if (e.position) {
+                        const card = document.querySelector(`.position-card[data-value="${e.position}"]`);
+                        if (card) {
+                            card.classList.add('selected');
+                            card.querySelector('input').checked = true;
+                        }
+                    }
+
+                    // Select employment type card
+                    document.querySelectorAll('.employment-card').forEach(c => c.classList.remove('selected'));
+                    const empType = e.employment_type || 'karyawan';
+                    const empCard = document.querySelector(`.employment-card[data-value="${empType}"]`);
+                    if (empCard) {
+                        empCard.classList.add('selected');
+                        empCard.querySelector('input').checked = true;
+                    }
+
+                    if (e.user_id) {
+                        document.getElementById('createLoginCheckbox').checked = true;
+                        document.getElementById('empUsername').value = e.username || '';
+                        document.getElementById('empRole').value = e.role || 'operator';
+                        toggleLoginFields();
+                    }
+
+                    document.getElementById('newEmployeeModal').classList.add('active');
+                }
+            })
+            .catch(err => showToast('Gagal memuat data', 'error'));
+    }
+
     async function saveEmployee() {
         const form = document.getElementById('employeeForm');
         const data = Object.fromEntries(new FormData(form));
+
+        // Validation
         if (!data.name) { showToast('Nama wajib diisi', 'error'); return; }
-        // Generate employee code
-        data.employee_code = 'EMP' + Date.now().toString().slice(-6);
+        if (!data.position) { showToast('Pilih posisi/stasiun kerja', 'error'); return; }
+
+        const createLogin = document.getElementById('createLoginCheckbox').checked;
+        data.create_login = createLogin;
+
+        if (createLogin) {
+            if (!data.username) { showToast('Username wajib diisi untuk membuat akun', 'error'); return; }
+            if (!data.password) {
+                data.password = 'password123'; // Default password
+            } else if (data.password.length < 6) {
+                showToast('Password minimal 6 karakter', 'error');
+                return;
+            }
+        }
+
         try {
-            // Note: You'd need an employee API endpoint
-            showToast('Employee berhasil ditambahkan', 'success');
-            closeModal('newEmployeeModal');
+            const isEdit = !!data.id;
+            const url = isEdit ? `/api/employees/${data.id}` : '/api/employees';
+            const method = isEdit ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showToast(isEdit ? 'Employee berhasil diupdate' : 'Employee berhasil ditambahkan', 'success');
+                closeModal('newEmployeeModal');
+                setTimeout(() => location.reload(), 500);
+            } else {
+                showToast(result.message || 'Gagal menyimpan', 'error');
+            }
         } catch (e) {
-            showToast(e.message, 'error');
+            showToast('Terjadi kesalahan: ' + e.message, 'error');
         }
     }
 </script>

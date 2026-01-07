@@ -28,11 +28,10 @@ def list_users():
         )
     
     if role:
-        try:
-            role_enum = UserRole(role)
-            query = query.filter(User.role == role_enum)
-        except ValueError:
-            pass
+        # Role is now stored as string, filter directly
+        valid_roles = ['admin', 'owner', 'admin_produksi', 'qc_line', 'operator']
+        if role in valid_roles:
+            query = query.filter(User.role == role)
     
     query = query.order_by(User.created_at.desc())
     result = paginate_query(query, page, per_page)
@@ -78,10 +77,9 @@ def create_user():
     if User.query.filter_by(username=data['username']).first():
         return api_response(message='Username already exists', status=400)
     
-    # Validate role
-    try:
-        role = UserRole(data['role'])
-    except ValueError:
+    # Validate role - now using string
+    valid_roles = ['admin', 'owner', 'admin_produksi', 'qc_line', 'operator']
+    if data['role'] not in valid_roles:
         return api_response(message='Invalid role', status=400)
     
     # Create user
@@ -89,7 +87,7 @@ def create_user():
         email=data['email'],
         username=data['username'],
         full_name=data['full_name'],
-        role=role,
+        role=data['role'],  # Store as string directly
         is_active=data.get('is_active', True)
     )
     user.set_password(data['password'])
@@ -138,10 +136,10 @@ def update_user(user_id):
         user.full_name = data['full_name']
     
     if 'role' in data:
-        try:
-            user.role = UserRole(data['role'])
-        except ValueError:
+        valid_roles = ['admin', 'owner', 'admin_produksi', 'qc_line', 'operator']
+        if data['role'] not in valid_roles:
             return api_response(message='Invalid role', status=400)
+        user.role = data['role']
     
     if 'is_active' in data:
         user.is_active = data['is_active']

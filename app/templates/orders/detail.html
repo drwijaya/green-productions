@@ -9,19 +9,110 @@
         <a href="{{ url_for('views.orders') }}" class="btn btn-sm btn-outline mb-2">
             <i class="fas fa-arrow-left"></i> Kembali
         </a>
-        <div class="d-flex align-items-center gap-2">
+        <div class="order-title-row">
             <h2>{{ order.order_code }}</h2>
             <span class="status status-{{ order.status }}">
                 {{ order.status.replace('_', ' ').title() }}
             </span>
         </div>
     </div>
-    <div class="page-header-right">
-        {% if order.dso.first() %}
-        <a href="{{ url_for('views.dso_detail', dso_id=order.dso.first().id) }}" class="btn btn-primary">
-            <i class="fas fa-edit"></i> Edit DSO
-        </a>
-        {% endif %}
+</div>
+
+<!-- Workflow Actions -->
+<div class="workflow-card mb-4">
+    <div class="workflow-header">
+        <h4><i class="fas fa-tasks"></i> Workflow Actions</h4>
+    </div>
+    <div class="workflow-steps">
+        <!-- Step 1: DSO -->
+        <div
+            class="workflow-step {% if order.dso_status == 'created' %}completed{% elif order.dso_status == 'draft' %}active{% else %}pending{% endif %}">
+            <div class="step-number">1</div>
+            <div class="step-info">
+                <div class="step-name">Design Specification Order (DSO)</div>
+                <div class="step-desc">
+                    {% if order.dso_status == 'not_created' %}
+                    DSO belum dibuat
+                    {% elif order.dso_status == 'draft' %}
+                    DSO dalam status draft
+                    {% else %}
+                    DSO sudah disetujui
+                    {% endif %}
+                </div>
+            </div>
+            <div class="step-action">
+                <a href="{{ url_for('views.dso_management') }}?search={{ order.order_code }}"
+                    class="btn btn-sm {% if order.dso_status == 'not_created' %}btn-primary{% else %}btn-outline{% endif %}">
+                    <i class="fas fa-drafting-compass"></i>
+                    {% if order.dso_status == 'not_created' %}Buat DSO{% else %}Manage DSO{% endif %}
+                </a>
+            </div>
+        </div>
+
+        <!-- Step 2: Production -->
+        <!-- Step 2: Production -->
+        <div
+            class="workflow-step {% if order.status == 'completed' %}completed{% elif order.status == 'in_production' %}active{% elif order.dso_status == 'created' %}ready{% else %}pending{% endif %}">
+            <div class="step-number">2</div>
+            <div class="step-info">
+                <div class="step-name">Production Monitoring</div>
+                <div class="step-desc">
+                    {% if order.status == 'in_production' %}
+                    Produksi sedang berjalan - {{ order.get_production_progress() }}%
+                    {% elif order.status == 'completed' %}
+                    Produksi selesai
+                    {% elif order.dso_status == 'created' %}
+                    Siap untuk produksi. Klik tombol 'Mulai Produksi'
+                    {% else %}
+                    Menunggu DSO disetujui
+                    {% endif %}
+                </div>
+            </div>
+            <div class="step-action">
+                {% if order.status == 'in_production' or order.status == 'completed' %}
+                <a href="{{ url_for('views.production') }}" class="btn btn-sm btn-outline">
+                    <i class="fas fa-industry"></i> View Production
+                </a>
+                {% elif order.dso_status == 'created' %}
+                <button class="btn btn-sm btn-success" onclick="startProduction({{ order.id }})">
+                    <i class="fas fa-play"></i> Mulai Produksi
+                </button>
+                {% else %}
+                <button class="btn btn-sm btn-secondary" disabled>
+                    <i class="fas fa-industry"></i> Menunggu DSO
+                </button>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Step 3: QC -->
+        <div
+            class="workflow-step {% if order.status == 'completed' %}completed{% elif order.status == 'qc_pending' %}active{% else %}pending{% endif %}">
+            <div class="step-number">3</div>
+            <div class="step-info">
+                <div class="step-name">Quality Control</div>
+                <div class="step-desc">
+                    {% if order.status == 'completed' %}
+                    QC selesai
+                    {% elif order.status == 'qc_pending' %}
+                    QC sedang berlangsung
+                    {% else %}
+                    Menunggu produksi
+                    {% endif %}
+                </div>
+            </div>
+            <div class="step-action">
+                {% if order.status in ['in_production', 'qc_pending', 'completed'] %}
+                <a href="{{ url_for('views.production') }}" class="btn btn-sm btn-outline">
+                    <i class="fas fa-check-circle"></i> View QC
+                </a>
+                {% else %}
+                <button class="btn btn-sm btn-secondary" disabled>
+                    <i class="fas fa-check-circle"></i> Menunggu
+                </button>
+                {% endif %}
+            </div>
+        </div>
     </div>
 </div>
 
@@ -29,7 +120,7 @@
     <!-- Order Info -->
     <div class="card">
         <div class="card-header">
-            <h3 class="card-title">Informasi Invoice</h3>
+            <h3 class="card-title"><i class="fas fa-file-invoice"></i> Informasi Invoice</h3>
         </div>
         <div class="card-body">
             <div class="info-grid">
@@ -66,6 +157,16 @@
                         {% endif %}
                     </span>
                 </div>
+                <div class="info-item">
+                    <span class="info-label">DSO Status</span>
+                    <span class="info-value">
+                        <span class="dso-badge dso-{{ order.dso_status }}">
+                            {% if order.dso_status == 'not_created' %}Not Created
+                            {% elif order.dso_status == 'draft' %}Draft
+                            {% else %}Created{% endif %}
+                        </span>
+                    </span>
+                </div>
             </div>
 
             {% if order.customer_notes %}
@@ -80,7 +181,7 @@
     <!-- Production Progress -->
     <div class="card">
         <div class="card-header">
-            <h3 class="card-title">Production Progress</h3>
+            <h3 class="card-title"><i class="fas fa-industry"></i> Production Progress</h3>
         </div>
         <div class="card-body">
             <div class="progress-overview mb-4">
@@ -112,6 +213,20 @@
                         <div class="step-title">{{ task.process.title() }}</div>
                         <div class="step-status">{{ task.status.replace('_', ' ').title() }}</div>
                     </div>
+                    {% if task.status in ['in_progress', 'completed'] %}
+                    <a href="{{ url_for('views.qc_inspect', task_id=task.id) }}" class="btn btn-xs btn-outline"
+                        title="QC Task">
+                        <i class="fas fa-clipboard-check"></i>
+                    </a>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="empty-tasks">
+                    <i class="fas fa-tasks"></i>
+                    <p>Belum ada production tasks</p>
+                    {% if order.dso_status != 'created' %}
+                    <small>Buat dan approve DSO terlebih dahulu</small>
+                    {% endif %}
                 </div>
                 {% endfor %}
             </div>
@@ -119,10 +234,72 @@
     </div>
 </div>
 
-<!-- DSO Versions -->
+<!-- QC Monitoring Section -->
 <div class="card mt-4">
     <div class="card-header">
-        <h3 class="card-title">DSO Versions</h3>
+        <h3 class="card-title"><i class="fas fa-clipboard-check"></i> QC Monitoring</h3>
+    </div>
+    <div class="card-body">
+        {% set total_tasks = tasks | length %}
+        {% set completed_tasks = tasks | selectattr('status', 'equalto', 'completed') | list | length %}
+        {% set in_progress_tasks = tasks | selectattr('status', 'equalto', 'in_progress') | list | length %}
+        {% set pending_tasks = total_tasks - completed_tasks - in_progress_tasks %}
+
+        <div class="qc-summary">
+            <div class="qc-stat">
+                <div class="qc-stat-value">{{ total_tasks }}</div>
+                <div class="qc-stat-label">Total Tasks</div>
+            </div>
+            <div class="qc-stat">
+                <div class="qc-stat-value text-success">{{ completed_tasks }}</div>
+                <div class="qc-stat-label">Completed</div>
+            </div>
+            <div class="qc-stat">
+                <div class="qc-stat-value text-primary">{{ in_progress_tasks }}</div>
+                <div class="qc-stat-label">In Progress</div>
+            </div>
+            <div class="qc-stat">
+                <div class="qc-stat-value text-warning">{{ pending_tasks }}</div>
+                <div class="qc-stat-label">Pending</div>
+            </div>
+        </div>
+
+        <div class="qc-tasks-list">
+            {% for task in tasks %}
+            <div class="qc-task-item">
+                <div class="step-icon"
+                    style="background: {% if task.status == 'completed' %}var(--success){% elif task.status == 'in_progress' %}var(--info){% else %}var(--gray-300){% endif %}">
+                    <i
+                        class="fas {% if task.status == 'completed' %}fa-check{% elif task.status == 'in_progress' %}fa-spinner fa-spin{% else %}fa-circle{% endif %}"></i>
+                </div>
+                <div class="qc-task-info">
+                    <div class="qc-task-name">{{ task.process.title() }}</div>
+                    <div class="qc-task-meta">Status: {{ task.status.replace('_', ' ').title() }}</div>
+                </div>
+                <a href="{{ url_for('views.qc_inspect', task_id=task.id) }}" class="btn btn-sm btn-outline">
+                    <i class="fas fa-clipboard-check"></i> QC
+                </a>
+            </div>
+            {% else %}
+            <div class="empty-tasks">
+                <i class="fas fa-clipboard-list"></i>
+                <p>Belum ada production tasks</p>
+                {% if order.dso_status != 'created' %}
+                <small>Buat dan approve DSO terlebih dahulu</small>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- DSO Versions -->
+<div class="card mt-4">
+    <div class="card-header d-flex justify-between align-center">
+        <h3 class="card-title"><i class="fas fa-drafting-compass"></i> DSO Versions</h3>
+        <a href="{{ url_for('views.dso_management') }}?search={{ order.order_code }}" class="btn btn-sm btn-outline">
+            <i class="fas fa-external-link-alt"></i> Manage DSO
+        </a>
     </div>
     <div class="card-body">
         <div class="table-container">
@@ -131,6 +308,7 @@
                     <tr>
                         <th>Version</th>
                         <th>Status</th>
+                        <th>Jenis</th>
                         <th>Bahan</th>
                         <th>Warna</th>
                         <th>Created</th>
@@ -146,6 +324,7 @@
                                 {{ dso.status.replace('_', ' ').title() }}
                             </span>
                         </td>
+                        <td>{{ dso.jenis or '-' }}</td>
                         <td>{{ dso.bahan or '-' }}</td>
                         <td>{{ dso.warna or '-' }}</td>
                         <td>{{ dso.created_at.strftime('%d/%m/%Y %H:%M') if dso.created_at else '-' }}</td>
@@ -157,7 +336,16 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="6" class="text-center text-muted">No DSO versions</td>
+                        <td colspan="7" class="text-center">
+                            <div class="empty-dso">
+                                <i class="fas fa-file-alt"></i>
+                                <p>Belum ada DSO</p>
+                                <a href="{{ url_for('views.dso_management') }}?search={{ order.order_code }}"
+                                    class="btn btn-sm btn-primary">
+                                    <i class="fas fa-plus"></i> Buat DSO
+                                </a>
+                            </div>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -175,6 +363,103 @@
         gap: 1rem;
     }
 
+    .order-title-row {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    /* Workflow Card */
+    .workflow-card {
+        background: var(--white);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--gray-200);
+        overflow: hidden;
+    }
+
+    .workflow-header {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: white;
+        padding: 1rem 1.5rem;
+    }
+
+    .workflow-header h4 {
+        margin: 0;
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .workflow-steps {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .workflow-step {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid var(--gray-100);
+        background: var(--white);
+    }
+
+    .workflow-step:last-child {
+        border-bottom: none;
+    }
+
+    .workflow-step.completed {
+        background: #F0FDF4;
+    }
+
+    .workflow-step.active {
+        background: #EFF6FF;
+    }
+
+    .step-number {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: var(--gray-200);
+        color: var(--gray-500);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        flex-shrink: 0;
+    }
+
+    .workflow-step.completed .step-number {
+        background: var(--success);
+        color: white;
+    }
+
+    .workflow-step.active .step-number {
+        background: var(--primary);
+        color: white;
+    }
+
+    .step-info {
+        flex: 1;
+    }
+
+    .step-name {
+        font-weight: 600;
+        color: var(--gray-800);
+        margin-bottom: 0.25rem;
+    }
+
+    .step-desc {
+        font-size: 0.85rem;
+        color: var(--gray-500);
+    }
+
+    .step-action {
+        flex-shrink: 0;
+    }
+
+    /* Detail Grid */
     .detail-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -206,6 +491,29 @@
         color: var(--gray-800);
     }
 
+    .dso-badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .dso-not_created {
+        background: #FEE2E2;
+        color: #DC2626;
+    }
+
+    .dso-draft {
+        background: #FEF3C7;
+        color: #D97706;
+    }
+
+    .dso-created {
+        background: #D1FAE5;
+        color: #059669;
+    }
+
+    /* Progress Circle */
     .progress-overview {
         text-align: center;
     }
@@ -246,6 +554,7 @@
         color: var(--gray-800);
     }
 
+    /* Production Steps */
     .production-steps {
         display: flex;
         flex-direction: column;
@@ -279,6 +588,7 @@
         background: var(--gray-300);
         color: white;
         font-size: 0.75rem;
+        flex-shrink: 0;
     }
 
     .step-item.completed .step-icon {
@@ -303,6 +613,113 @@
         color: var(--gray-500);
     }
 
+    .empty-tasks {
+        text-align: center;
+        padding: 2rem;
+        color: var(--gray-400);
+    }
+
+    .empty-tasks i {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-tasks p {
+        margin: 0;
+        font-weight: 500;
+    }
+
+    .empty-tasks small {
+        font-size: 0.8rem;
+    }
+
+    /* QC Summary */
+    .qc-summary {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .qc-stat {
+        background: var(--gray-50);
+        padding: 1rem;
+        border-radius: var(--radius);
+        text-align: center;
+    }
+
+    .qc-stat-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--gray-800);
+    }
+
+    .qc-stat-label {
+        font-size: 0.8rem;
+        color: var(--gray-500);
+        margin-top: 0.25rem;
+    }
+
+    .qc-tasks-list {
+        min-height: 100px;
+    }
+
+    .qc-task-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        background: var(--gray-50);
+        border-radius: var(--radius);
+        margin-bottom: 0.5rem;
+    }
+
+    .qc-task-info {
+        flex: 1;
+    }
+
+    .qc-task-name {
+        font-weight: 500;
+    }
+
+    .qc-task-meta {
+        font-size: 0.8rem;
+        color: var(--gray-500);
+    }
+
+    /* Empty DSO */
+    .empty-dso {
+        padding: 2rem;
+        text-align: center;
+        color: var(--gray-400);
+    }
+
+    .empty-dso i {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-dso p {
+        margin: 0 0 1rem 0;
+    }
+
+    .d-flex {
+        display: flex;
+    }
+
+    .justify-between {
+        justify-content: space-between;
+    }
+
+    .align-center {
+        align-items: center;
+    }
+
+    .btn-xs {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+
     @media (max-width: 1024px) {
         .detail-grid {
             grid-template-columns: 1fr;
@@ -313,6 +730,50 @@
         .info-grid {
             grid-template-columns: 1fr;
         }
+
+        .workflow-step {
+            flex-wrap: wrap;
+        }
+
+        .step-action {
+            width: 100%;
+            margin-top: 0.5rem;
+        }
+
+        .step-action .btn {
+            width: 100%;
+        }
+
+        .qc-summary {
+            grid-template-columns: repeat(2, 1fr);
+        }
     }
 </style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Initialize QC stats - already rendered server-side
+        console.log('Invoice detail page loaded');
+    });
+</script>
+<script>
+    async function startProduction(orderId) {
+        if (!confirm('Apakah anda yakin ingin memulai produksi untuk order ini?')) {
+            return;
+        }
+
+        showLoading();
+        try {
+            await api.put(`/orders/${orderId}/status`, {
+                status: 'in_production'
+            });
+
+            showToast('Produksi berhasil dimulai!', 'success');
+            setTimeout(() => window.location.reload(), 1000);
+        } catch (error) {
+            hideLoading();
+            showToast(error.message || 'Gagal memulai produksi', 'error');
+        }
+    }
+</script>
 {% endblock %}

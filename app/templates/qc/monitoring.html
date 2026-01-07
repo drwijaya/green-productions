@@ -1,0 +1,1882 @@
+{% extends "base.html" %}
+
+{% block title %}QC Monitoring System{% endblock %}
+{% block page_title %}QC Monitoring System{% endblock %}
+
+{% block extra_css %}
+<!-- Select2 -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+    /* Modern Dashboard Styling */
+    :root {
+        --dashboard-gap: 1.5rem;
+        --card-radius: 16px;
+        --bg-color: #f8fafc;
+    }
+
+    .main-content {
+        background-color: var(--bg-color);
+    }
+
+    /* Tab Navigation Styles */
+    .qc-tabs {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2rem;
+        border-bottom: 1px solid var(--gray-200);
+        padding-bottom: 0px;
+    }
+
+    .qc-tab-btn {
+        background: transparent;
+        border: none;
+        padding: 1rem 1.5rem;
+        font-weight: 600;
+        color: var(--gray-500);
+        cursor: pointer;
+        font-size: 1rem;
+        position: relative;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .qc-tab-btn.active {
+        color: var(--primary);
+    }
+
+    .qc-tab-btn.active::after {
+        content: '';
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background-color: var(--primary);
+        border-radius: 2px 2px 0 0;
+    }
+
+    .qc-tab-btn:hover:not(.active) {
+        color: var(--gray-700);
+    }
+
+    /* Tab Content Area */
+    .tab-content {
+        display: none;
+        animation: fadeIn 0.3s ease-in-out;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Dashboard Grid System */
+    .dashboard-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: var(--dashboard-gap);
+        margin-bottom: var(--dashboard-gap);
+    }
+
+    .charts-row {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: var(--dashboard-gap);
+        margin-bottom: var(--dashboard-gap);
+    }
+
+    /* Aesthetic Cards */
+    .content-card {
+        background: white;
+        border-radius: var(--card-radius);
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        border: 1px solid var(--gray-100);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .content-card:hover {
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+    }
+
+    .stats-card {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        height: 100%;
+    }
+
+    .stats-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+
+    .stats-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+    }
+
+    .stats-value {
+        font-size: 2.25rem;
+        font-weight: 700;
+        color: var(--gray-800);
+        line-height: 1;
+        margin-bottom: 0.5rem;
+    }
+
+    .stats-label {
+        font-size: 0.9rem;
+        color: var(--gray-500);
+        font-weight: 500;
+    }
+
+    .chart-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .chart-container {
+        position: relative;
+        height: 350px;
+        width: 100%;
+    }
+
+    /* Defect Table Enhancement */
+    .table-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        background: white;
+        padding: 1rem;
+        border-radius: var(--card-radius);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .search-box {
+        position: relative;
+        width: 300px;
+    }
+
+    .search-box i {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--gray-400);
+    }
+
+    .search-box input {
+        padding-left: 2.5rem;
+        border-radius: 50px;
+    }
+
+    .status-badge {
+        padding: 0.35em 0.8em;
+        border-radius: 50px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* Modal Styling Fixes */
+    .modal-lg {
+        max-width: 900px;
+        width: 95%;
+    }
+
+    /* Input Form Sections */
+    .form-section-header {
+        background: var(--bg-color);
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        color: var(--gray-700);
+        margin-bottom: 1rem;
+        border-left: 4px solid var(--primary);
+    }
+
+    /* Empty State */
+    .empty-state-modern {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: var(--gray-400);
+    }
+
+    .empty-state-modern i {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        color: var(--gray-300);
+    }
+
+    /* Chart Loading Overlay */
+    .chart-container {
+        position: relative;
+    }
+
+    .chart-loading {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.9);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 10;
+        border-radius: 8px;
+        transition: opacity 0.3s ease;
+        backdrop-filter: blur(2px);
+    }
+
+    .loading-spinner {
+        width: 30px;
+        height: 30px;
+        border: 3px solid #e5e7eb;
+        border-top: 3px solid var(--primary);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 0.5rem;
+    }
+
+    .loading-text {
+        font-size: 0.875rem;
+        color: #6b7280;
+        font-weight: 500;
+    }
+
+    @keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+
+    h4 i,
+    h5 i {
+        margin-right: 0.5rem;
+    }
+
+    .btn-close-custom {
+        background: transparent;
+        border: none;
+        font-size: 1.25rem;
+        color: #94a3b8;
+        transition: color 0.2s;
+    }
+
+    .btn-close-custom:hover {
+        color: #334155;
+    }
+
+    .form-control-plaintext {
+        outline: none;
+    }
+
+    .ls-1 {
+        letter-spacing: 0.05em;
+    }
+
+    /* Ensure analytics tab doesn't overflow */
+    #tab-analytics {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-stats-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .charts-row {
+            grid-template-columns: 1fr;
+        }
+
+        .qc-tabs {
+            flex-wrap: wrap;
+        }
+
+        .qc-tab-btn {
+            flex: 1;
+            justify-content: center;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">Quality Control Center</h2>
+        <p class="text-muted">Monitoring kualitas produksi dan manajemen defect terpusat</p>
+    </div>
+    <div id="dashboardActions">
+
+    </div>
+</div>
+
+<!-- Main Tabs -->
+<!-- Main Tabs -->
+<div class="qc-tabs">
+    <button class="qc-tab-btn active" onclick="switchTab('analytics', this)">
+        <i class="fas fa-brain"></i> Advanced Analytics
+    </button>
+    <button class="qc-tab-btn" onclick="switchTab('input', this)">
+        <i class="fas fa-clipboard-list"></i> Pencatatan Defect
+    </button>
+</div>
+
+<!-- ADVANCED ANALYTICS TAB -->
+<div id="tab-analytics" class="tab-content active">
+    <!-- Header with Export Buttons -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1"><i class="fas fa-brain text-primary me-2"></i>Advanced Quality Analytics</h4>
+            <p class="text-muted mb-0">Deep insights dari data QC Checklist parameters</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-success" onclick="exportCSV()">
+                <i class="fas fa-file-csv me-1"></i> Export CSV
+            </button>
+            <button class="btn btn-outline-primary" onclick="window.print()">
+                <i class="fas fa-print me-1"></i> Print Report
+            </button>
+        </div>
+    </div>
+
+    <!-- Quality Score + FPY Row -->
+    <div class="row mb-4">
+        <!-- Quality Score Gauge -->
+        <div class="col-md-4">
+            <div class="content-card h-100 position-relative overflow-hidden"
+                style="background: white; border: 1px solid var(--gray-200);">
+                <div class="text-center">
+                    <h6 class="mb-4 text-uppercase ls-1 text-muted" style="font-size: 0.75rem; font-weight: 700;">
+                        <i class="fas fa-star text-warning me-2"></i>Quality Score
+                    </h6>
+
+                    <div class="position-relative d-inline-block mb-3">
+                        <svg width="160" height="160" viewBox="0 0 160 160">
+                            <!-- Background Circle -->
+                            <circle cx="80" cy="80" r="70" stroke="#f1f5f9" stroke-width="12" fill="none" />
+                            <!-- Value Circle -->
+                            <circle id="scoreCircle" cx="80" cy="80" r="70" stroke="#10B981" stroke-width="12"
+                                fill="none" stroke-dasharray="440" stroke-dashoffset="440" stroke-linecap="round"
+                                transform="rotate(-90 80 80)" style="transition: stroke-dashoffset 1s ease-out;" />
+                        </svg>
+                        <div class="position-absolute top-50 start-50 translate-middle text-center">
+                            <div id="qualityScoreValue" class="text-gray-900"
+                                style="font-size: 2.5rem; font-weight: 800; color: #1e293b;">--</div>
+                            <div id="qualityGrade" class="text-muted" style="font-size: 0.85rem; font-weight: 500;">
+                                Grade</div>
+                        </div>
+                    </div>
+
+                    <div class="mt-2">
+                        <span id="qualityStatus"
+                            class="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-pill fw-bold">
+                            Loading...
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FPY & Key Metrics -->
+        <div class="col-md-4">
+            <div class="content-card h-100">
+                <h5 class="mb-4"><i class="fas fa-bullseye text-success me-2"></i>First Pass Yield</h5>
+                <div class="text-center mb-4">
+                    <div id="fpyValue" style="font-size: 3rem; font-weight: 700; color: #10B981;">--%</div>
+                    <div class="text-muted">Produk lolos QC pertama kali</div>
+                </div>
+                <div class="row text-center">
+                    <div class="col-4">
+                        <div id="fpyInspected" class="fw-bold text-primary" style="font-size: 1.25rem;">0</div>
+                        <small class="text-muted">Inspected</small>
+                    </div>
+                    <div class="col-4">
+                        <div id="fpyPassed" class="fw-bold text-success" style="font-size: 1.25rem;">0</div>
+                        <small class="text-muted">Passed</small>
+                    </div>
+                    <div class="col-4">
+                        <div id="fpyFailed" class="fw-bold text-danger" style="font-size: 1.25rem;">0</div>
+                        <small class="text-muted">Failed</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trend Comparison -->
+        <div class="col-md-4">
+            <div class="content-card h-100">
+                <h5 class="mb-4"><i class="fas fa-exchange-alt text-info me-2"></i>Trend Comparison</h5>
+                <div class="d-flex gap-3">
+                    <div class="flex-fill p-3 rounded" style="background: #F0FDF4;">
+                        <small class="text-muted d-block mb-1">This Period</small>
+                        <div id="currentFpy" class="fw-bold text-success" style="font-size: 1.5rem;">--%</div>
+                    </div>
+                    <div class="flex-fill p-3 rounded" style="background: #F3F4F6;">
+                        <small class="text-muted d-block mb-1">Previous</small>
+                        <div id="prevFpy" class="fw-bold text-secondary" style="font-size: 1.5rem;">--%</div>
+                    </div>
+                </div>
+                <div class="mt-3 text-center">
+                    <span id="trendIndicator" class="badge bg-success px-3 py-2">
+                        <i class="fas fa-arrow-up me-1"></i>
+                        <span id="trendChange">+0%</span> vs periode sebelumnya
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row mb-4">
+        <!-- Process Stage Comparison Radar -->
+        <div class="col-md-6">
+            <div class="content-card">
+                <div class="chart-header">
+                    <h5 class="mb-0"><i class="fas fa-project-diagram text-primary me-2"></i>Process Stage Comparison
+                    </h5>
+                </div>
+                <div class="chart-container" style="height: 350px;">
+                    <canvas id="processRadarChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Parameter Analysis Bar Chart -->
+        <div class="col-md-6">
+            <div class="content-card">
+                <div class="chart-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar text-primary me-2"></i>Top Problem Parameters</h5>
+                </div>
+                <div class="chart-container" style="height: 350px;">
+                    <canvas id="paramBarChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Defect Pareto Chart -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="content-card">
+                <div class="chart-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar text-warning me-2"></i>Top Defect Types (Pareto
+                        Analysis)</h5>
+                </div>
+                <div class="chart-container" style="height: 350px;">
+                    <canvas id="paretoChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Parameter Heatmap Table -->
+    <div class="content-card">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0"><i class="fas fa-th text-primary me-2"></i>Parameter Analysis Detail</h5>
+            <span class="badge bg-primary" id="analysisCount">0 parameters</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle" id="parameterTable">
+                <thead class="bg-light">
+                    <tr>
+                        <th>Stage</th>
+                        <th>Parameter</th>
+                        <th class="text-end">Total Checked</th>
+                        <th class="text-end">Total NG</th>
+                        <th class="text-end">NG Rate</th>
+                        <th class="text-center">Status</th>
+                        <th class="text-end">Std Dev</th>
+                    </tr>
+                </thead>
+                <tbody id="parameterTableBody">
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-muted">
+                            <i class="fas fa-spinner fa-spin me-2"></i>Loading analytics...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- INPUT & DATA TAB -->
+<div id="tab-input" class="tab-content">
+    <div class="table-controls">
+        <div class="d-flex gap-3 align-items-center flex-grow-1">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" class="form-control" id="tableSearch"
+                    placeholder="Cari No. Order, Produk, atau Defect..." onkeyup="debounce(loadDefects, 500)()">
+            </div>
+            <select class="form-select w-auto" id="statusFilter" onchange="loadDefects()">
+                <option value="">Semua Status</option>
+                <option value="open">Open - Butuh Perbaikan</option>
+                <option value="in_progress">Processing - Sedang Dikerjakan</option>
+                <option value="resolved">Resolved - Selesai</option>
+                <option value="closed">Closed - Verifikasi OK</option>
+            </select>
+            <select class="form-select w-auto" id="stageFilter" onchange="loadDefects()">
+                <option value="">Semua Tahapan</option>
+                <option value="Cutting">Cutting</option>
+                <option value="Sewing">Sewing</option>
+                <option value="Sablon">Sablon</option>
+                <option value="Finishing">Finishing</option>
+                <option value="QC Akhir">QC Akhir</option>
+            </select>
+        </div>
+        <button class="btn btn-primary" onclick="openDefectModal()">
+            <i class="fas fa-plus-circle"></i> Tambah Catatan Defect
+        </button>
+    </div>
+
+    <div class="content-card p-0 overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4">Tanggal</th>
+                        <th>Konteks Produk</th>
+                        <th>Detail Defect</th>
+                        <th>Tahapan</th>
+                        <th>Penanggung Jawab</th>
+                        <th>Status</th>
+                        <th class="text-end pe-4">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="defectTableBody">
+                    <tr>
+                        <td colspan="7" class="text-center p-5">Memuat data...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+
+<!-- MODAL FORM INPUT -->
+<div class="modal-backdrop" id="defectModal">
+    <div class="modal modal-xl fade-in-up">
+        <!-- Clean Header -->
+        <div class="modal-header bg-white border-bottom">
+            <div class="d-flex align-items-center gap-3">
+                <div class="icon-wrapper">
+                    <i class="fas fa-clipboard-check"></i>
+                </div>
+                <div>
+                    <h4 class="mb-0 fw-bold">Laporan Ketidaksesuaian Produk (NCR)</h4>
+                    <p class="text-muted mb-0" style="font-size: 0.875rem;">Formulir pencatatan temuan cacat produksi
+                        dan tindak lanjut</p>
+                </div>
+            </div>
+            <button class="btn-close" onclick="closeModal('defectModal')"></button>
+        </div>
+
+        <div class="modal-body p-0" style="max-height: 75vh; overflow-y: auto;">
+            <input type="hidden" id="defectId">
+
+            <div class="row g-0">
+                <!-- LEFT COLUMN: Product Context -->
+                <div class="col-lg-4 border-end" style="background: #F9FAFB;">
+                    <div class="p-4">
+                        <!-- Section Header -->
+                        <div class="section-label mb-4">
+                            <i class="fas fa-box-open me-2"></i>
+                            <span>Konteks Produksi</span>
+                        </div>
+
+                        <!-- Order Selection -->
+                        <div class="mb-4">
+                            <label class="form-label required">Sumber Order / Task</label>
+                            <select class="form-select" id="taskSelect" style="width: 100%;"
+                                onchange="autoFillProductInfo()"></select>
+                            <small class="form-text text-muted">
+                                <i class="fas fa-info-circle me-1"></i>Pilih SPK/Order yang sedang berjalan
+                            </small>
+                        </div>
+
+                        <!-- Product Info Card -->
+                        <div class="info-card mb-4">
+                            <div class="info-item">
+                                <label>Customer</label>
+                                <input type="text" class="info-value" id="customerName" readonly placeholder="-">
+                            </div>
+                            <div class="info-item">
+                                <label>No. Order</label>
+                                <input type="text" class="info-value" id="orderCode" readonly placeholder="-">
+                            </div>
+                            <div class="info-item mb-0">
+                                <label>Produk</label>
+                                <input type="text" class="info-value" id="productName" readonly placeholder="-">
+                            </div>
+                        </div>
+
+                        <!-- Process Stage Selection -->
+                        <div class="mb-3">
+                            <label class="form-label required">Tahapan Proses (Stage)</label>
+                            <div class="d-flex flex-column gap-2">
+                                <label class="stage-option">
+                                    <input type="radio" name="processStage" value="Cutting">
+                                    <div class="stage-content">
+                                        <div class="stage-title">Cutting</div>
+                                        <div class="stage-desc">Pemotongan kain</div>
+                                    </div>
+                                </label>
+                                <label class="stage-option">
+                                    <input type="radio" name="processStage" value="Sewing">
+                                    <div class="stage-content">
+                                        <div class="stage-title">Sewing</div>
+                                        <div class="stage-desc">Penjahitan & Perakitan</div>
+                                    </div>
+                                </label>
+                                <label class="stage-option">
+                                    <input type="radio" name="processStage" value="Sablon">
+                                    <div class="stage-content">
+                                        <div class="stage-title">Sablon / Bordir</div>
+                                        <div class="stage-desc">Aplikasi grafis</div>
+                                    </div>
+                                </label>
+                                <label class="stage-option">
+                                    <input type="radio" name="processStage" value="Finishing">
+                                    <div class="stage-content">
+                                        <div class="stage-title">Finishing</div>
+                                        <div class="stage-desc">Buang benang, setrika, packing</div>
+                                    </div>
+                                </label>
+                                <label class="stage-option">
+                                    <input type="radio" name="processStage" value="QC Akhir">
+                                    <div class="stage-content">
+                                        <div class="stage-title">QC Akhir</div>
+                                        <div class="stage-desc">Pemeriksaan final sebelum kirim</div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT COLUMN: Form Inputs -->
+                <div class="col-lg-8 bg-white">
+                    <div class="p-4">
+                        <!-- Section 1: Detail Temuan -->
+                        <div class="form-section mb-4">
+                            <div class="section-header">
+                                <span class="section-number">1</span>
+                                <h6>Detail Temuan Defect</h6>
+                            </div>
+
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label required">Tanggal Temuan</label>
+                                    <input type="date" class="form-control" id="findingDate">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Lokasi / Line / Stasiun</label>
+                                    <input type="text" class="form-control" id="station"
+                                        placeholder="Ex: Line Sewing 2, Meja 4">
+                                </div>
+                                <div class="col-md-8">
+                                    <label class="form-label required">Jenis Defect</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white">
+                                            <i class="fas fa-exclamation-triangle text-warning"></i>
+                                        </span>
+                                        <input type="text" class="form-control" id="defectType"
+                                            placeholder="Contoh: Jahitan Loncat, Bolong, Noda Oli...">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label required">Jumlah (Qty)</label>
+                                    <input type="number" class="form-control text-center fw-bold" id="defectQty"
+                                        value="1" min="1">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Keterangan Tambahan</label>
+                                    <textarea class="form-control" id="defectDescription" rows="2"
+                                        placeholder="Deskripsikan posisi defect atau detail visual lainnya..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section 2: Penanganan -->
+                        <div class="form-section mb-4">
+                            <div class="section-header">
+                                <span class="section-number">2</span>
+                                <h6>Rencana Penanganan (Rework)</h6>
+                            </div>
+
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label class="form-label">Tindakan Perbaikan</label>
+                                    <textarea class="form-control" id="actionTaken" rows="2"
+                                        placeholder="Apa yang harus dilakukan untuk memperbaiki? (Ex: Bongkar jahitan samping, Cuci ulang spot noda)"></textarea>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Penanggung Jawab</label>
+                                    <input type="text" class="form-control" id="responsibleDept"
+                                        placeholder="Ex: Operator A, Bagian Cutting">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Target Selesai</label>
+                                    <input type="date" class="form-control" id="targetDate">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section 3: Verifikasi -->
+                        <div class="verification-section">
+                            <div class="section-header mb-3">
+                                <span class="section-number">3</span>
+                                <h6>Verifikasi & Status Akhir</h6>
+                            </div>
+
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Hasil Verifikasi QC</label>
+                                    <div class="btn-group w-100" role="group">
+                                        <input type="radio" class="btn-check" name="verificationResult" id="v_ok"
+                                            value="Sesuai" autocomplete="off">
+                                        <label class="btn btn-outline-success" for="v_ok">
+                                            <i class="fas fa-check me-1"></i>Sesuai (OK)
+                                        </label>
+                                        <input type="radio" class="btn-check" name="verificationResult" id="v_fail"
+                                            value="Tidak Sesuai" autocomplete="off">
+                                        <label class="btn btn-outline-danger" for="v_fail">
+                                            <i class="fas fa-times me-1"></i>Gagal (Fail)
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Status Tiket</label>
+                                    <select class="form-select" id="finalStatus">
+                                        <option value="open">Open - Belum Selesai</option>
+                                        <option value="in_progress">In Progress - Sedang Dikerjakan</option>
+                                        <option value="resolved">Resolved - Selesai Diperbaiki</option>
+                                        <option value="closed">Closed - Final (Arsip)</option>
+                                    </select>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Catatan Verifikasi</label>
+                                    <input type="text" class="form-control" id="verificationNotes"
+                                        placeholder="Tambahkan catatan verifikasi di sini...">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="modal-footer bg-white border-top">
+            <button class="btn btn-light px-4" onclick="closeModal('defectModal')">Batal</button>
+            <button class="btn btn-primary px-5" onclick="saveDefect()">
+                <i class="fas fa-save me-2"></i>Simpan Laporan
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Modal Defect Form Styles */
+    .modal-xl {
+        max-width: 1100px;
+    }
+
+    /* Header Icon */
+    .icon-wrapper {
+        width: 48px;
+        height: 48px;
+        background: #EFF6FF;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--primary);
+        font-size: 1.25rem;
+    }
+
+    /* Section Label */
+    .section-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--gray-600);
+    }
+
+    /* Info Card */
+    .info-card {
+        background: white;
+        border-radius: 8px;
+        padding: 1rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .info-item {
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #E5E7EB;
+    }
+
+    .info-item:last-child {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: none;
+    }
+
+    .info-item label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: var(--gray-500);
+        margin-bottom: 0.25rem;
+        letter-spacing: 0.5px;
+    }
+
+    .info-value {
+        border: none;
+        background: transparent;
+        padding: 0;
+        font-weight: 600;
+        color: var(--gray-800);
+        width: 100%;
+        outline: none;
+    }
+
+    /* Stage Options */
+    .stage-option {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem;
+        border: 1.5px solid #E5E7EB;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: white;
+    }
+
+    .stage-option:hover {
+        border-color: #CBD5E1;
+        background: #FAFAFA;
+    }
+
+    .stage-option input[type="radio"] {
+        margin: 0;
+        margin-right: 0.75rem;
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+
+    .stage-option input[type="radio"]:checked~.stage-content .stage-title {
+        color: var(--primary);
+    }
+
+    .stage-option:has(input:checked) {
+        border-color: var(--primary);
+        background: #EFF6FF;
+    }
+
+    .stage-content {
+        flex: 1;
+    }
+
+    .stage-title {
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: var(--gray-800);
+        margin-bottom: 0.125rem;
+    }
+
+    .stage-desc {
+        font-size: 0.75rem;
+        color: var(--gray-500);
+    }
+
+    /* Form Sections */
+    .form-section {
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid #E5E7EB;
+    }
+
+    .section-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .section-number {
+        width: 28px;
+        height: 28px;
+        background: var(--primary);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+
+    .section-header h6 {
+        margin: 0;
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--gray-700);
+    }
+
+    /* Verification Section */
+    .verification-section {
+        background: #F9FAFB;
+        border-radius: 8px;
+        padding: 1.25rem;
+        border: 1px solid #E5E7EB;
+    }
+
+    /* Form Labels */
+    .form-label {
+        font-weight: 500;
+        font-size: 0.875rem;
+        margin-bottom: 0.5rem;
+        color: var(--gray-700);
+    }
+
+    .form-label.required::after {
+        content: ' *';
+        color: #EF4444;
+    }
+
+    /* Form Controls */
+    .form-control,
+    .form-select {
+        border: 1px solid #D1D5DB;
+        border-radius: 6px;
+        padding: 0.625rem 0.875rem;
+        font-size: 0.875rem;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        outline: none;
+    }
+
+    .input-group-text {
+        border: 1px solid #D1D5DB;
+        border-right: none;
+    }
+
+    .input-group .form-control {
+        border-left: none;
+    }
+
+    .input-group:focus-within .input-group-text {
+        border-color: var(--primary);
+    }
+
+    /* Button Styles */
+    .btn-outline-success,
+    .btn-outline-danger {
+        font-size: 0.875rem;
+        padding: 0.625rem 1rem;
+        font-weight: 500;
+    }
+
+    /* Modal Footer */
+    .modal-footer {
+        padding: 1rem 1.5rem;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .modal-footer .btn {
+        font-weight: 500;
+    }
+</style>
+
+<style>
+    /* Radio Card Styling */
+    .radio-card input:checked+div .fw-bold {
+        color: var(--primary);
+    }
+
+    .radio-card {
+        border-color: #e2e8f0;
+    }
+
+    .radio-card:has(input:checked) {
+        border-color: var(--primary);
+        background-color: #eff6ff;
+    }
+
+    .hover-bg-white:hover {
+        background-color: white;
+        border-color: #cbd5e1;
+    }
+
+    /* Parameter Stats Row */
+    .param-stats-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
+
+    .card-header-simple {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid #E5E7EB;
+    }
+
+    .card-header-simple .card-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+
+    /* Parameter List */
+    .param-list {
+        padding: 0.75rem;
+        max-height: 280px;
+        overflow-y: auto;
+    }
+
+    .param-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        margin-bottom: 0.5rem;
+        background: #F9FAFB;
+        transition: background 0.2s;
+    }
+
+    .param-item:hover {
+        background: #F3F4F6;
+    }
+
+    .param-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .param-info {
+        flex: 1;
+    }
+
+    .param-name {
+        font-weight: 500;
+        font-size: 0.875rem;
+        color: #374151;
+        margin-bottom: 0.125rem;
+    }
+
+    .param-count {
+        font-size: 0.75rem;
+        color: #6B7280;
+    }
+
+    .param-rate {
+        font-weight: 600;
+        font-size: 0.875rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        background: #FEE2E2;
+        color: #B91C1C;
+    }
+
+    .param-rate.low {
+        background: #FEF3C7;
+        color: #B45309;
+    }
+
+    .param-rate.ok {
+        background: #D1FAE5;
+        color: #047857;
+    }
+
+    /* Stage Breakdown */
+    .stage-breakdown {
+        padding: 1rem;
+    }
+
+    .stage-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.875rem 0;
+        border-bottom: 1px solid #F3F4F6;
+    }
+
+    .stage-item:last-child {
+        border-bottom: none;
+    }
+
+    .stage-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+
+    .stage-icon.cutting {
+        background: #DBEAFE;
+        color: #1E40AF;
+    }
+
+    .stage-icon.sewing {
+        background: #FEF3C7;
+        color: #92400E;
+    }
+
+    .stage-icon.sablon {
+        background: #FCE7F3;
+        color: #9D174D;
+    }
+
+    .stage-icon.finishing {
+        background: #E0E7FF;
+        color: #3730A3;
+    }
+
+    .stage-info {
+        flex: 1;
+    }
+
+    .stage-name {
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: #374151;
+        margin-bottom: 0.25rem;
+    }
+
+    .stage-bar {
+        height: 6px;
+        background: #E5E7EB;
+        border-radius: 3px;
+        overflow: hidden;
+    }
+
+    .stage-bar-fill {
+        height: 100%;
+        border-radius: 3px;
+        transition: width 0.5s ease;
+    }
+
+    .stage-bar-fill.good {
+        background: #10B981;
+    }
+
+    .stage-bar-fill.warning {
+        background: #F59E0B;
+    }
+
+    .stage-bar-fill.bad {
+        background: #EF4444;
+    }
+
+    .stage-stats {
+        text-align: right;
+    }
+
+    .stage-rate {
+        font-weight: 700;
+        font-size: 1rem;
+        color: #374151;
+    }
+
+    .stage-count {
+        font-size: 0.75rem;
+        color: #9CA3AF;
+    }
+
+    /* Empty State */
+    .empty-state-mini {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        color: #9CA3AF;
+        gap: 0.5rem;
+    }
+
+    .empty-state-mini i {
+        font-size: 1.5rem;
+    }
+
+    @media (max-width: 1024px) {
+        .param-stats-row {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<!-- SCRIPTS -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+    let trendChart = null;
+    let paretoChart = null;
+    let currentPeriod = 'month';
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Init Select2 Logic
+        setupSelect2();
+
+        // Init Date
+        document.getElementById('findingDate').valueAsDate = new Date();
+
+        // Load Initial Data
+        loadAnalyticsData();
+        loadDefects();
+    });
+
+    // --- Tab Switching ---
+    function switchTab(tabName, btn) {
+        // Update Buttons
+        document.querySelectorAll('.qc-tab-btn').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active'); // Use the passed button if available
+
+        // Update Content
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        document.getElementById(`tab-${tabName}`).classList.add('active');
+
+        if (tabName === 'input') {
+            loadDefects();
+        } else if (tabName === 'analytics') {
+            loadAnalyticsData();
+        } else {
+            loadDashboardData();
+        }
+    }
+
+    // --- Advanced Analytics Logic ---
+    // --- Helper Functions ---
+    function showChartLoading(canvasId) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        const container = canvas.parentElement;
+
+        let loader = container.querySelector('.chart-loading');
+        if (!loader) {
+            loader = document.createElement('div');
+            loader.className = 'chart-loading';
+            loader.innerHTML = `
+                <div class="loading-spinner"></div>
+                <div class="loading-text">Memuat Data...</div>
+            `;
+            container.appendChild(loader);
+        }
+        loader.style.display = 'flex';
+        // Trigger reflow
+        void loader.offsetWidth;
+        loader.style.opacity = '1';
+    }
+
+    function hideChartLoading(canvasId) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        const container = canvas.parentElement;
+        const loader = container.querySelector('.chart-loading');
+        if (loader) {
+            loader.style.opacity = '0';
+            setTimeout(() => {
+                loader.style.display = 'none';
+            }, 300);
+        }
+    }
+
+    // --- Advanced Analytics Logic ---
+    async function loadAnalyticsData(days = 30) {
+        // Show Loaders for Charts
+        showChartLoading('processRadarChart');
+        showChartLoading('paramBarChart');
+        showChartLoading('paretoChart');
+
+        try {
+            // Use parallel requests for better performance
+            const p1 = api.get(`/qc/dashboard/quality-score?days=${days}`)
+                .then(res => {
+                    updateQualityScore(res);
+                    if (res.components) updateFPY(res.components);
+                });
+
+            const p2 = api.get(`/qc/dashboard/summary-report?period=${currentPeriod}`)
+                .then(res => {
+                    if (res.summary) updateTrend(res.summary);
+                });
+
+            const p3 = api.get(`/qc/dashboard/process-comparison?days=${days}`)
+                .then(res => {
+                    renderProcessRadar(res.stages);
+                    hideChartLoading('processRadarChart');
+                });
+
+            const p4 = api.get(`/qc/dashboard/checklist-analysis?days=${days}`)
+                .then(res => {
+                    renderParamBar(res.parameters);
+                    hideChartLoading('paramBarChart');
+                    updateParamTable(res.parameters);
+                    document.getElementById('analysisCount').textContent = res.total_parameters_analyzed + ' parameters';
+                });
+
+            const p5 = api.get(`/qc/dashboard/defect-pareto?days=${days}`)
+                .then(res => {
+                    renderParetoChart(res.pareto_data);
+                    hideChartLoading('paretoChart');
+                });
+
+            await Promise.all([p1, p2, p3, p4, p5]);
+
+        } catch (error) {
+            console.error('Error loading analytics:', error);
+            showToast('Gagal memuat data analytics', 'error');
+
+            // Ensure loaders are hidden on error
+            hideChartLoading('processRadarChart');
+            hideChartLoading('paramBarChart');
+            hideChartLoading('paretoChart');
+        }
+    }
+
+    function renderParetoChart(data) {
+        const canvas = document.getElementById('paretoChart');
+        const ctx = canvas.getContext('2d');
+        const container = canvas.parentElement;
+
+        if (paretoChart) {
+            paretoChart.destroy();
+            paretoChart = null;
+        }
+
+        // Remove existing empty state if any
+        const existingEmpty = container.querySelector('.empty-state-overlay');
+        if (existingEmpty) existingEmpty.remove();
+
+        // Handle empty data
+        if (!data || data.length === 0) {
+            const emptyState = document.createElement('div');
+            emptyState.className = 'empty-state-overlay';
+            emptyState.style.cssText = 'position: absolute; top:0; left:0; width:100%; height:100%; display:flex; flex-direction:column; justify-content:center; align-items:center; background:rgba(255,255,255,0.9); z-index:5;';
+            emptyState.innerHTML = `
+                <div class="text-muted mb-2"><i class="fas fa-chart-bar fa-2x"></i></div>
+                <div class="text-muted fw-medium">Belum ada data defect untuk ditampilkan</div>
+            `;
+            container.appendChild(emptyState);
+            return;
+        }
+
+        const labels = data.map(d => d.type);
+        const counts = data.map(d => d.count);
+        const percentages = data.map(d => d.cumulative_percentage);
+
+        paretoChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Jumlah Defect',
+                        data: counts,
+                        backgroundColor: 'rgba(245, 158, 11, 0.7)',
+                        borderColor: '#F59E0B',
+                        borderWidth: 1,
+                        order: 2,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Kumulatif %',
+                        data: percentages,
+                        type: 'line',
+                        borderColor: '#EF4444',
+                        borderWidth: 2,
+                        pointBackgroundColor: '#EF4444',
+                        tension: 0.1,
+                        order: 1,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: { position: 'top' }
+                },
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        beginAtZero: true,
+                        title: { display: true, text: 'Jumlah Defect' }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        min: 0,
+                        max: 105,
+                        grid: { display: false },
+                        title: { display: true, text: 'Persentase Kumulatif (%)' }
+                    }
+                }
+            }
+        });
+    }
+
+    function updateQualityScore(data) {
+        // Update Value & Grade
+        animateValue('qualityScoreValue', data.quality_score); // Assuming animateValue handles floats slightly modified or just parseInt
+        document.getElementById('qualityScoreValue').textContent = data.quality_score;
+        document.getElementById('qualityGrade').textContent = `Grade ${data.grade} (${data.status})`;
+
+        // Update Status Text
+        const statusEl = document.getElementById('qualityStatus');
+        statusEl.textContent = data.status;
+        statusEl.className = 'fw-semibold ' + (data.grade === 'A' || data.grade === 'B' ? 'text-success' : data.grade === 'C' ? 'text-warning' : 'text-danger');
+
+        // Update Circle Progress
+        const circle = document.getElementById('scoreCircle');
+        const radius = circle.r.baseVal.value;
+        const circumference = radius * 2 * Math.PI;
+        const offset = circumference - (data.quality_score / 100) * circumference;
+        circle.style.strokeDashoffset = offset;
+
+        // Color based on score
+        const color = data.quality_score >= 90 ? '#10B981' : data.quality_score >= 70 ? '#F59E0B' : '#EF4444';
+        circle.style.stroke = color;
+    }
+
+    function updateFPY(data) {
+        document.getElementById('fpyValue').textContent = data.fpy + '%';
+        animateValue('fpyInspected', data.total_inspected);
+        animateValue('fpyPassed', data.total_passed);
+        animateValue('fpyFailed', data.total_failed);
+    }
+
+    function updateTrend(summary) {
+        document.getElementById('currentFpy').textContent = summary.fpy + '%';
+        document.getElementById('prevFpy').textContent = (summary.fpy - summary.fpy_change).toFixed(2) + '%'; // Approx/Reverse calc
+
+        const trendEl = document.getElementById('trendChange');
+        const indicatorEl = document.getElementById('trendIndicator');
+        const change = summary.fpy_change;
+
+        trendEl.textContent = (change >= 0 ? '+' : '') + change + '%';
+
+        if (change >= 0) {
+            indicatorEl.className = 'badge bg-success px-3 py-2';
+            indicatorEl.innerHTML = `<i class="fas fa-arrow-up me-1"></i> ${trendEl.textContent} vs periode sebelumnya`;
+        } else {
+            indicatorEl.className = 'badge bg-danger px-3 py-2';
+            indicatorEl.innerHTML = `<i class="fas fa-arrow-down me-1"></i> ${trendEl.textContent} vs periode sebelumnya`;
+        }
+    }
+
+    let processChart = null;
+    function renderProcessRadar(stages) {
+        const ctx = document.getElementById('processRadarChart').getContext('2d');
+
+        if (processChart) processChart.destroy();
+
+        const labels = stages.map(s => s.name);
+        const passRates = stages.map(s => s.pass_rate);
+        const ngRates = stages.map(s => s.ng_rate);
+
+        processChart = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Pass Rate (%)',
+                    data: passRates,
+                    fill: true,
+                    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                    borderColor: 'rgb(16, 185, 129)',
+                    pointBackgroundColor: 'rgb(16, 185, 129)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgb(16, 185, 129)'
+                }, {
+                    label: 'NG Rate (%)',
+                    data: ngRates,
+                    fill: true,
+                    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                    borderColor: 'rgb(239, 68, 68)',
+                    pointBackgroundColor: 'rgb(239, 68, 68)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgb(239, 68, 68)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        angleLines: { display: false },
+                        suggestedMin: 0,
+                        suggestedMax: 100
+                    }
+                }
+            }
+        });
+    }
+
+    let paramBarChart = null;
+    function renderParamBar(params) {
+        const ctx = document.getElementById('paramBarChart').getContext('2d');
+
+        if (paramBarChart) paramBarChart.destroy();
+
+        // Top 5 problem params
+        const topParams = params.slice(0, 5);
+
+        paramBarChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: topParams.map(p => p.parameter),
+                datasets: [{
+                    label: 'NG Rate (%)',
+                    data: topParams.map(p => p.ng_rate),
+                    backgroundColor: topParams.map(p => {
+                        return p.ng_rate > 2.5 ? 'rgba(239, 68, 68, 0.7)' : 'rgba(245, 158, 11, 0.7)';
+                    }),
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: { beginAtZero: true }
+                }
+            }
+        });
+    }
+
+    function updateParamTable(params) {
+        const tbody = document.getElementById('parameterTableBody');
+        tbody.innerHTML = '';
+
+        params.forEach(p => {
+            const statusClass = p.status === 'critical' ? 'bg-danger text-white' :
+                p.status === 'warning' ? 'bg-warning text-dark' : 'bg-success text-white';
+            const statusBadge = `<span class="badge ${statusClass}">${p.status.toUpperCase()}</span>`;
+
+            const row = `
+                <tr>
+                    <td><span class="badge bg-light text-dark border">${p.stage || 'General'}</span></td>
+                    <td class="fw-medium">${p.parameter}</td>
+                    <td class="text-end">${p.total_checked}</td>
+                    <td class="text-end text-danger">${p.total_ng}</td>
+                    <td class="text-end fw-bold">${p.ng_rate}%</td>
+                    <td class="text-center">${statusBadge}</td>
+                    <td class="text-end text-muted">${p.std_dev}</td>
+                </tr>
+            `;
+            tbody.insertAdjacentHTML('beforeend', row);
+        });
+    }
+
+    function exportCSV() {
+        window.location.href = '/api/qc/dashboard/export-csv?days=30';
+    }
+
+    // --- Dashboard Logic ---
+    function updatePeriod(period, btn) {
+        if (btn) {
+            document.querySelectorAll('#dashboardActions .btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        }
+        currentPeriod = period;
+        let days = 30;
+        if (period === 'week') days = 7;
+        if (period === 'year') days = 365;
+        loadAnalyticsData(days);
+    }
+
+    // --- Defect List Logic ---
+    async function loadDefects() {
+        const tbody = document.getElementById('defectTableBody');
+        const status = document.getElementById('statusFilter').value;
+        const stage = document.getElementById('stageFilter').value;
+        const search = document.getElementById('tableSearch').value;
+
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center p-5 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Mengambil data...</td></tr>';
+
+        try {
+            const query = new URLSearchParams({ status, stage, search });
+            const res = await api.get(`/qc/defects?${query}`);
+
+            if (res.defects.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center p-5 text-muted empty-state-modern">
+                            <i class="fas fa-clipboard-check"></i>
+                            <p>Tidak ada data defect yang ditemukan</p>
+                        </td>
+                    </tr>`;
+                return;
+            }
+
+            tbody.innerHTML = res.defects.map(d => `
+                <tr>
+                    <td class="ps-4">
+                        <div class="fw-bold text-dark">${new Date(d.created_at).toLocaleDateString()}</div>
+                        <div class="text-xs text-muted">${new Date(d.created_at).toLocaleTimeString().slice(0, 5)}</div>
+                    </td>
+                    <td>
+                        <div class="badge bg-light text-dark mb-1 border">${d.order_code || 'N/A'}</div>
+                        <div class="text-sm fw-medium text-truncate" style="max-width: 150px;" title="${d.product_name}">${d.product_name || '-'}</div>
+                    </td>
+                    <td>
+                        <div class="fw-bold text-primary">${d.defect_type}</div>
+                        <div class="text-xs text-muted text-truncate" style="max-width: 200px;">${d.description || ''}</div>
+                    </td>
+                    <td><span class="badge bg-secondary bg-opacity-10 text-secondary border">${d.process_stage || '-'}</span></td>
+                    <td><div class="text-sm">${d.responsible_department || '-'}</div></td>
+                    <td>${getStatusBadge(d.status)}</td>
+                    <td class="text-end pe-4">
+                        <button class="btn btn-sm btn-icon btn-ghost text-primary" onclick="editDefect(${d.id})" title="Edit Detail">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+
+        } catch (e) {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger p-4">Gagal memuat data: ${e.message}</td></tr>`;
+        }
+    }
+
+    function getStatusBadge(status) {
+        const styles = {
+            'open': 'background:#FEE2E2; color:#B91C1C; border: 1px solid #FECACA;',
+            'in_progress': 'background:#FEF3C7; color:#B45309; border: 1px solid #FDE68A;',
+            'resolved': 'background:#D1FAE5; color:#047857; border: 1px solid #A7F3D0;',
+            'closed': 'background:#F3F4F6; color:#374151; border: 1px solid #E5E7EB;',
+        };
+        const labels = {
+            'open': 'Open',
+            'in_progress': 'Progress',
+            'resolved': 'Resolved',
+            'closed': 'Closed',
+        };
+        return `<span class="status-badge" style="${styles[status] || styles.open}">
+                    <i class="fas fa-circle me-1" style="font-size: 6px; vertical-align: middle;"></i>${labels[status] || status}
+                </span>`;
+    }
+
+    // --- Modal & Form Logic ---
+    function setupSelect2() {
+        // Dynamic Loader for jQuery + Select2
+        const loadSelect2 = () => {
+            if (typeof $.fn.select2 === 'undefined') {
+                const s2Script = document.createElement('script');
+                s2Script.src = "https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js";
+                s2Script.onload = () => initSelect2Internal();
+                document.head.appendChild(s2Script);
+            } else {
+                initSelect2Internal();
+            }
+        };
+
+        if (typeof jQuery === 'undefined') {
+            const jqScript = document.createElement('script');
+            jqScript.src = "https://code.jquery.com/jquery-3.7.1.min.js";
+            jqScript.onload = loadSelect2;
+            document.head.appendChild(jqScript);
+        } else {
+            loadSelect2();
+        }
+    }
+
+    function initSelect2Internal() {
+        $('#taskSelect').select2({
+            dropdownParent: $('#defectModal'),
+            placeholder: 'Cari Order / Produk...',
+            allowClear: true,
+            ajax: {
+                url: '/api/production/search-tasks',
+                dataType: 'json',
+                delay: 250,
+                processResults: function (data) {
+                    return { results: data.results };
+                }
+            }
+        }).on('select2:select', function (e) {
+            autoFillProductInfo(e.params.data);
+        });
+    }
+
+    function openDefectModal() {
+        // Reset Form
+        document.getElementById('defectId').value = '';
+        $('#taskSelect').val(null).trigger('change');
+
+        // Reset Inputs
+        const inputs = ['customerName', 'orderCode', 'productName', 'station', 'defectType',
+            'defectDescription', 'actionTaken', 'responsibleDept', 'targetDate', 'verificationNotes'];
+        inputs.forEach(id => document.getElementById(id).value = '');
+
+        document.getElementById('defectQty').value = '1';
+        document.getElementById('finalStatus').value = 'open';
+        document.getElementById('findingDate').valueAsDate = new Date(); // Default Today
+
+        // Reset Radios
+        document.querySelectorAll('input[name="processStage"]').forEach(el => el.checked = false);
+        document.querySelectorAll('input[name="verificationResult"]').forEach(el => el.checked = false);
+
+        openModal('defectModal');
+    }
+
+    function autoFillProductInfo(data) {
+        if (!data) return;
+        document.getElementById('customerName').value = data.customer_name || '';
+        document.getElementById('orderCode').value = data.order_code || '';
+        document.getElementById('productName').value = data.product_name || '';
+
+        // Auto-select stage if returned
+        if (data.process_stage) {
+            const radio = document.querySelector(`input[name="processStage"][value="${data.process_stage}"]`);
+            if (radio) radio.checked = true;
+        }
+    }
+
+    async function saveDefect() {
+        const id = document.getElementById('defectId').value;
+        const taskData = $('#taskSelect').select2('data')[0];
+
+        const processStageEl = document.querySelector('input[name="processStage"]:checked');
+        const verificationEl = document.querySelector('input[name="verificationResult"]:checked');
+
+        const payload = {
+            production_task_id: taskData ? taskData.id : null,
+            finding_date: document.getElementById('findingDate').value,
+            process_stage: processStageEl ? processStageEl.value : null,
+            station: document.getElementById('station').value,
+            defect_type: document.getElementById('defectType').value,
+            qty_defect: document.getElementById('defectQty').value,
+            description: document.getElementById('defectDescription').value,
+            action_taken: document.getElementById('actionTaken').value,
+            responsible_department: document.getElementById('responsibleDept').value,
+            target_resolution_date: document.getElementById('targetDate').value,
+            verification_result: verificationEl ? verificationEl.value : null,
+            verification_notes: document.getElementById('verificationNotes').value,
+            status: document.getElementById('finalStatus').value
+        };
+
+        if (!payload.defect_type) {
+            alert('Wajib mengisi Jenis Defect');
+            return;
+        }
+
+        // If creating new input, task IS required for linking context
+        if (!id && !payload.production_task_id) {
+            alert('Wajib memilih Order/Produk untuk input baru');
+            return;
+        }
+
+        try {
+            if (id) {
+                await api.put(`/qc/defects/${id}`, payload);
+            } else {
+                await api.post('/qc/defects', payload);
+            }
+            closeModal('defectModal');
+            showToast('Data Defect berhasil disimpan', 'success');
+
+            // Reload active tab data
+            if (document.getElementById('tab-input').classList.contains('active')) {
+                loadDefects();
+            } else {
+                loadDashboardData();
+            }
+        } catch (e) {
+            alert('Gagal menyimpan: ' + e.message);
+        }
+    }
+
+    // Helper: Debounce for search
+    function debounce(func, wait) {
+        let timeout;
+        return function () {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, arguments), wait);
+        };
+    }
+
+    // Helper: Number Animation
+    function animateValue(objId, end) {
+        const obj = document.getElementById(objId);
+        if (!obj) return;
+        // Simple set for now
+        obj.textContent = end;
+    }
+
+    async function editDefect(id) {
+        // Future Enhancement: Load data into modal
+        alert('Edit functionality ready in backend, UI binding pending.');
+    }
+</script>
+{% endblock %}

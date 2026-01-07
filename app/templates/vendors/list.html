@@ -1,0 +1,394 @@
+{% extends "base.html" %}
+
+{% block title %}Kelola Vendor{% endblock %}
+{% block page_title %}Kelola Vendor{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+    <div class="page-header-left">
+        <p class="text-muted">Kelola daftar vendor/supplier untuk material</p>
+    </div>
+    <div class="page-header-right">
+        <button class="btn btn-primary" onclick="openVendorModal()">
+            <i class="fas fa-plus"></i> Tambah Vendor
+        </button>
+        <a href="{{ url_for('views.materials_list') }}" class="btn btn-outline">
+            <i class="fas fa-boxes"></i> Materials
+        </a>
+    </div>
+</div>
+
+<div class="vendors-container">
+    <div class="search-row mb-4">
+        <div class="search-group">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" class="search-input" id="searchInput" placeholder="Cari vendor...">
+        </div>
+    </div>
+
+    <div class="vendors-table-container">
+        <table class="vendors-table" id="vendorsTable">
+            <thead>
+                <tr>
+                    <th>Kode</th>
+                    <th>Nama Vendor</th>
+                    <th>Contact Person</th>
+                    <th>Telepon</th>
+                    <th>Email</th>
+                    <th>Kota</th>
+                    <th>Status</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody id="vendorsBody">
+                <tr>
+                    <td colspan="8" class="loading">
+                        <i class="fas fa-spinner fa-spin"></i> Memuat data...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Vendor Modal -->
+<div class="modal-backdrop" id="vendorModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title" id="vendorModalTitle">
+                <i class="fas fa-building"></i> Tambah Vendor
+            </h3>
+            <button class="modal-close" onclick="closeModal('vendorModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="vendorId">
+            <div class="form-group">
+                <label class="form-label required">Nama Vendor</label>
+                <input type="text" class="form-input" id="vendorName" placeholder="Nama vendor...">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Contact Person</label>
+                    <input type="text" class="form-input" id="contactPerson" placeholder="Nama contact...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Telepon</label>
+                    <input type="text" class="form-input" id="vendorPhone" placeholder="Nomor telepon...">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-input" id="vendorEmail" placeholder="Email...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Kota</label>
+                    <input type="text" class="form-input" id="vendorCity" placeholder="Kota...">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Alamat</label>
+                <textarea class="form-input" id="vendorAddress" rows="2" placeholder="Alamat lengkap..."></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Catatan</label>
+                <textarea class="form-input" id="vendorNotes" rows="2" placeholder="Catatan..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('vendorModal')">Batal</button>
+            <button class="btn btn-primary" onclick="saveVendor()">
+                <i class="fas fa-save"></i> Simpan
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .vendors-container {
+        background: var(--white);
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+    }
+
+    .search-row {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .search-group {
+        flex: 1;
+        position: relative;
+        max-width: 400px;
+    }
+
+    .search-icon {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--gray-400);
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 0.75rem 1rem 0.75rem 3rem;
+        border: 1px solid var(--gray-200);
+        border-radius: var(--radius);
+        font-size: 0.95rem;
+    }
+
+    .search-input:focus {
+        border-color: var(--primary);
+        outline: none;
+    }
+
+    .vendors-table-container {
+        overflow-x: auto;
+    }
+
+    .vendors-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .vendors-table th,
+    .vendors-table td {
+        padding: 1rem;
+        text-align: left;
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .vendors-table th {
+        background: var(--gray-50);
+        font-weight: 600;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        color: var(--gray-600);
+    }
+
+    .vendors-table tbody tr:hover {
+        background: var(--gray-50);
+    }
+
+    .vendor-code {
+        font-weight: 600;
+        color: var(--primary);
+    }
+
+    .vendor-name {
+        font-weight: 500;
+    }
+
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .status-badge.active {
+        background: #D1FAE5;
+        color: #059669;
+    }
+
+    .status-badge.inactive {
+        background: #FEE2E2;
+        color: #DC2626;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .loading {
+        text-align: center;
+        padding: 2rem;
+        color: var(--gray-500);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: var(--gray-500);
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .form-group {
+        margin-bottom: 1rem;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        font-size: 0.875rem;
+    }
+
+    .form-label.required::after {
+        content: ' *';
+        color: #EF4444;
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid var(--gray-300);
+        border-radius: var(--radius);
+        font-size: 0.95rem;
+    }
+
+    .form-input:focus {
+        border-color: var(--primary);
+        outline: none;
+    }
+</style>
+
+<script>
+    let vendorsData = [];
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadVendors();
+        setupSearch();
+    });
+
+    function setupSearch() {
+        document.getElementById('searchInput').addEventListener('keyup', (e) => {
+            const term = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('#vendorsBody tr');
+
+            rows.forEach(row => {
+                if (row.classList.contains('loading') || row.classList.contains('empty')) return;
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(term) ? '' : 'none';
+            });
+        });
+    }
+
+    async function loadVendors() {
+        const tbody = document.getElementById('vendorsBody');
+
+        try {
+            const response = await api.get('/vendors');
+            vendorsData = response.vendors || [];
+
+            if (vendorsData.length === 0) {
+                tbody.innerHTML = `
+                    <tr class="empty">
+                        <td colspan="8" class="empty-state">
+                            <div><i class="fas fa-building" style="font-size: 2rem; margin-bottom: 1rem;"></i></div>
+                            <div>Belum ada vendor. Klik "Tambah Vendor" untuk membuat.</div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = vendorsData.map(v => `
+                <tr>
+                    <td><span class="vendor-code">${v.code}</span></td>
+                    <td><span class="vendor-name">${v.name}</span></td>
+                    <td>${v.contact_person || '-'}</td>
+                    <td>${v.phone || '-'}</td>
+                    <td>${v.email || '-'}</td>
+                    <td>${v.city || '-'}</td>
+                    <td><span class="status-badge ${v.status}">${v.status === 'active' ? 'Aktif' : 'Nonaktif'}</span></td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-sm btn-outline" onclick="editVendor(${v.id})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteVendor(${v.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        } catch (error) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="empty-state">
+                        <div>Gagal memuat data: ${error.message}</div>
+                    </td>
+                </tr>
+            `;
+        }
+    }
+
+    function openVendorModal(vendor = null) {
+        document.getElementById('vendorModalTitle').innerHTML = vendor
+            ? '<i class="fas fa-building"></i> Edit Vendor'
+            : '<i class="fas fa-building"></i> Tambah Vendor';
+
+        document.getElementById('vendorId').value = vendor ? vendor.id : '';
+        document.getElementById('vendorName').value = vendor ? vendor.name : '';
+        document.getElementById('contactPerson').value = vendor ? vendor.contact_person || '' : '';
+        document.getElementById('vendorPhone').value = vendor ? vendor.phone || '' : '';
+        document.getElementById('vendorEmail').value = vendor ? vendor.email || '' : '';
+        document.getElementById('vendorCity').value = vendor ? vendor.city || '' : '';
+        document.getElementById('vendorAddress').value = vendor ? vendor.address || '' : '';
+        document.getElementById('vendorNotes').value = vendor ? vendor.notes || '' : '';
+
+        openModal('vendorModal');
+    }
+
+    function editVendor(id) {
+        const vendor = vendorsData.find(v => v.id === id);
+        if (vendor) {
+            openVendorModal(vendor);
+        }
+    }
+
+    async function saveVendor() {
+        const id = document.getElementById('vendorId').value;
+        const data = {
+            name: document.getElementById('vendorName').value,
+            contact_person: document.getElementById('contactPerson').value,
+            phone: document.getElementById('vendorPhone').value,
+            email: document.getElementById('vendorEmail').value,
+            city: document.getElementById('vendorCity').value,
+            address: document.getElementById('vendorAddress').value,
+            notes: document.getElementById('vendorNotes').value
+        };
+
+        if (!data.name) {
+            showToast('Nama vendor wajib diisi', 'error');
+            return;
+        }
+
+        try {
+            if (id) {
+                await api.put(`/vendors/${id}`, data);
+                showToast('Vendor berhasil diupdate', 'success');
+            } else {
+                await api.post('/vendors', data);
+                showToast('Vendor berhasil ditambahkan', 'success');
+            }
+            closeModal('vendorModal');
+            loadVendors();
+        } catch (error) {
+            showToast('Gagal menyimpan: ' + error.message, 'error');
+        }
+    }
+
+    async function deleteVendor(id) {
+        if (!confirm('Yakin ingin menghapus vendor ini?')) return;
+
+        try {
+            await api.delete(`/vendors/${id}`);
+            showToast('Vendor berhasil dihapus', 'success');
+            loadVendors();
+        } catch (error) {
+            showToast('Gagal menghapus: ' + error.message, 'error');
+        }
+    }
+</script>
+{% endblock %}

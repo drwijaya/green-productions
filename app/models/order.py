@@ -34,6 +34,9 @@ class Order(db.Model):
     status = db.Column(db.String(50), default='draft')
     priority = db.Column(db.Integer, default=1)  # 1=Normal, 2=High, 3=Urgent
     
+    # DSO Status for tracking DSO creation: not_created, draft, created
+    dso_status = db.Column(db.String(50), default='not_created')
+    
     # QC Assignment
     qc_inspector_id = db.Column(db.Integer, db.ForeignKey('employees.id'))
     
@@ -84,6 +87,22 @@ class Order(db.Model):
         completed = sum(1 for t in tasks if t.status == 'completed')
         return int((completed / len(tasks)) * 100)
     
+    def get_latest_dso(self):
+        """Get the latest DSO version (any status)."""
+        return self.dso.order_by(db.desc('version')).first()
+    
+    def update_dso_status(self):
+        """Update DSO status based on existing DSOs."""
+        dsos = self.dso.all()
+        if not dsos:
+            self.dso_status = 'not_created'
+        else:
+            latest = self.get_latest_dso()
+            if latest.status == 'approved':
+                self.dso_status = 'created'
+            else:
+                self.dso_status = 'draft'
+    
     def to_dict(self, include_relations=False):
         """Convert order to dictionary for API response."""
         data = {
@@ -97,6 +116,7 @@ class Order(db.Model):
             'deadline': self.deadline.isoformat() if self.deadline else None,
             'status': self.status,
             'priority': self.priority,
+            'dso_status': self.dso_status,
             'customer_notes': self.customer_notes,
             'internal_notes': self.internal_notes,
             'created_at': self.created_at.isoformat() if self.created_at else None,

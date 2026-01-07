@@ -1,0 +1,631 @@
+{% extends "base.html" %}
+
+{% block title %}DSO Management{% endblock %}
+{% block page_title %}DSO Management{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <p class="text-muted">Kelola Design Specification Order (DSO) untuk semua invoice</p>
+    </div>
+</div>
+
+<!-- Status Tabs -->
+<div class="status-tabs">
+    <button class="status-tab active" data-status="" onclick="filterByStatus('')">
+        <i class="fas fa-list"></i>
+        <span>Semua</span>
+        <span class="count" id="countAll">0</span>
+    </button>
+    <button class="status-tab" data-status="not_created" onclick="filterByStatus('not_created')">
+        <i class="fas fa-plus-circle"></i>
+        <span>Not Created</span>
+        <span class="count count-danger">{{ not_created_count }}</span>
+    </button>
+    <button class="status-tab" data-status="draft" onclick="filterByStatus('draft')">
+        <i class="fas fa-edit"></i>
+        <span>Draft</span>
+        <span class="count count-warning">{{ draft_count }}</span>
+    </button>
+    <button class="status-tab" data-status="created" onclick="filterByStatus('created')">
+        <i class="fas fa-check-circle"></i>
+        <span>Created</span>
+        <span class="count count-success">{{ created_count }}</span>
+    </button>
+</div>
+
+<!-- Search Bar -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="search-row">
+            <div class="search-group">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" class="form-input search-input" id="searchInput"
+                    placeholder="Cari invoice, model, customer...">
+            </div>
+            <button class="btn btn-secondary" onclick="loadDSOList()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- DSO List -->
+<div class="dso-grid" id="dsoGrid">
+    <div class="loading-state">
+        <div class="loading-spinner"></div>
+        <p>Memuat data...</p>
+    </div>
+</div>
+
+<!-- Pagination -->
+<div class="pagination-container" id="paginationContainer" style="display: none;">
+    <div class="pagination" id="pagination"></div>
+</div>
+
+<style>
+    .status-tabs {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+    }
+
+    .status-tab {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.875rem 1.25rem;
+        background: var(--white);
+        border: 2px solid var(--gray-200);
+        border-radius: var(--radius-lg);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-weight: 500;
+        color: var(--gray-600);
+    }
+
+    .status-tab:hover {
+        border-color: var(--primary);
+        color: var(--primary);
+    }
+
+    .status-tab.active {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: white;
+    }
+
+    .status-tab.active .count {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+    }
+
+    .status-tab i {
+        font-size: 1.1rem;
+    }
+
+    .count {
+        background: var(--gray-100);
+        padding: 0.25rem 0.625rem;
+        border-radius: 9999px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .count-danger {
+        background: #FEE2E2;
+        color: #DC2626;
+    }
+
+    .count-warning {
+        background: #FEF3C7;
+        color: #D97706;
+    }
+
+    .count-success {
+        background: #D1FAE5;
+        color: #059669;
+    }
+
+    .search-row {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .search-group {
+        flex: 1;
+        position: relative;
+    }
+
+    .search-icon {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--gray-400);
+    }
+
+    .search-input {
+        padding-left: 2.75rem;
+    }
+
+    .dso-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+        gap: 1.25rem;
+    }
+
+    .dso-card {
+        background: var(--white);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--gray-200);
+        overflow: hidden;
+        transition: all 0.2s ease;
+    }
+
+    .dso-card:hover {
+        box-shadow: var(--shadow-lg);
+        transform: translateY(-2px);
+    }
+
+    .dso-card-header {
+        padding: 1.25rem;
+        border-bottom: 1px solid var(--gray-100);
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+
+    .dso-invoice {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--gray-900);
+        margin-bottom: 0.25rem;
+    }
+
+    .dso-model {
+        color: var(--gray-500);
+        font-size: 0.9rem;
+    }
+
+    .dso-status-badge {
+        padding: 0.375rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+    }
+
+    .dso-status-not_created {
+        background: #FEE2E2;
+        color: #DC2626;
+    }
+
+    .dso-status-draft {
+        background: #FEF3C7;
+        color: #D97706;
+    }
+
+    .dso-status-created {
+        background: #D1FAE5;
+        color: #059669;
+    }
+
+    .dso-card-body {
+        padding: 1.25rem;
+    }
+
+    .dso-info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+    }
+
+    .dso-info-item {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .dso-info-label {
+        font-size: 0.75rem;
+        color: var(--gray-500);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.25rem;
+    }
+
+    .dso-info-value {
+        font-weight: 500;
+        color: var(--gray-800);
+    }
+
+    .dso-versions {
+        background: var(--gray-50);
+        padding: 0.75rem;
+        border-radius: var(--radius-md);
+        margin-bottom: 1rem;
+    }
+
+    .dso-versions-label {
+        font-size: 0.75rem;
+        color: var(--gray-500);
+        margin-bottom: 0.5rem;
+    }
+
+    .dso-version-list {
+        display: flex;
+        gap: 0.375rem;
+        flex-wrap: wrap;
+    }
+
+    .dso-version-chip {
+        background: var(--white);
+        border: 1px solid var(--gray-200);
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .dso-version-chip.approved {
+        background: #D1FAE5;
+        border-color: #10B981;
+        color: #059669;
+    }
+
+    .dso-version-chip.pending {
+        background: #FEF3C7;
+        border-color: #F59E0B;
+        color: #D97706;
+    }
+
+    .dso-version-chip.draft {
+        background: #F3F4F6;
+        border-color: #9CA3AF;
+        color: #6B7280;
+    }
+
+    .dso-card-footer {
+        padding: 1rem 1.25rem;
+        background: var(--gray-50);
+        border-top: 1px solid var(--gray-100);
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    .dso-card-footer .btn {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .loading-state {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 3rem;
+        color: var(--gray-500);
+    }
+
+    .empty-state {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 4rem 2rem;
+        background: var(--white);
+        border-radius: var(--radius-lg);
+        border: 2px dashed var(--gray-200);
+    }
+
+    .empty-state-icon {
+        font-size: 3rem;
+        color: var(--gray-300);
+        margin-bottom: 1rem;
+    }
+
+    .empty-state-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--gray-700);
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-state-text {
+        color: var(--gray-500);
+    }
+
+    .pagination-container {
+        margin-top: 2rem;
+        display: flex;
+        justify-content: center;
+    }
+
+    @media (max-width: 768px) {
+        .status-tabs {
+            overflow-x: auto;
+            flex-wrap: nowrap;
+            padding-bottom: 0.5rem;
+        }
+
+        .status-tab {
+            flex-shrink: 0;
+        }
+
+        .dso-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .search-row {
+            flex-direction: column;
+        }
+
+        .search-group {
+            width: 100%;
+        }
+    }
+</style>
+
+<script>
+    let currentStatus = '';
+    let currentPage = 1;
+    const perPage = 12;
+
+    document.addEventListener('DOMContentLoaded', function () {
+        loadDSOList();
+
+        // Search with debounce
+        document.getElementById('searchInput').addEventListener('input', debounce(function () {
+            currentPage = 1;
+            loadDSOList();
+        }, 300));
+    });
+
+    function filterByStatus(status) {
+        currentStatus = status;
+        currentPage = 1;
+
+        // Update active tab
+        document.querySelectorAll('.status-tab').forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.status === status);
+        });
+
+        loadDSOList();
+    }
+
+    async function loadDSOList() {
+        const grid = document.getElementById('dsoGrid');
+        const search = document.getElementById('searchInput').value.trim();
+
+        grid.innerHTML = `
+            <div class="loading-state">
+                <div class="loading-spinner"></div>
+                <p>Memuat data...</p>
+            </div>
+        `;
+
+        try {
+            const params = new URLSearchParams({
+                page: currentPage,
+                per_page: perPage
+            });
+
+            if (currentStatus) params.set('dso_status', currentStatus);
+            if (search) params.set('search', search);
+
+            const response = await api.get('/dso?' + params.toString());
+            const data = response.data;
+
+            // Update total count
+            document.getElementById('countAll').textContent = data.total;
+
+            if (data.items.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon"><i class="fas fa-file-alt"></i></div>
+                        <div class="empty-state-title">Tidak ada data</div>
+                        <div class="empty-state-text">
+                            ${currentStatus === 'not_created'
+                        ? 'Semua invoice sudah memiliki DSO'
+                        : 'Tidak ada invoice yang cocok dengan filter'}
+                        </div>
+                    </div>
+                `;
+                document.getElementById('paginationContainer').style.display = 'none';
+                return;
+            }
+
+            // Render cards
+            grid.innerHTML = data.items.map(order => renderDSOCard(order)).join('');
+
+            // Render pagination
+            renderPagination(data);
+
+        } catch (error) {
+            grid.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                    <div class="empty-state-title">Gagal memuat data</div>
+                    <div class="empty-state-text">${error.message || 'Terjadi kesalahan'}</div>
+                </div>
+            `;
+        }
+    }
+
+    function renderDSOCard(order) {
+        const statusLabels = {
+            'not_created': 'Not Created',
+            'draft': 'Draft',
+            'created': 'Created'
+        };
+
+        let versionsHtml = '';
+        if (order.dso_versions && order.dso_versions.length > 0) {
+            const versionChips = order.dso_versions.map(dso => {
+                let chipClass = 'draft';
+                if (dso.status === 'approved') chipClass = 'approved';
+                else if (dso.status === 'pending_approval') chipClass = 'pending';
+
+                return `<span class="dso-version-chip ${chipClass}">v${dso.version}</span>`;
+            }).join('');
+
+            versionsHtml = `
+                <div class="dso-versions">
+                    <div class="dso-versions-label">DSO Versions</div>
+                    <div class="dso-version-list">${versionChips}</div>
+                </div>
+            `;
+        } else {
+            versionsHtml = `
+                <div class="dso-versions">
+                    <div class="dso-versions-label">DSO Versions</div>
+                    <div class="dso-version-list">
+                        <span style="color: var(--gray-400); font-size: 0.8rem;">Belum ada DSO</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        const latestDsoId = order.latest_dso ? order.latest_dso.id : null;
+
+        let actionButtons = '';
+        if (order.dso_status === 'not_created') {
+            actionButtons = `
+                <button class="btn btn-primary" onclick="createDSO(${order.id})">
+                    <i class="fas fa-plus"></i> Buat DSO
+                </button>
+                <a href="/orders/${order.id}" class="btn btn-outline">
+                    <i class="fas fa-eye"></i> Detail
+                </a>
+            `;
+        } else {
+            actionButtons = `
+                <a href="/dso/${latestDsoId}" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> Edit DSO
+                </a>
+                <a href="/orders/${order.id}" class="btn btn-outline">
+                    <i class="fas fa-eye"></i> Detail
+                </a>
+            `;
+        }
+
+        return `
+            <div class="dso-card">
+                <div class="dso-card-header">
+                    <div>
+                        <div class="dso-invoice">${order.order_code}</div>
+                        <div class="dso-model">${order.model}</div>
+                    </div>
+                    <span class="dso-status-badge dso-status-${order.dso_status}">
+                        ${statusLabels[order.dso_status] || order.dso_status}
+                    </span>
+                </div>
+                <div class="dso-card-body">
+                    <div class="dso-info-grid">
+                        <div class="dso-info-item">
+                            <span class="dso-info-label">Customer</span>
+                            <span class="dso-info-value">${order.customer_name || '-'}</span>
+                        </div>
+                        <div class="dso-info-item">
+                            <span class="dso-info-label">Qty</span>
+                            <span class="dso-info-value">${order.qty_total} pcs</span>
+                        </div>
+                        <div class="dso-info-item">
+                            <span class="dso-info-label">Deadline</span>
+                            <span class="dso-info-value">${order.deadline ? formatDate(order.deadline) : '-'}</span>
+                        </div>
+                        <div class="dso-info-item">
+                            <span class="dso-info-label">Status Order</span>
+                            <span class="dso-info-value">${order.status.replace('_', ' ')}</span>
+                        </div>
+                    </div>
+                    ${versionsHtml}
+                </div>
+                <div class="dso-card-footer">
+                    ${actionButtons}
+                </div>
+            </div>
+        `;
+    }
+
+    function renderPagination(data) {
+        const container = document.getElementById('paginationContainer');
+        const pagination = document.getElementById('pagination');
+
+        if (data.pages <= 1) {
+            container.style.display = 'none';
+            return;
+        }
+
+        container.style.display = 'flex';
+
+        let html = '';
+
+        if (currentPage > 1) {
+            html += `<button class="page-link" onclick="goToPage(${currentPage - 1})"><i class="fas fa-chevron-left"></i></button>`;
+        }
+
+        for (let i = 1; i <= data.pages; i++) {
+            if (i === 1 || i === data.pages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+                html += `<button class="page-link ${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+            } else if (i === currentPage - 2 || i === currentPage + 2) {
+                html += `<span class="page-link disabled">...</span>`;
+            }
+        }
+
+        if (currentPage < data.pages) {
+            html += `<button class="page-link" onclick="goToPage(${currentPage + 1})"><i class="fas fa-chevron-right"></i></button>`;
+        }
+
+        pagination.innerHTML = html;
+    }
+
+    function goToPage(page) {
+        currentPage = page;
+        loadDSOList();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function createDSO(orderId) {
+        if (!confirm('Buat DSO baru untuk invoice ini?')) return;
+
+        try {
+            showLoading('Membuat DSO...');
+
+            const response = await api.post(`/dso/order/${orderId}`);
+
+            hideLoading();
+            showToast('DSO berhasil dibuat!', 'success');
+
+            // The response from api_response has {success, status, data}
+            if (response && response.data && response.data.id) {
+                window.location.href = `/dso/${response.data.id}`;
+            } else if (response && response.id) {
+                window.location.href = `/dso/${response.id}`;
+            } else {
+                window.location.reload();
+            }
+        } catch (error) {
+            hideLoading();
+
+            if (error.message && error.message.includes('already has a DSO')) {
+                showToast('Order sudah memiliki DSO. Silakan edit DSO yang ada.', 'info');
+                loadDSOList();
+            } else {
+                showToast(error.message || 'Gagal membuat DSO', 'error');
+            }
+        }
+    }
+
+    function formatDate(dateStr) {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('id-ID', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+        });
+    }
+</script>
+{% endblock %}
