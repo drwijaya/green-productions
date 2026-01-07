@@ -197,17 +197,23 @@ def qc_list():
 @login_required
 def qc_inspect(task_id):
     """QC inspection/checklist page for a task."""
-    from datetime import datetime
-    task = ProductionTask.query.get_or_404(task_id)
-    
-    # Get assigned workers for this task
-    workers = task.worker_logs.all()
-    operator_names = [log.employee.name for log in workers if log.employee] if workers else []
-    
-    return render_template('qc/inspect.html', 
-                           task=task, 
-                           now=datetime.now(),
-                           operator_names=operator_names)
+    import traceback
+    try:
+        from datetime import datetime
+        task = ProductionTask.query.get_or_404(task_id)
+        
+        # Get assigned workers for this task
+        workers = task.worker_logs.all()
+        operator_names = [log.employee.name for log in workers if log.employee] if workers else []
+        
+        return render_template('qc/inspect.html', 
+                               task=task, 
+                               now=datetime.now(),
+                               operator_names=operator_names)
+    except Exception as e:
+        print(f"QC_INSPECT ERROR: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({'error': str(e), 'trace': traceback.format_exc()}), 500
 
 
 @views_bp.route('/production/qc/inspect/<int:sheet_id>')
