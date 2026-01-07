@@ -40,25 +40,31 @@ def index():
 @views_bp.route('/login', methods=['GET', 'POST'])
 def login():
     """Login page."""
-    if current_user.is_authenticated:
-        return redirect(url_for('views.dashboard'))
-    
-    if request.method == 'POST':
-        email = request.form.get('email')
-        password = request.form.get('password')
+    import traceback
+    try:
+        if current_user.is_authenticated:
+            return redirect(url_for('views.dashboard'))
         
-        user = User.query.filter(
-            (User.email == email) | (User.username == email)
-        ).first()
+        if request.method == 'POST':
+            email = request.form.get('email')
+            password = request.form.get('password')
+            
+            user = User.query.filter(
+                (User.email == email) | (User.username == email)
+            ).first()
+            
+            if user and user.check_password(password) and user.is_active:
+                login_user(user)
+                next_page = request.args.get('next')
+                return redirect(next_page or url_for('views.dashboard'))
+            
+            flash('Email atau password salah', 'error')
         
-        if user and user.check_password(password) and user.is_active:
-            login_user(user)
-            next_page = request.args.get('next')
-            return redirect(next_page or url_for('views.dashboard'))
-        
-        flash('Email atau password salah', 'error')
-    
-    return render_template('auth/login.html')
+        return render_template('auth/login.html')
+    except Exception as e:
+        print(f"LOGIN ERROR: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({'error': str(e), 'trace': traceback.format_exc()}), 500
 
 
 @views_bp.route('/logout')
