@@ -200,9 +200,21 @@ def add_worker_log(task_id):
 @login_required
 @require_roles(UserRole.ADMIN, UserRole.OWNER, UserRole.ADMIN_PRODUKSI)
 def update_worker_log(log_id):
-    """Update a worker's qty completed."""
+    """Update a worker's qty completed or change employee assignment."""
     worker_log = ProductionWorkerLog.query.get_or_404(log_id)
     data = request.get_json()
+    
+    # Handle employee change
+    if 'employee_id' in data and data['employee_id'] != worker_log.employee_id:
+        new_employee_id = data['employee_id']
+        # Check if new employee is already assigned to this task
+        existing = ProductionWorkerLog.query.filter_by(
+            task_id=worker_log.task_id,
+            employee_id=new_employee_id
+        ).first()
+        if existing:
+            return api_response(message='Employee sudah ditugaskan ke task ini', status=400)
+        worker_log.employee_id = new_employee_id
     
     if 'qty_completed' in data:
         worker_log.qty_completed = data['qty_completed']

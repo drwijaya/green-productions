@@ -262,12 +262,10 @@
                             <div class="workers-label">
                                 <i class="fas fa-users"></i> Workers
                             </div>
-                            {% if task.status != 'completed' %}
                             <button class="btn btn-xs btn-outline-primary add-worker-btn"
                                 onclick="addWorker({{ task.id }}); event.stopPropagation();">
                                 <i class="fas fa-user-plus"></i> Tambah
                             </button>
-                            {% endif %}
                         </div>
                         <div class="workers-list">
                             {% for log in task._prefetched_worker_logs %}
@@ -276,27 +274,27 @@
                                     <span class="worker-avatar">{{ log.employee.name[0].upper() if log.employee else '?'
                                         }}</span>
                                     <span class="worker-name">{{ log.employee.name if log.employee else '?' }}</span>
+                                    <button class="btn btn-xs btn-change-worker"
+                                        onclick="openChangeWorkerModal({{ log.id }}, '{{ log.employee.name if log.employee else '' }}', {{ log.qty_completed }}); event.stopPropagation();"
+                                        title="Ganti Worker">
+                                        <i class="fas fa-exchange-alt"></i>
+                                    </button>
                                 </div>
-                                {% if task.status in ['in_progress', 'assigned'] %}
                                 <div class="worker-qty-controls">
                                     <input type="number" class="qty-input" id="qty-{{ log.id }}"
                                         value="{{ log.qty_completed }}" min="0" placeholder="qty">
                                     <button class="btn btn-xs btn-confirm-qty"
                                         onclick="confirmWorkerQty({{ log.id }}); event.stopPropagation();"
-                                        title="Simpan">
-                                        <i class="fas fa-check"></i>
+                                        title="{% if task.status == 'completed' %}Edit{% else %}Simpan{% endif %}">
+                                        <i
+                                            class="fas fa-{% if task.status == 'completed' %}edit{% else %}check{% endif %}"></i>
+                                    </button>
+                                    <button class="btn btn-xs btn-delete-worker"
+                                        onclick="removeWorker({{ log.id }}, '{{ log.employee.name if log.employee else '?' }}'); event.stopPropagation();"
+                                        title="Hapus Worker">
+                                        <i class="fas fa-trash"></i>
                                     </button>
                                 </div>
-                                {% elif task.status == 'completed' %}
-                                <div class="worker-qty-controls">
-                                    <input type="number" class="qty-input" id="qty-{{ log.id }}"
-                                        value="{{ log.qty_completed }}" min="0" placeholder="qty">
-                                    <button class="btn btn-xs btn-confirm-qty"
-                                        onclick="confirmWorkerQty({{ log.id }}); event.stopPropagation();" title="Edit">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                </div>
-                                {% endif %}
                             </div>
                             {% else %}
                             <div class="no-workers-msg">
@@ -427,6 +425,44 @@
             <button class="btn btn-secondary" onclick="closeModal('workerModal')">Batal</button>
             <button class="btn btn-primary" onclick="saveWorker()">
                 <i class="fas fa-plus"></i> Tambah Worker
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Change Worker Modal -->
+<div class="modal-backdrop" id="changeWorkerModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title"><i class="fas fa-exchange-alt"></i> Ganti Worker</h3>
+            <button class="modal-close" onclick="closeModal('changeWorkerModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="changeWorkerLogId">
+            <div class="current-worker-info mb-3">
+                <label class="form-label">Worker Saat Ini</label>
+                <div class="current-worker-display" id="currentWorkerDisplay">
+                    <span class="worker-avatar" id="currentWorkerAvatar">?</span>
+                    <span class="worker-name" id="currentWorkerName">-</span>
+                    <span class="worker-qty-badge" id="currentWorkerQty">0 pcs</span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Ganti Dengan</label>
+                <select class="form-select" id="changeWorkerEmployeeId">
+                    <option value="">-- Pilih Karyawan --</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label text-muted small">
+                    <i class="fas fa-info-circle"></i> Qty completed akan tetap sama
+                </label>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('changeWorkerModal')">Batal</button>
+            <button class="btn btn-primary" onclick="saveChangeWorker()">
+                <i class="fas fa-exchange-alt"></i> Ganti Worker
             </button>
         </div>
     </div>
@@ -1350,6 +1386,56 @@
     .btn-confirm-qty:hover {
         background: #059669;
         transform: scale(1.05);
+    }
+
+    .btn-delete-worker {
+        background: #EF4444;
+        color: white;
+        border: none;
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-delete-worker:hover {
+        background: #DC2626;
+        transform: scale(1.05);
+    }
+
+    .btn-change-worker {
+        background: #3B82F6;
+        color: white;
+        border: none;
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-left: 0.5rem;
+        font-size: 0.7rem;
+    }
+
+    .btn-change-worker:hover {
+        background: #2563EB;
+        transform: scale(1.05);
+    }
+
+    .current-worker-display {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem;
+        background: var(--gray-100);
+        border-radius: var(--radius);
+        margin-top: 0.5rem;
     }
 
     .worker-qty-badge {
@@ -2412,6 +2498,71 @@ MOBILE RESPONSIVE STYLES
             showToast('Progress disimpan', 'success');
         } catch (error) {
             showToast(error.message || 'Gagal update progress', 'error');
+        }
+    }
+
+    async function removeWorker(logId, workerName) {
+        if (!confirm(`Hapus worker "${workerName}" dari task ini?\n\nProgress yang sudah diinput akan hilang.`)) {
+            return;
+        }
+
+        try {
+            await api.delete(`/production/workers/${logId}`);
+            showToast('Worker berhasil dihapus', 'success');
+            setTimeout(() => location.reload(), 500);
+        } catch (error) {
+            showToast(error.message || 'Gagal menghapus worker', 'error');
+        }
+    }
+
+    async function openChangeWorkerModal(logId, currentWorkerName, currentQty) {
+        // Set hidden fields
+        document.getElementById('changeWorkerLogId').value = logId;
+
+        // Update current worker display
+        document.getElementById('currentWorkerAvatar').textContent = currentWorkerName ? currentWorkerName[0].toUpperCase() : '?';
+        document.getElementById('currentWorkerName').textContent = currentWorkerName || '-';
+        document.getElementById('currentWorkerQty').textContent = `${currentQty} pcs`;
+
+        // Load employees for dropdown
+        const select = document.getElementById('changeWorkerEmployeeId');
+        select.innerHTML = '<option value="">-- Pilih Karyawan --</option>';
+
+        try {
+            const response = await api.get('/employees');
+            const employees = response.data.employees || [];
+            employees.forEach(emp => {
+                const option = document.createElement('option');
+                option.value = emp.id;
+                option.textContent = emp.name;
+                select.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error loading employees:', error);
+            showToast('Gagal memuat daftar karyawan', 'error');
+        }
+
+        openModal('changeWorkerModal');
+    }
+
+    async function saveChangeWorker() {
+        const logId = document.getElementById('changeWorkerLogId').value;
+        const newEmployeeId = document.getElementById('changeWorkerEmployeeId').value;
+
+        if (!newEmployeeId) {
+            showToast('Pilih karyawan terlebih dahulu', 'error');
+            return;
+        }
+
+        try {
+            await api.put(`/production/workers/${logId}`, {
+                employee_id: parseInt(newEmployeeId)
+            });
+            showToast('Worker berhasil diganti', 'success');
+            closeModal('changeWorkerModal');
+            setTimeout(() => location.reload(), 500);
+        } catch (error) {
+            showToast(error.message || 'Gagal mengganti worker', 'error');
         }
     }
 
