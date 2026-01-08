@@ -411,53 +411,6 @@
             </div>
         </div>
 
-        <!-- FPY & Key Metrics -->
-        <div class="col-md-4">
-            <div class="content-card h-100">
-                <h5 class="mb-4"><i class="fas fa-bullseye text-success me-2"></i>First Pass Yield</h5>
-                <div class="text-center mb-4">
-                    <div id="fpyValue" style="font-size: 3rem; font-weight: 700; color: #10B981;">--%</div>
-                    <div class="text-muted">Produk lolos QC pertama kali</div>
-                </div>
-                <div class="row text-center">
-                    <div class="col-4">
-                        <div id="fpyInspected" class="fw-bold text-primary" style="font-size: 1.25rem;">0</div>
-                        <small class="text-muted">Inspected</small>
-                    </div>
-                    <div class="col-4">
-                        <div id="fpyPassed" class="fw-bold text-success" style="font-size: 1.25rem;">0</div>
-                        <small class="text-muted">Passed</small>
-                    </div>
-                    <div class="col-4">
-                        <div id="fpyFailed" class="fw-bold text-danger" style="font-size: 1.25rem;">0</div>
-                        <small class="text-muted">Failed</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Trend Comparison -->
-        <div class="col-md-4">
-            <div class="content-card h-100">
-                <h5 class="mb-4"><i class="fas fa-exchange-alt text-info me-2"></i>Trend Comparison</h5>
-                <div class="d-flex gap-3">
-                    <div class="flex-fill p-3 rounded" style="background: #F0FDF4;">
-                        <small class="text-muted d-block mb-1">This Period</small>
-                        <div id="currentFpy" class="fw-bold text-success" style="font-size: 1.5rem;">--%</div>
-                    </div>
-                    <div class="flex-fill p-3 rounded" style="background: #F3F4F6;">
-                        <small class="text-muted d-block mb-1">Previous</small>
-                        <div id="prevFpy" class="fw-bold text-secondary" style="font-size: 1.5rem;">--%</div>
-                    </div>
-                </div>
-                <div class="mt-3 text-center">
-                    <span id="trendIndicator" class="badge bg-success px-3 py-2">
-                        <i class="fas fa-arrow-up me-1"></i>
-                        <span id="trendChange">+0%</span> vs periode sebelumnya
-                    </span>
-                </div>
-            </div>
-        </div>
     </div>
 
     <!-- Charts Row -->
@@ -498,6 +451,59 @@
                 </div>
                 <div class="chart-container" style="height: 350px;">
                     <canvas id="paretoChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Defect Rate Trend Chart -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="content-card">
+                <div class="chart-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line text-info me-2"></i>Defect Rate Trend
+                    </h5>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button class="btn btn-outline-primary active" onclick="loadDefectTrend('weekly', this)">Per
+                            Minggu</button>
+                        <button class="btn btn-outline-primary" onclick="loadDefectTrend('monthly', this)">Per
+                            Bulan</button>
+                    </div>
+                </div>
+                <!-- Trend Statistics -->
+                <div class="row my-3" id="trendStatsRow">
+                    <div class="col-md-3">
+                        <div class="p-3 rounded" style="background: #F0FDF4;">
+                            <small class="text-muted d-block">Rata-rata</small>
+                            <div id="avgDefectRate" class="fw-bold text-success fs-4">--%</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 rounded" style="background: #EFF6FF;">
+                            <small class="text-muted d-block">Trend</small>
+                            <div id="overallTrend" class="fw-bold text-primary fs-4">--</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 rounded" style="background: #D1FAE5;">
+                            <small class="text-muted d-block">Periode Terbaik</small>
+                            <div id="bestPeriod" class="fw-bold text-success fs-6">--</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 rounded" style="background: #FEE2E2;">
+                            <small class="text-muted d-block">Periode Terburuk</small>
+                            <div id="worstPeriod" class="fw-bold text-danger fs-6">--</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-container" style="height: 350px; position: relative;">
+                    <div class="chart-loading" id="trendChartLoading">
+                        <div class="loading-spinner"></div>
+                        <div class="loading-text">Memuat data trend...</div>
+                    </div>
+                    <canvas id="defectRateTrendChart"></canvas>
                 </div>
             </div>
         </div>
@@ -1279,6 +1285,7 @@
         // Load Initial Data
         loadAnalyticsData();
         loadDefects();
+        loadDefectTrend('weekly');
     });
 
     // --- Tab Switching ---
@@ -1348,12 +1355,6 @@
             const p1 = api.get(`/qc/dashboard/quality-score?days=${days}`)
                 .then(res => {
                     updateQualityScore(res);
-                    if (res.components) updateFPY(res.components);
-                });
-
-            const p2 = api.get(`/qc/dashboard/summary-report?period=${currentPeriod}`)
-                .then(res => {
-                    if (res.summary) updateTrend(res.summary);
                 });
 
             const p3 = api.get(`/qc/dashboard/process-comparison?days=${days}`)
@@ -1376,7 +1377,7 @@
                     hideChartLoading('paretoChart');
                 });
 
-            await Promise.all([p1, p2, p3, p4, p5]);
+            await Promise.all([p1, p3, p4, p5]);
 
         } catch (error) {
             console.error('Error loading analytics:', error);
@@ -1640,6 +1641,114 @@
 
     function exportCSV() {
         window.location.href = '/api/qc/dashboard/export-csv?days=30';
+    }
+
+    // --- Defect Rate Trend Logic ---
+
+    async function loadDefectTrend(period = 'weekly', btn = null) {
+        // Update button states
+        if (btn) {
+            btn.closest('.btn-group').querySelectorAll('.btn')
+                .forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        }
+
+        // Show loading
+        const loader = document.getElementById('trendChartLoading');
+        if (loader) loader.style.display = 'flex';
+
+        try {
+            const count = period === 'weekly' ? 12 : 12; // 12 weeks or 12 months
+            const res = await api.get(`/qc/dashboard/defect-rate-trends?period=${period}&count=${count}`);
+
+            // Update stats
+            document.getElementById('avgDefectRate').textContent = res.average_rate.toFixed(2) + '%';
+            document.getElementById('overallTrend').innerHTML = getTrendBadge(res.overall_trend);
+            document.getElementById('bestPeriod').textContent =
+                res.best_period ? `${res.best_period.label} (${res.best_period.defect_rate}%)` : '-';
+            document.getElementById('worstPeriod').textContent =
+                res.worst_period ? `${res.worst_period.label} (${res.worst_period.defect_rate}%)` : '-';
+
+            // Render chart
+            renderTrendChart(res.data_points, period);
+        } catch (e) {
+            console.error('Failed to load trend:', e);
+        } finally {
+            if (loader) loader.style.display = 'none';
+        }
+    }
+
+    function getTrendBadge(trend) {
+        const icons = { 'improving': 'fa-arrow-trend-down', 'stable': 'fa-minus', 'declining': 'fa-arrow-trend-up' };
+        // Note: For defect rate, 'improving' means going DOWN (less defects)
+        // 'declining' means going UP (more defects)
+        const colors = { 'improving': 'text-success', 'stable': 'text-secondary', 'declining': 'text-danger' };
+        const labels = { 'improving': 'Membaik', 'stable': 'Stabil', 'declining': 'Memburuk' };
+
+        // If trend is not recognized, default to stable
+        const t = trend || 'stable';
+
+        return `<i class="fas ${icons[t] || icons.stable} me-1 ${colors[t] || colors.stable}"></i><span class="${colors[t] || colors.stable}">${labels[t] || t}</span>`;
+    }
+
+    function renderTrendChart(dataPoints, period) {
+        const ctx = document.getElementById('defectRateTrendChart');
+        if (!ctx) return;
+
+        if (trendChart) trendChart.destroy();
+
+        // Prepare datasets
+        const labels = dataPoints.map(d => d.label);
+        const rates = dataPoints.map(d => d.defect_rate);
+
+        trendChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Defect Rate (%)',
+                    data: rates,
+                    borderColor: '#3B82F6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#3B82F6',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            afterLabel: (ctx) => {
+                                const point = dataPoints[ctx.dataIndex];
+                                return [
+                                    `Defect Rate: ${point.defect_rate}%`,
+                                    `Inspected: ${point.total_inspected}`,
+                                    `Defects: ${point.total_defects}`
+                                ];
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Defect Rate (%)' },
+                        grid: { borderDash: [2, 4] }
+                    },
+                    x: {
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
     }
 
     // --- Dashboard Logic ---

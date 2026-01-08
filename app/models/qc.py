@@ -221,7 +221,9 @@ class DefectLog(db.Model):
             'resolved_at': self.resolved_at.isoformat() if self.resolved_at else None,
             # Context info from parent QC Sheet
             'order_code': self.qc_sheet.order.order_code if self.qc_sheet and self.qc_sheet.order else None,
-            'product_name': self.qc_sheet.production_task.product_name if self.qc_sheet and self.qc_sheet.production_task else None
+            'product_name': (self.qc_sheet.order.model if self.qc_sheet.order else 
+                           (self.qc_sheet.production_task.order.model if self.qc_sheet.production_task and self.qc_sheet.production_task.order else None))
+            if self.qc_sheet else None
         }
     
     def __repr__(self):

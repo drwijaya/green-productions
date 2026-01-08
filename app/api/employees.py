@@ -206,6 +206,13 @@ def update_employee(employee_id):
         except:
             pass
     
+    # Update is_active status
+    if 'is_active' in data:
+        employee.is_active = data['is_active']
+        # Also update linked user account if exists
+        if employee.user:
+            employee.user.is_active = data['is_active']
+    
     create_login = data.get('create_login', False)
     
     # Handle login account

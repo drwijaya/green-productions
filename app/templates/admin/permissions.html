@@ -38,8 +38,8 @@
 
 <div class="card">
     <div class="card-header">
-        <h3 class="card-title"><i class="fas fa-key"></i> Menu & Permissions</h3>
-        <p class="text-muted mt-1">Centang menu yang dapat diakses oleh user ini</p>
+        <h3 class="card-title"><i class="fas fa-key"></i> Akses Menu Dashboard</h3>
+        <p class="text-muted mt-1">Toggle menu yang dapat diakses oleh user ini</p>
     </div>
     <div class="card-body">
         <div class="permissions-grid" id="permissionsGrid">
@@ -319,9 +319,6 @@
 
         for (const [key, perm] of Object.entries(availablePermissions)) {
             const isEnabled = userPermissions[key] && userPermissions[key].can_view;
-            const canCreate = userPermissions[key]?.can_create || false;
-            const canEdit = userPermissions[key]?.can_edit || false;
-            const canDelete = userPermissions[key]?.can_delete || false;
 
             html += `
                 <div class="permission-card ${isEnabled ? 'enabled' : ''}" data-key="${key}">
@@ -335,22 +332,6 @@
                         </div>
                         <div class="permission-toggle">
                             <div class="toggle-switch ${isEnabled ? 'active' : ''}" onclick="togglePermission('${key}')"></div>
-                        </div>
-                    </div>
-                    <div class="permission-options">
-                        <div class="option-group">
-                            <label class="option-checkbox">
-                                <input type="checkbox" data-action="create" ${canCreate ? 'checked' : ''}>
-                                <span>Dapat Membuat</span>
-                            </label>
-                            <label class="option-checkbox">
-                                <input type="checkbox" data-action="edit" ${canEdit ? 'checked' : ''}>
-                                <span>Dapat Edit</span>
-                            </label>
-                            <label class="option-checkbox">
-                                <input type="checkbox" data-action="delete" ${canDelete ? 'checked' : ''}>
-                                <span>Dapat Hapus</span>
-                            </label>
                         </div>
                     </div>
                 </div>
@@ -384,7 +365,7 @@
     }
 
     async function savePermissions() {
-        // Collect all enabled permissions
+        // Collect all enabled permissions (menu access only)
         const permissions = {};
 
         document.querySelectorAll('.permission-card').forEach(card => {
@@ -394,9 +375,9 @@
             if (isEnabled) {
                 permissions[key] = {
                     can_view: true,
-                    can_create: card.querySelector('[data-action="create"]')?.checked || false,
-                    can_edit: card.querySelector('[data-action="edit"]')?.checked || false,
-                    can_delete: card.querySelector('[data-action="delete"]')?.checked || false
+                    can_create: true,
+                    can_edit: true,
+                    can_delete: true
                 };
             }
         });

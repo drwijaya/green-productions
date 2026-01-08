@@ -415,6 +415,17 @@ def get_defect_pareto():
     result = QCAnalyticsService.get_defect_pareto(days)
     return jsonify(result)
 
+
+@api_bp.route('/qc/dashboard/defect-rate-trends', methods=['GET'])
+@login_required
+def get_defect_rate_trends():
+    """Get defect rate trends over time."""
+    period = request.args.get('period', 'weekly')
+    count = int(request.args.get('count', 12))
+    result = QCAnalyticsService.get_defect_rate_trends(period, count)
+    return jsonify(result)
+
+
 @api_bp.route('/qc/dashboard/export-csv', methods=['GET'])
 @login_required
 def export_qc_csv():

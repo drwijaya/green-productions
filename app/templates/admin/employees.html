@@ -38,42 +38,47 @@
                         <td><strong>{{ e.employee_code }}</strong></td>
                         <td>{{ e.name }}</td>
                         <td>
-                            {% set pos = e.position or '-' %}
+                            {% set positions = (e.position or '-').split(',') %}
+                            {% for pos in positions %}
+                            {% set pos = pos.strip() %}
                             {% if pos == 'owner' %}
-                            <span class="badge"
+                            <span class="badge mb-1"
                                 style="background: linear-gradient(135deg, #667eea, #764ba2); color: white;"><i
                                     class="fas fa-crown"></i> Owner</span>
                             {% elif pos == 'admin' %}
-                            <span class="badge"
+                            <span class="badge mb-1"
                                 style="background: linear-gradient(135deg, #11998e, #38ef7d); color: white;"><i
                                     class="fas fa-user-shield"></i> Admin</span>
                             {% elif pos == 'qc_line' %}
-                            <span class="badge"
+                            <span class="badge mb-1"
                                 style="background: linear-gradient(135deg, #f093fb, #f5576c); color: white;"><i
                                     class="fas fa-clipboard-check"></i> QC Line</span>
                             {% elif pos == 'sewing' %}
-                            <span class="badge"
+                            <span class="badge mb-1"
                                 style="background: linear-gradient(135deg, #4facfe, #00f2fe); color: white;"><i
                                     class="fas fa-tshirt"></i> Sewing</span>
                             {% elif pos == 'sablon' %}
-                            <span class="badge"
+                            <span class="badge mb-1"
                                 style="background: linear-gradient(135deg, #fa709a, #fee140); color: white;"><i
                                     class="fas fa-paint-brush"></i> Sablon</span>
                             {% elif pos == 'cutting' %}
-                            <span class="badge"
+                            <span class="badge mb-1"
                                 style="background: linear-gradient(135deg, #a8edea, #fed6e3); color: #333;"><i
                                     class="fas fa-cut"></i> Cutting</span>
                             {% elif pos == 'finishing' %}
-                            <span class="badge"
+                            <span class="badge mb-1"
                                 style="background: linear-gradient(135deg, #d299c2, #fef9d7); color: #333;"><i
                                     class="fas fa-magic"></i> Finishing</span>
                             {% elif pos == 'packing' %}
-                            <span class="badge"
+                            <span class="badge mb-1"
                                 style="background: linear-gradient(135deg, #89f7fe, #66a6ff); color: white;"><i
                                     class="fas fa-box"></i> Packing</span>
+                            {% elif pos != '-' %}
+                            <span class="badge badge-secondary mb-1">{{ pos }}</span>
                             {% else %}
-                            <span class="badge badge-secondary">{{ pos }}</span>
+                            <span class="badge badge-secondary">-</span>
                             {% endif %}
+                            {% endfor %}
                         </td>
                         <td>
                             {% set emp_type = e.employment_type or 'karyawan' %}
@@ -138,59 +143,60 @@
                             placeholder="Masukkan nama lengkap">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Posisi / Stasiun Kerja *</label>
+                        <label class="form-label">Posisi / Stasiun Kerja * <small style="color: var(--gray-500);">(pilih
+                                satu atau lebih)</small></label>
                         <div class="position-grid" id="positionGrid">
                             <label class="position-card" data-value="owner">
-                                <input type="radio" name="position" value="owner">
+                                <input type="checkbox" name="positions" value="owner">
                                 <div class="position-icon"
                                     style="background: linear-gradient(135deg, #667eea, #764ba2);"><i
                                         class="fas fa-crown"></i></div>
                                 <span>Owner</span>
                             </label>
                             <label class="position-card" data-value="admin">
-                                <input type="radio" name="position" value="admin">
+                                <input type="checkbox" name="positions" value="admin">
                                 <div class="position-icon"
                                     style="background: linear-gradient(135deg, #11998e, #38ef7d);"><i
                                         class="fas fa-user-shield"></i></div>
                                 <span>Admin</span>
                             </label>
                             <label class="position-card" data-value="qc_line">
-                                <input type="radio" name="position" value="qc_line">
+                                <input type="checkbox" name="positions" value="qc_line">
                                 <div class="position-icon"
                                     style="background: linear-gradient(135deg, #f093fb, #f5576c);"><i
                                         class="fas fa-clipboard-check"></i></div>
                                 <span>QC Line</span>
                             </label>
                             <label class="position-card" data-value="sewing">
-                                <input type="radio" name="position" value="sewing">
+                                <input type="checkbox" name="positions" value="sewing">
                                 <div class="position-icon"
                                     style="background: linear-gradient(135deg, #4facfe, #00f2fe);"><i
                                         class="fas fa-tshirt"></i></div>
                                 <span>Sewing</span>
                             </label>
                             <label class="position-card" data-value="sablon">
-                                <input type="radio" name="position" value="sablon">
+                                <input type="checkbox" name="positions" value="sablon">
                                 <div class="position-icon"
                                     style="background: linear-gradient(135deg, #fa709a, #fee140);"><i
                                         class="fas fa-paint-brush"></i></div>
                                 <span>Sablon</span>
                             </label>
                             <label class="position-card" data-value="cutting">
-                                <input type="radio" name="position" value="cutting">
+                                <input type="checkbox" name="positions" value="cutting">
                                 <div class="position-icon"
                                     style="background: linear-gradient(135deg, #a8edea, #fed6e3);"><i
                                         class="fas fa-cut"></i></div>
                                 <span>Cutting</span>
                             </label>
                             <label class="position-card" data-value="finishing">
-                                <input type="radio" name="position" value="finishing">
+                                <input type="checkbox" name="positions" value="finishing">
                                 <div class="position-icon"
                                     style="background: linear-gradient(135deg, #d299c2, #fef9d7);"><i
                                         class="fas fa-magic"></i></div>
                                 <span>Finishing</span>
                             </label>
                             <label class="position-card" data-value="packing">
-                                <input type="radio" name="position" value="packing">
+                                <input type="checkbox" name="positions" value="packing">
                                 <div class="position-icon"
                                     style="background: linear-gradient(135deg, #89f7fe, #66a6ff);"><i
                                         class="fas fa-box"></i></div>
@@ -248,6 +254,25 @@
                     <div class="form-group">
                         <label class="form-label">Tanggal Bergabung</label>
                         <input type="date" class="form-input" name="join_date" id="empJoinDate">
+                    </div>
+
+                    <!-- Status Aktif (only visible when editing) -->
+                    <div class="form-group" id="statusActiveSection" style="display: none;">
+                        <label class="form-label">Status Karyawan</label>
+                        <div
+                            style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem; background: var(--gray-50); border-radius: 8px;">
+                            <label class="switch"
+                                style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; margin: 0;">
+                                <input type="checkbox" id="empIsActive" name="is_active" checked>
+                                <span class="slider"></span>
+                            </label>
+                            <div>
+                                <span id="statusLabel" style="font-weight: 600; color: #10B981;">Aktif</span>
+                                <small style="display: block; color: var(--gray-500); font-size: 0.75rem;">
+                                    Karyawan dapat ditugaskan ke produksi
+                                </small>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -330,17 +355,18 @@
         flex-direction: column;
         align-items: center;
         padding: 0.75rem 0.5rem;
-        border: 2px solid var(--border-color);
+        border: 2px solid var(--gray-300);
         border-radius: 10px;
         cursor: pointer;
         transition: all 0.2s ease;
         background: var(--bg-primary);
+        position: relative;
     }
 
     .position-card:hover {
-        border-color: var(--primary);
+        border-color: var(--gray-500);
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     }
 
     .position-card input {
@@ -348,9 +374,36 @@
     }
 
     .position-card.selected {
-        border-color: var(--primary);
-        background: rgba(var(--primary-rgb), 0.1);
-        box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.2);
+        border-color: #1a1a1a;
+        background: #f8f9fa;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    }
+
+    /* Checkmark indicator for position cards */
+    .position-card::after {
+        content: '';
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        border: 2px solid var(--gray-300);
+        background: white;
+        transition: all 0.2s ease;
+        pointer-events: none;
+    }
+
+    .position-card.selected::after {
+        content: '✓';
+        background: #10B981;
+        border-color: #10B981;
+        color: white;
+        font-size: 11px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
     .position-icon {
@@ -369,6 +422,12 @@
         font-size: 0.8rem;
         font-weight: 500;
         text-align: center;
+        color: var(--gray-600);
+    }
+
+    .position-card.selected span {
+        color: #1a1a1a;
+        font-weight: 600;
     }
 
     /* Employment Type Grid */
@@ -384,17 +443,18 @@
         flex-direction: column;
         align-items: center;
         padding: 0.6rem 0.4rem;
-        border: 2px solid var(--border-color);
+        border: 2px solid var(--gray-300);
         border-radius: 10px;
         cursor: pointer;
         transition: all 0.2s ease;
         background: var(--bg-primary);
+        position: relative;
     }
 
     .employment-card:hover {
-        border-color: var(--primary);
+        border-color: var(--gray-500);
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     }
 
     .employment-card input {
@@ -402,9 +462,30 @@
     }
 
     .employment-card.selected {
-        border-color: var(--primary);
-        background: rgba(var(--primary-rgb), 0.1);
-        box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.2);
+        border-color: #1a1a1a;
+        background: #f8f9fa;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    }
+
+    /* Radio indicator for employment cards */
+    .employment-card::after {
+        content: '';
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 2px solid var(--gray-300);
+        background: white;
+        transition: all 0.2s ease;
+        pointer-events: none;
+    }
+
+    .employment-card.selected::after {
+        background: #10B981;
+        border-color: #10B981;
+        box-shadow: inset 0 0 0 3px white;
     }
 
     .employment-icon {
@@ -423,12 +504,21 @@
         font-size: 0.75rem;
         font-weight: 600;
         text-align: center;
+        color: var(--gray-600);
+    }
+
+    .employment-card.selected span {
+        color: #1a1a1a;
     }
 
     .employment-card small {
         font-size: 0.65rem;
-        color: var(--text-secondary);
+        color: var(--gray-400);
         margin-top: 2px;
+    }
+
+    .employment-card.selected small {
+        color: var(--gray-600);
     }
 
     /* Toggle Switch */
@@ -492,34 +582,47 @@
 <script>
     let editingEmployeeId = null;
 
-    // Position card selection
+    // Position card selection (multi-select with checkboxes)
     document.querySelectorAll('.position-card').forEach(card => {
-        card.addEventListener('click', function () {
-            document.querySelectorAll('.position-card').forEach(c => c.classList.remove('selected'));
-            this.classList.add('selected');
-            this.querySelector('input').checked = true;
+        card.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
 
-            // Auto-set role based on position
-            const pos = this.dataset.value;
-            const roleMap = {
-                'owner': 'owner',
-                'admin': 'admin',
-                'qc_line': 'qc_line',
-                'sewing': 'operator',
-                'sablon': 'operator',
-                'cutting': 'operator',
-                'finishing': 'operator',
-                'packing': 'operator'
-            };
+            const checkbox = this.querySelector('input[type="checkbox"]');
+            checkbox.checked = !checkbox.checked;
+
+            // Update visual selection
+            if (checkbox.checked) {
+                this.classList.add('selected');
+            } else {
+                this.classList.remove('selected');
+            }
+
+            // Auto-set role based on highest priority position
             if (document.getElementById('createLoginCheckbox').checked) {
-                document.getElementById('empRole').value = roleMap[pos] || 'operator';
+                const selectedPositions = Array.from(document.querySelectorAll('.position-card.selected'))
+                    .map(c => c.dataset.value);
+
+                // Priority: owner > admin > qc_line > operator
+                let role = 'operator';
+                if (selectedPositions.includes('owner')) role = 'owner';
+                else if (selectedPositions.includes('admin')) role = 'admin';
+                else if (selectedPositions.includes('qc_line')) role = 'qc_line';
+                else if (selectedPositions.includes('sewing') || selectedPositions.includes('cutting')
+                    || selectedPositions.includes('finishing') || selectedPositions.includes('sablon')
+                    || selectedPositions.includes('packing')) role = 'operator';
+
+                document.getElementById('empRole').value = role;
             }
         });
     });
 
     // Employment type card selection
     document.querySelectorAll('.employment-card').forEach(card => {
-        card.addEventListener('click', function () {
+        card.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
             document.querySelectorAll('.employment-card').forEach(c => c.classList.remove('selected'));
             this.classList.add('selected');
             this.querySelector('input').checked = true;
@@ -591,18 +694,56 @@
         document.getElementById('employeeForm').reset();
         document.getElementById('employeeId').value = '';
         document.getElementById('createLoginCheckbox').checked = false;
-        document.querySelectorAll('.position-card').forEach(c => c.classList.remove('selected'));
+
+        // Clear all position cards - both visual and checkbox state
+        document.querySelectorAll('.position-card').forEach(c => {
+            c.classList.remove('selected');
+            c.querySelector('input[type="checkbox"]').checked = false;
+        });
+
+        // Clear all employment cards
         document.querySelectorAll('.employment-card').forEach(c => c.classList.remove('selected'));
+
         // Set default employment type
         const defaultEmpCard = document.querySelector('.employment-card[data-value="karyawan"]');
         if (defaultEmpCard) {
             defaultEmpCard.classList.add('selected');
             defaultEmpCard.querySelector('input').checked = true;
         }
-        toggleLoginFields();
+
+        // Reset is_active to checked (active) and hide section
+        const isActiveCheckbox = document.getElementById('empIsActive');
+        if (isActiveCheckbox) {
+            isActiveCheckbox.checked = true;
+        }
+        document.getElementById('statusActiveSection').style.display = 'none';
+
+        // Hide login fields
+        const loginFields = document.getElementById('loginFields');
+        const noLoginMessage = document.getElementById('noLoginMessage');
+        if (loginFields) loginFields.style.display = 'none';
+        if (noLoginMessage) noLoginMessage.style.display = 'block';
+
         editingEmployeeId = null;
         document.getElementById('employeeModalTitle').textContent = 'Tambah Employee';
     }
+
+    function updateStatusLabel() {
+        const isActiveCheckbox = document.getElementById('empIsActive');
+        const statusLabel = document.getElementById('statusLabel');
+        if (isActiveCheckbox && statusLabel) {
+            if (isActiveCheckbox.checked) {
+                statusLabel.textContent = 'Aktif';
+                statusLabel.style.color = '#10B981';
+            } else {
+                statusLabel.textContent = 'Tidak Aktif';
+                statusLabel.style.color = '#EF4444';
+            }
+        }
+    }
+
+    // Add event listener for status toggle
+    document.getElementById('empIsActive')?.addEventListener('change', updateStatusLabel);
 
     function openModal(id) {
         resetForm();
@@ -610,8 +751,12 @@
     }
 
     function editEmployee(id) {
+        resetForm(); // Reset form first before populating with edit data
         editingEmployeeId = id;
         document.getElementById('employeeModalTitle').textContent = 'Edit Employee';
+
+        // Show status section when editing
+        document.getElementById('statusActiveSection').style.display = 'block';
 
         fetch(`/api/employees/${id}`)
             .then(r => r.json())
@@ -624,13 +769,24 @@
                     document.getElementById('empEmail').value = e.email || '';
                     document.getElementById('empJoinDate').value = e.join_date || '';
 
-                    // Select position card
+                    // Set is_active status
+                    const isActiveCheckbox = document.getElementById('empIsActive');
+                    const statusLabel = document.getElementById('statusLabel');
+                    if (isActiveCheckbox) {
+                        isActiveCheckbox.checked = e.is_active !== false;
+                        updateStatusLabel();
+                    }
+
+                    // Select position cards (multiple positions stored as comma-separated)
                     if (e.position) {
-                        const card = document.querySelector(`.position-card[data-value="${e.position}"]`);
-                        if (card) {
-                            card.classList.add('selected');
-                            card.querySelector('input').checked = true;
-                        }
+                        const positions = e.position.split(',').map(p => p.trim());
+                        positions.forEach(pos => {
+                            const card = document.querySelector(`.position-card[data-value="${pos}"]`);
+                            if (card) {
+                                card.classList.add('selected');
+                                card.querySelector('input[type="checkbox"]').checked = true;
+                            }
+                        });
                     }
 
                     // Select employment type card
@@ -657,11 +813,30 @@
 
     async function saveEmployee() {
         const form = document.getElementById('employeeForm');
-        const data = Object.fromEntries(new FormData(form));
+        const formData = new FormData(form);
+
+        // Build data object manually to handle multiple positions
+        const data = {
+            id: formData.get('id'),
+            name: formData.get('name'),
+            phone: formData.get('phone'),
+            email: formData.get('email'),
+            join_date: formData.get('join_date'),
+            employment_type: formData.get('employment_type'),
+            username: formData.get('username'),
+            password: formData.get('password'),
+            role: formData.get('role'),
+            is_active: document.getElementById('empIsActive')?.checked ?? true
+        };
+
+        // Collect all selected positions
+        const selectedPositions = Array.from(document.querySelectorAll('input[name="positions"]:checked'))
+            .map(cb => cb.value);
+        data.position = selectedPositions.join(','); // Store as comma-separated string
 
         // Validation
         if (!data.name) { showToast('Nama wajib diisi', 'error'); return; }
-        if (!data.position) { showToast('Pilih posisi/stasiun kerja', 'error'); return; }
+        if (selectedPositions.length === 0) { showToast('Pilih minimal satu posisi/stasiun kerja', 'error'); return; }
 
         const createLogin = document.getElementById('createLoginCheckbox').checked;
         data.create_login = createLogin;

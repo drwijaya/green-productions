@@ -166,7 +166,14 @@ def production():
     """Production timeline page."""
     from datetime import date
     from sqlalchemy import case
-    # Get orders with production history (draft, in_production, qc_pending, or completed)
+    from sqlalchemy.orm import joinedload
+    from ..models.production import ProductionTask, ProductionWorkerLog
+    from ..models.qc import QCSheet
+    
+    # Only show active orders (not completed) for faster loading
+    # User can filter to see completed orders if needed
+    show_completed = request.args.get('show_completed', 'false') == 'true'
+    
     # Rank statuses: in_production (1), qc_pending (2), draft (3), completed (4)
     status_order = case(
         {
@@ -179,10 +186,67 @@ def production():
         else_=5
     )
     
-    orders = Order.query.filter(
-        Order.status.in_(['draft', 'in_production', 'qc_pending', 'completed'])
-    ).order_by(status_order, Order.deadline.asc()).all()
-    return render_template('production/timeline.html', orders=orders, now=date.today())
+    # Filter statuses based on show_completed parameter
+    if show_completed:
+        status_filter = ['draft', 'in_production', 'qc_pending', 'completed']
+    else:
+        status_filter = ['draft', 'in_production', 'qc_pending']
+    
+    # Load orders with customer - limit to 50 for faster loading
+    orders = Order.query.options(
+        joinedload(Order.customer)
+    ).filter(
+        Order.status.in_(status_filter)
+    ).order_by(status_order, Order.deadline.asc()).limit(50).all()
+    
+    # Pre-fetch all data in efficient separate queries
+    order_ids = [o.id for o in orders]
+    tasks_by_order = {}
+    
+    if order_ids:
+        # Get tasks with supervisor
+        all_tasks = ProductionTask.query.options(
+            joinedload(ProductionTask.supervisor)
+        ).filter(
+            ProductionTask.order_id.in_(order_ids)
+        ).order_by(ProductionTask.order_id, ProductionTask.sequence).all()
+        
+        task_ids = [t.id for t in all_tasks]
+        
+        # Fetch worker logs separately with employees
+        worker_logs_by_task = {}
+        if task_ids:
+            all_worker_logs = ProductionWorkerLog.query.options(
+                joinedload(ProductionWorkerLog.employee)
+            ).filter(ProductionWorkerLog.task_id.in_(task_ids)).all()
+            for log in all_worker_logs:
+                if log.task_id not in worker_logs_by_task:
+                    worker_logs_by_task[log.task_id] = []
+                worker_logs_by_task[log.task_id].append(log)
+        
+        # Fetch QC sheets separately
+        qc_sheets_by_task = {}
+        if task_ids:
+            all_qc_sheets = QCSheet.query.filter(QCSheet.production_task_id.in_(task_ids)).all()
+            for sheet in all_qc_sheets:
+                if sheet.production_task_id not in qc_sheets_by_task:
+                    qc_sheets_by_task[sheet.production_task_id] = []
+                qc_sheets_by_task[sheet.production_task_id].append(sheet)
+        
+        # Group tasks by order_id and attach prefetched data
+        for task in all_tasks:
+            task._prefetched_worker_logs = worker_logs_by_task.get(task.id, [])
+            task._prefetched_qc_sheets = qc_sheets_by_task.get(task.id, [])
+            if task.order_id not in tasks_by_order:
+                tasks_by_order[task.order_id] = []
+            tasks_by_order[task.order_id].append(task)
+    
+    # Attach tasks to orders
+    for order in orders:
+        order._prefetched_tasks = tasks_by_order.get(order.id, [])
+    
+    return render_template('production/timeline.html', orders=orders, now=date.today(), show_completed=show_completed)
+
 
 
 @views_bp.route('/production/qc')

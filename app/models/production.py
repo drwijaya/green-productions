@@ -56,7 +56,7 @@ class ProductionTask(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    supervisor = db.relationship('Employee', foreign_keys=[line_supervisor_id])
+    supervisor = db.relationship('Employee', foreign_keys=[line_supervisor_id], back_populates='production_tasks')
     worker_logs = db.relationship('ProductionWorkerLog', backref='task', lazy='dynamic', cascade='all, delete-orphan')
     qc_sheets = db.relationship('QCSheet', backref='production_task', lazy='dynamic')
     

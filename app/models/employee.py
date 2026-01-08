@@ -31,7 +31,7 @@ class Employee(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    production_tasks = db.relationship('ProductionTask', backref='pic', lazy='dynamic')
+    production_tasks = db.relationship('ProductionTask', back_populates='supervisor', foreign_keys='ProductionTask.line_supervisor_id', lazy='dynamic')
     qc_sheets = db.relationship('QCSheet', backref='inspector', lazy='dynamic')
     
     def to_dict(self):

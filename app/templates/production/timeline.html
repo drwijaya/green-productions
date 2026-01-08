@@ -58,13 +58,21 @@
             <input type="text" class="search-input" id="prodSearchInput"
                 placeholder="Cari Invoice, Customer, atau Model..." onkeyup="filterProduction()">
         </div>
-        <div class="view-toggle">
-            <button class="view-btn active" data-view="list" onclick="switchView('list')">
-                <i class="fas fa-th-list"></i> List
-            </button>
-            <button class="view-btn" data-view="timeline" onclick="switchView('timeline')">
-                <i class="fas fa-calendar-alt"></i> Timeline
-            </button>
+        <div class="d-flex align-items-center gap-3">
+            <!-- Show Completed Toggle -->
+            <label class="completed-toggle" title="Tampilkan order yang sudah selesai">
+                <input type="checkbox" id="showCompletedToggle" {% if show_completed %}checked{% endif %}
+                    onchange="toggleCompleted()">
+                <span class="toggle-label"><i class="fas fa-check-circle"></i> Completed</span>
+            </label>
+            <!-- View Toggle Removed (List View Only) -->
+            <!--
+            <div class="view-toggle">
+                <button class="view-btn active" data-view="list">
+                    <i class="fas fa-th-list"></i> List
+                </button>
+            </div>
+            -->
         </div>
     </div>
 </div>
@@ -90,9 +98,14 @@
                 </div>
                 <div class="prod-model">{{ order.model }}</div>
             </div>
-            <div class="prod-progress-badge">
-                <i class="fas fa-chart-pie"></i>
-                {{order.get_production_progress()}}%
+            <div class="prod-progress-container">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <small class="text-muted" style="font-size: 0.7rem;">Progress</small>
+                    <small style="font-weight: 600; font-size: 0.7rem;">{{order.get_production_progress()}}%</small>
+                </div>
+                <div class="progress-bar-container" style="height: 6px;">
+                    <div class="progress-bar-fill" style="width: {{order.get_production_progress()}}%"></div>
+                </div>
             </div>
         </div>
 
@@ -122,13 +135,13 @@
             </div>
 
             <!-- Visual Steps Summary -->
-            {% if order.production_tasks.count() > 0 %}
+            {% if order._prefetched_tasks|length > 0 %}
             <div class="dual-status-grid">
                 <!-- Production Status -->
                 <div class="status-column">
                     <div class="prod-status-label">Production Status</div>
                     <div class="prod-steps-summary">
-                        {% for task in order.production_tasks.order_by('sequence').all() %}
+                        {% for task in order._prefetched_tasks %}
                         {% set icon_class = 'fa-tasks' %}
                         {% if 'cutting' in task.process.lower() %} {% set icon_class = 'fa-cut' %}
                         {% elif 'sewing' in task.process.lower() %} {% set icon_class = 'fa-tshirt' %}
@@ -164,7 +177,7 @@
                 <div class="status-column">
                     <div class="prod-status-label">QC Status</div>
                     <div class="prod-steps-summary qc-steps">
-                        {% for task in order.production_tasks.order_by('sequence').all() %}
+                        {% for task in order._prefetched_tasks %}
                         {% set icon_class = 'fa-tasks' %}
                         {% if 'cutting' in task.process.lower() %} {% set icon_class = 'fa-cut' %}
                         {% elif 'sewing' in task.process.lower() %} {% set icon_class = 'fa-tshirt' %}
@@ -175,7 +188,7 @@
 
                         {% set ns = namespace(is_submitted=false) %}
 
-                        {% for sheet in task.qc_sheets.all() %}
+                        {% for sheet in task._prefetched_qc_sheets %}
                         {% if sheet.result %}
                         {% set result_val = sheet.result.value if sheet.result.value is defined else sheet.result %}
                         {% if result_val and result_val != 'pending' %}
@@ -221,7 +234,7 @@
 
             <!-- Original Content Start -->
             <div class="process-flow">
-                {% for task in order.production_tasks.order_by('sequence').all() %}
+                {% for task in order._prefetched_tasks %}
                 <div class="process-step status-{{ task.status }}" data-task-id="{{ task.id }}">
                     <!-- Step Header -->
                     <div class="step-header">
@@ -235,7 +248,7 @@
 
                     <!-- Progress Section (only show if started) -->
                     {% if task.status in ['in_progress', 'completed'] %}
-                    <div class="step-progress">
+                    <div class="step-progress-wrapper">
                         <div class="progress-bar-container">
                             <div class="progress-bar-fill" style="width: {{ task.get_progress_percentage() }}%"></div>
                         </div>
@@ -249,7 +262,7 @@
                             <div class="workers-label">
                                 <i class="fas fa-users"></i> Workers
                             </div>
-                            {% if task.status in ['pending', 'assigned'] %}
+                            {% if task.status != 'completed' %}
                             <button class="btn btn-xs btn-outline-primary add-worker-btn"
                                 onclick="addWorker({{ task.id }}); event.stopPropagation();">
                                 <i class="fas fa-user-plus"></i> Tambah
@@ -257,14 +270,14 @@
                             {% endif %}
                         </div>
                         <div class="workers-list">
-                            {% for log in task.worker_logs.all() %}
+                            {% for log in task._prefetched_worker_logs %}
                             <div class="worker-item" data-log-id="{{ log.id }}">
                                 <div class="worker-info">
                                     <span class="worker-avatar">{{ log.employee.name[0].upper() if log.employee else '?'
                                         }}</span>
                                     <span class="worker-name">{{ log.employee.name if log.employee else '?' }}</span>
                                 </div>
-                                {% if task.status == 'in_progress' %}
+                                {% if task.status in ['in_progress', 'assigned'] %}
                                 <div class="worker-qty-controls">
                                     <input type="number" class="qty-input" id="qty-{{ log.id }}"
                                         value="{{ log.qty_completed }}" min="0" placeholder="qty">
@@ -275,7 +288,14 @@
                                     </button>
                                 </div>
                                 {% elif task.status == 'completed' %}
-                                <span class="worker-qty-badge">{{ log.qty_completed }} pcs</span>
+                                <div class="worker-qty-controls">
+                                    <input type="number" class="qty-input" id="qty-{{ log.id }}"
+                                        value="{{ log.qty_completed }}" min="0" placeholder="qty">
+                                    <button class="btn btn-xs btn-confirm-qty"
+                                        onclick="confirmWorkerQty({{ log.id }}); event.stopPropagation();" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </div>
                                 {% endif %}
                             </div>
                             {% else %}
@@ -294,21 +314,25 @@
                         </div>
                         {% elif task.status == 'assigned' %}
                         <button class="btn btn-primary btn-action"
-                            onclick="startTask({{ task.id }}); event.stopPropagation();">
-                            <i class="fas fa-play"></i> Mulai Produksi
+                            style="position: relative; z-index: 100; pointer-events: auto !important;"
+                            onclick="alert('DEBUG: Click Start #{{ task.id }}'); if(window.startTask) { window.startTask({{ task.id }}); } else { alert('ERROR: startTask OFF'); } event.stopPropagation();">
+                            <i class="fas fa-play"></i> Mulai #{{ task.id }}
                         </button>
                         {% elif task.status == 'in_progress' %}
                         <button class="btn btn-success btn-action"
-                            onclick="completeTask({{ task.id }}); event.stopPropagation();">
-                            <i class="fas fa-check"></i> Selesai
+                            style="position: relative; z-index: 100; pointer-events: auto !important;"
+                            onclick="alert('DEBUG: Click Complete #{{ task.id }}'); if(window.completeTask) { window.completeTask({{ task.id }}); } event.stopPropagation();">
+                            <i class="fas fa-check"></i> Selesai #{{ task.id }}
                         </button>
                         {% elif task.status == 'completed' %}
                         <div class="completed-actions">
                             <div class="completed-badge">
                                 <i class="fas fa-check-circle"></i> Completed
                             </div>
-                            <a href="{{ url_for('views.qc_inspect', task_id=task.id) }}" class="btn btn-qc-checklist">
-                                <i class="fas fa-clipboard-check"></i> QC Checklist
+                            <a href="{{ url_for('views.qc_inspect', task_id=task.id) }}" class="btn btn-qc-checklist"
+                                style="position: relative; z-index: 100; pointer-events: auto !important;"
+                                onclick="alert('DEBUG: Link Click #{{ task.id }}');">
+                                <i class="fas fa-clipboard-check"></i> QC Checklist #{{ task.id }}
                             </a>
                         </div>
                         {% endif %}
@@ -425,10 +449,7 @@
                     <label class="form-label">Total Completed</label>
                     <input type="number" class="form-input" id="completeQty" min="0">
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Qty Defect</label>
-                    <input type="number" class="form-input" id="completeDefect" min="0" value="0">
-                </div>
+                <!-- Qty Defect Removed -->
             </div>
         </div>
         <div class="modal-footer">
@@ -436,6 +457,24 @@
             <button class="btn btn-success" onclick="saveComplete()">
                 <i class="fas fa-check"></i> Tandai Selesai
             </button>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- Generic Confirmation Modal -->
+<div class="modal-backdrop" id="confirmationModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title" id="confirmTitle">Konfirmasi</h3>
+            <button class="modal-close" onclick="closeModal('confirmationModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p id="confirmMessage" class="mb-3"></p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('confirmationModal')">Batal</button>
+            <button class="btn btn-primary" id="confirmBtnAction">Ya, Lanjutkan</button>
         </div>
     </div>
 </div>
@@ -456,10 +495,61 @@
 </div>
 
 <style>
+    .step-actions {
+        position: relative;
+        z-index: 50;
+        pointer-events: auto !important;
+    }
+
+    .production-tasks {
+        pointer-events: auto !important;
+    }
+
     /* Modal Transition Fix */
     .modal-body {
         max-height: 80vh;
         overflow-y: auto;
+    }
+
+    /* Completed Toggle */
+    .completed-toggle {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        padding: 0.5rem 0.75rem;
+        background: var(--gray-100);
+        border-radius: var(--radius);
+        transition: all var(--transition);
+        user-select: none;
+    }
+
+    .completed-toggle:hover {
+        background: var(--gray-200);
+    }
+
+    .completed-toggle input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        accent-color: #10B981;
+        cursor: pointer;
+    }
+
+    .completed-toggle .toggle-label {
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: var(--gray-600);
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
+    .completed-toggle input[type="checkbox"]:checked+.toggle-label {
+        color: #10B981;
+    }
+
+    .completed-toggle .toggle-label i {
+        font-size: 0.75rem;
     }
 
     /* Status Legend */
@@ -1464,8 +1554,8 @@
     }
 
     /* ========================================
-       TIMELINE VIEW - ROBUST & MOBILE-FRIENDLY
-       ======================================== */
+TIMELINE VIEW - ROBUST & MOBILE-FRIENDLY
+======================================== */
 
     /* Main Timeline Container - Clear Section */
     .timeline-view-container {
@@ -1782,8 +1872,8 @@
     }
 
     /* ========================================
-       MOBILE RESPONSIVE STYLES
-       ======================================== */
+MOBILE RESPONSIVE STYLES
+======================================== */
     @media (max-width: 768px) {
         .timeline-view-container {
             border-radius: 12px;
@@ -1931,14 +2021,39 @@
         background: #10B981;
     }
 
-    .step-progress {
+    .step-completed .step-status-indicator {
+        background: #10B981;
+    }
+
+    .step-progress-wrapper {
+        margin: 0.5rem 0;
+        padding: 0 0.25rem;
+    }
+
+    /* Progress Bar Styles for Modal */
+    .progress-bar-container {
+        width: 100%;
+        height: 6px;
+        background-color: #e5e7eb;
+        border-radius: 9999px;
+        overflow: hidden;
+        margin-bottom: 0.25rem;
+    }
+
+    .progress-bar-fill {
+        height: 100%;
+        background-color: var(--primary);
+        transition: width 0.3s ease;
+    }
+
+    .status-badge.step-progress {
+        /* Conflict Fix */
         background: #DBEAFE;
-        /* Blue Light */
         color: #2563EB;
-        /* Blue Dark */
     }
 
     .step-progress .step-status-indicator {
+        /* Keep this for compatibility if needed */
         background: #3B82F6;
     }
 
@@ -1957,29 +2072,35 @@
         background: var(--gray-100);
         color: var(--gray-400);
     }
+
+    /* Progress Bar Styles for Modal */
+    .progress-bar-container {
+        width: 100%;
+        height: 8px;
+        background-color: #e5e7eb;
+        border-radius: 9999px;
+        overflow: hidden;
+        margin-bottom: 0.25rem;
+    }
+
+    .progress-bar-fill {
+        height: 100%;
+        background-color: var(--primary);
+        transition: width 0.3s ease;
+    }
+
+    /* New List View Progress */
+    .prod-progress-container {
+        width: 120px;
+    }
 </style>
 
 
 <!-- DATA ISLAND: JSON Data for Timeline (Safe from JS Auto-formatters) -->
-<script id="timeline-orders-data" type="application/json">
-[
-    {% for order in orders %}
-    {
-        "id": {{order.id}},
-        "order_code": "{{order.order_code}}",
-        "model": "{{order.model}}", 
-        "customer_name": "{{order.customer.name if order.customer else '-'}}",
-        "deadline": {% if order.deadline %}"{{order.deadline.strftime('%Y-%m-%d')}}"{% else %}null{% endif %},
-        "production_progress": {{order.get_production_progress()}},
-        "tasks_total": {{order.production_tasks.count()}},
-        "tasks_completed": {{order.production_tasks.filter_by(status='completed').count()}},
-        "qc_total": {{order.production_tasks.count()}},
-        "qc_submitted": 0
-    }{% if not loop.last %},{% endif %}
-    {% endfor %}
-]
-</script>
+<!-- Timeline Data Script Removed -->
+{% endblock %}
 
+{% block extra_js %}
 <script>
     let employeesData = [];
     let currentDetailOrderId = null; // Track currently open detail
@@ -2028,6 +2149,14 @@
         });
     }
 
+    function toggleCompleted() {
+        const checkbox = document.getElementById('showCompletedToggle');
+        if (checkbox.checked) {
+            window.location.href = '/production?show_completed=true';
+        } else {
+            window.location.href = '/production';
+        }
+    }
 
     async function loadEmployees() {
         try {
@@ -2078,6 +2207,29 @@
                 // Tag it so we know where to return it
                 content.setAttribute('data-original-id', orderId);
                 modalBody.appendChild(content);
+
+                // FORCE RE-BIND EVENTS (Fix for click issues in modal)
+                content.querySelectorAll('.btn-action').forEach(btn => {
+                    const step = btn.closest('.process-step');
+                    if (step && step.dataset.taskId) {
+                        const taskId = step.dataset.taskId;
+                        // Clone button to remove old listeners/attributes issues
+                        const newBtn = btn.cloneNode(true);
+
+                        if (btn.classList.contains('btn-primary')) { // Start
+                            newBtn.onclick = function (e) {
+                                e.preventDefault(); e.stopPropagation();
+                                if (window.startTask) window.startTask(taskId);
+                            };
+                        } else if (btn.classList.contains('btn-success')) { // Complete
+                            newBtn.onclick = function (e) {
+                                e.preventDefault(); e.stopPropagation();
+                                if (window.completeTask) window.completeTask(taskId);
+                            };
+                        }
+                        btn.parentNode.replaceChild(newBtn, btn);
+                    }
+                });
 
                 // Update Modal Title (Optional)
                 const titleEl = document.getElementById('detailModalTitle');
@@ -2140,17 +2292,43 @@
         }
     }
 
-    async function startTask(taskId) {
-        if (!confirm('Mulai produksi untuk task ini?')) return;
+    let confirmCallback = null;
 
-        try {
-            await api.post(`/production/tasks/${taskId}/start`);
-            showToast('Produksi dimulai!', 'success');
-            location.reload();
-        } catch (error) {
-            showToast(error.message || 'Gagal memulai task', 'error');
-        }
+    function showConfirmation(title, message, callback) {
+        document.getElementById('confirmTitle').textContent = title;
+        document.getElementById('confirmMessage').textContent = message;
+        confirmCallback = callback;
+        openModal('confirmationModal');
     }
+
+    document.getElementById('confirmBtnAction').addEventListener('click', function () {
+        if (confirmCallback) confirmCallback();
+        closeModal('confirmationModal');
+    });
+
+    async function startTask(taskId) {
+        if (typeof api === 'undefined') {
+            console.error('API not defined');
+            alert('System Error: API client not loaded. Please refresh the page.');
+            return;
+        }
+
+        showConfirmation(
+            'Mulai Produksi',
+            'Apakah Anda yakin ingin memulai produksi untuk task ini?',
+            async () => {
+                try {
+                    await api.post(`/production/tasks/${taskId}/start`);
+                    showToast('Produksi dimulai!', 'success');
+                    setTimeout(() => location.reload(), 500);
+                } catch (error) {
+                    console.error('Start Task Error:', error);
+                    showToast(error.message || 'Gagal memulai task', 'error');
+                }
+            }
+        );
+    }
+    window.startTask = startTask;
 
     function completeTask(taskId) {
         document.getElementById('completeTaskId').value = taskId;
@@ -2163,14 +2341,14 @@
                 document.getElementById('completeQty').value = target.trim();
             }
         }
-        document.getElementById('completeDefect').value = 0;
         openModal('completeModal');
     }
+    window.completeTask = completeTask;
 
     async function saveComplete() {
         const taskId = document.getElementById('completeTaskId').value;
         const qtyCompleted = parseInt(document.getElementById('completeQty').value) || 0;
-        const qtyDefect = parseInt(document.getElementById('completeDefect').value) || 0;
+        const qtyDefect = 0; // Disabled as per request
 
         try {
             await api.post(`/production/tasks/${taskId}/complete`, {
@@ -2179,7 +2357,7 @@
             });
             showToast('Task selesai!', 'success');
             closeModal('completeModal');
-            location.reload();
+            setTimeout(() => location.reload(), 500);
         } catch (error) {
             showToast(error.message || 'Gagal menyelesaikan task', 'error');
         }
