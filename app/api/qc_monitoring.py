@@ -217,7 +217,7 @@ def get_parameter_stats():
     })
 
 
-@api_bp.route('/qc/defects', methods=['GET'])
+@api_bp.route('/qc/defects-query', methods=['GET'])
 @login_required
 def list_monitoring_defects():
     """Get list of defects with filtering."""
@@ -246,6 +246,54 @@ def list_monitoring_defects():
     
     return jsonify({
         'defects': [d.to_dict() for d in defects]
+    })
+
+@api_bp.route('/qc/defects-stats', methods=['GET'])
+@login_required
+def get_defects_stats():
+    """Get defect statistics for summary cards."""
+    # Count by status
+    total = DefectLog.query.count()
+    open_count = DefectLog.query.filter(DefectLog.status == 'open').count()
+    in_progress = DefectLog.query.filter(DefectLog.status == 'in_progress').count()
+    resolved = DefectLog.query.filter(DefectLog.status == 'resolved').count()
+    closed = DefectLog.query.filter(DefectLog.status == 'closed').count()
+    
+    # Count by severity
+    critical = DefectLog.query.filter(DefectLog.severity == DefectSeverity.CRITICAL).count()
+    major = DefectLog.query.filter(DefectLog.severity == DefectSeverity.MAJOR).count()
+    
+    # Average resolution time (only for resolved/closed defects)
+    resolved_defects = DefectLog.query.filter(
+        DefectLog.status.in_(['resolved', 'closed']),
+        DefectLog.resolved_at != None
+    ).all()
+    
+    avg_resolution = '-'
+    if resolved_defects:
+        total_hours = 0
+        count = 0
+        for d in resolved_defects:
+            if d.created_at and d.resolved_at:
+                delta = d.resolved_at - d.created_at
+                total_hours += delta.total_seconds() / 3600
+                count += 1
+        if count > 0:
+            avg_hours = total_hours / count
+            if avg_hours < 24:
+                avg_resolution = f"{avg_hours:.1f}h"
+            else:
+                avg_resolution = f"{avg_hours/24:.1f}d"
+    
+    return jsonify({
+        'total': total,
+        'open': open_count,
+        'in_progress': in_progress,
+        'resolved': resolved,
+        'closed': closed,
+        'critical': critical,
+        'major': major,
+        'avg_resolution': avg_resolution
     })
 
 
@@ -281,8 +329,8 @@ def create_defect():
         qc_sheet_id=qc_sheet.id,
         defect_type=data['defect_type'],
         defect_category=data.get('defect_category'),
-        severity=data.get('severity', 'minor'),
-        qty_defect=data.get('qty_defect', 1),
+        severity=DefectSeverity(data.get('severity', 'minor')),
+        qty_defect=int(data.get('qty_defect', 1) or 1),
         description=data.get('description'),
         station=data.get('station'),
         process_stage=data.get('process_stage'),
@@ -304,11 +352,16 @@ def create_defect():
     }), 201
 
 
-@api_bp.route('/qc/defects/<int:defect_id>', methods=['PUT'])
+@api_bp.route('/qc/defects/<int:defect_id>', methods=['GET', 'PUT'])
 @login_required
-def update_defect(defect_id):
-    """Update defect (Action Taken, Verification, etc)."""
+def handle_defect_detail(defect_id):
+    """Get or update single defect detail."""
     defect = DefectLog.query.get_or_404(defect_id)
+    
+    if request.method == 'GET':
+        return jsonify(defect.to_dict())
+        
+    # PUT: Update defect
     data = request.get_json()
     
     if 'action_taken' in data:
@@ -316,7 +369,10 @@ def update_defect(defect_id):
     if 'responsible_department' in data:
         defect.responsible_department = data['responsible_department']
     if 'target_resolution_date' in data and data['target_resolution_date']:
-        defect.target_resolution_date = datetime.strptime(data['target_resolution_date'], '%Y-%m-%d').date()
+        try:
+            defect.target_resolution_date = datetime.strptime(data['target_resolution_date'], '%Y-%m-%d').date()
+        except ValueError:
+            pass
     
     if 'verification_result' in data:
         defect.verification_result = data['verification_result']
@@ -326,12 +382,26 @@ def update_defect(defect_id):
     if 'status' in data:
         old_status = defect.status
         new_status = data['status']
-        defect.status = new_status  # Use string directly
+        defect.status = new_status
         
-        # If resolving/closing
         if new_status in ['resolved', 'closed'] and old_status not in ['resolved', 'closed']:
-            defect.resolved_at = datetime.utcnow()
+            if data.get('resolved_at_custom'):
+                try:
+                    defect.resolved_at = datetime.strptime(data['resolved_at_custom'], '%Y-%m-%d')
+                except ValueError:
+                    defect.resolved_at = datetime.utcnow()
+            else:
+                defect.resolved_at = datetime.utcnow()
             defect.resolved_by = current_user.id
+        elif new_status not in ['resolved', 'closed']:
+            defect.resolved_at = None
+            defect.resolved_by = None
+        elif data.get('resolved_at_custom'):
+            # Allow manual update of date even if already resolved
+            try:
+                defect.resolved_at = datetime.strptime(data['resolved_at_custom'], '%Y-%m-%d')
+            except ValueError:
+                pass
             
     db.session.commit()
     return jsonify({
@@ -356,13 +426,32 @@ def get_checklist_analysis():
     return jsonify(result)
 
 
+def parse_date_params():
+    """Helper to parse start_date and end_date from request args."""
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+    days = int(request.args.get('days', 30))
+    
+    if start_date_str and end_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+            end_date = end_date.replace(hour=23, minute=59, second=59)
+            return start_date, end_date
+        except ValueError:
+            pass
+    
+    # Fallback to days calculation
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=days)
+    return start_date, end_date
+
+
 @api_bp.route('/qc/dashboard/quality-score', methods=['GET'])
 @login_required
 def get_quality_score():
     """Get overall quality score with FPY calculation."""
-    days = int(request.args.get('days', 30))
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=days)
+    start_date, end_date = parse_date_params()
     
     score_data = QCAnalyticsService.calculate_quality_score(start_date, end_date)
     fpy_data = QCAnalyticsService.calculate_fpy(start_date, end_date)
@@ -376,7 +465,8 @@ def get_quality_score():
         'total_inspected': fpy_data['total_inspected'],
         'total_passed': fpy_data['total_passed'],
         'total_failed': fpy_data['total_failed'],
-        'period_days': days
+        'period_start': start_date.isoformat(),
+        'period_end': end_date.isoformat()
     })
 
 
@@ -384,7 +474,8 @@ def get_quality_score():
 @login_required
 def get_process_comparison():
     """Compare quality metrics across process stages."""
-    days = int(request.args.get('days', 30))
+    start_date, end_date = parse_date_params()
+    days = (end_date - start_date).days
     result = QCAnalyticsService.get_process_comparison(days)
     return jsonify(result)
 
@@ -402,7 +493,8 @@ def get_summary_report():
 @login_required
 def get_parameter_trends():
     """Get parameter failure trends over time."""
-    days = int(request.args.get('days', 30))
+    start_date, end_date = parse_date_params()
+    days = (end_date - start_date).days
     result = QCAnalyticsService.get_parameter_trends(days)
     return jsonify(result)
 
@@ -411,7 +503,8 @@ def get_parameter_trends():
 @login_required
 def get_defect_pareto():
     """Get Pareto analysis data for defect types."""
-    days = int(request.args.get('days', 30))
+    start_date, end_date = parse_date_params()
+    days = (end_date - start_date).days
     result = QCAnalyticsService.get_defect_pareto(days)
     return jsonify(result)
 
@@ -434,7 +527,8 @@ def export_qc_csv():
     import csv
     import io
     
-    days = int(request.args.get('days', 30))
+    start_date, end_date = parse_date_params()
+    days = (end_date - start_date).days
     report = QCAnalyticsService.generate_summary_report('week' if days <= 7 else 'month')
     
     # Create CSV

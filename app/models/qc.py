@@ -219,11 +219,13 @@ class DefectLog(db.Model):
             'reported_by_name': self.reporter.name if self.reporter else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'resolved_at': self.resolved_at.isoformat() if self.resolved_at else None,
-            # Context info from parent QC Sheet
-            'order_code': self.qc_sheet.order.order_code if self.qc_sheet and self.qc_sheet.order else None,
-            'product_name': (self.qc_sheet.order.model if self.qc_sheet.order else 
-                           (self.qc_sheet.production_task.order.model if self.qc_sheet.production_task and self.qc_sheet.production_task.order else None))
-            if self.qc_sheet else None
+            'order_code': self.qc_sheet.order.order_code if self.qc_sheet and self.qc_sheet.order else 
+                         (self.qc_sheet.production_task.order.order_code if self.qc_sheet and self.qc_sheet.production_task else None),
+            'product_name': self.qc_sheet.order.model if self.qc_sheet and self.qc_sheet.order else 
+                           (self.qc_sheet.production_task.order.model if self.qc_sheet and self.qc_sheet.production_task else None),
+            'customer_name': self.qc_sheet.order.customer.name if self.qc_sheet and self.qc_sheet.order and self.qc_sheet.order.customer else 
+                            (self.qc_sheet.production_task.order.customer.name if self.qc_sheet and self.qc_sheet.production_task and self.qc_sheet.production_task.order.customer else None),
+            'production_task_id': self.qc_sheet.production_task_id if self.qc_sheet else None
         }
     
     def __repr__(self):

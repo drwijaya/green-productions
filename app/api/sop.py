@@ -116,23 +116,38 @@ def update_sop_document(sop_id):
 @login_required
 @require_roles(UserRole.ADMIN, UserRole.OWNER, UserRole.ADMIN_PRODUKSI)
 def upload_sop_file(sop_id):
-    """Upload SOP file."""
+    """Upload SOP file to Google Drive."""
+    from ..services.google_drive_service import upload_to_drive
+    
     sop = SOPDocument.query.get_or_404(sop_id)
     
     if 'file' not in request.files:
         return api_response(message='No file provided', status=400)
     
     file = request.files['file']
-    result = upload_file(file, 'sop')
+    if not file.filename:
+        return api_response(message='No file selected', status=400)
+    
+    # Generate filename with SOP code
+    file_ext = file.filename.rsplit('.', 1)[-1].lower()
+    safe_filename = f"{sop.document_code}_{sop.title[:30].replace(' ', '_')}.{file_ext}"
+    
+    # Upload to Google Drive
+    result = upload_to_drive(
+        file_stream=file.stream,
+        filename=safe_filename,
+        mimetype=file.content_type or 'application/pdf'
+    )
     
     if not result['success']:
         return api_response(message=f"Upload failed: {result.get('error', 'Unknown error')}", status=500)
     
-    sop.file_url = result['url']
-    sop.file_type = file.filename.rsplit('.', 1)[-1].lower()
+    # Store the preview URL for embedding
+    sop.file_url = result.get('preview_url') or result.get('url')
+    sop.file_type = file_ext
     db.session.commit()
     
-    return api_response(data=sop.to_dict(), message='File uploaded')
+    return api_response(data=sop.to_dict(), message='File uploaded to Google Drive')
 
 
 @api_bp.route('/sop/<int:sop_id>/acknowledge', methods=['POST'])

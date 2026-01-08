@@ -170,27 +170,56 @@
         align-items: center;
         margin-bottom: 1.5rem;
         background: white;
-        padding: 1rem;
+        padding: 1.25rem;
         border-radius: var(--card-radius);
-        box-shadow: var(--shadow-sm);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        border: 1px solid var(--gray-100);
     }
 
     .search-box {
         position: relative;
-        width: 300px;
+        width: 380px;
     }
 
     .search-box i {
         position: absolute;
-        left: 1rem;
+        left: 1.15rem;
         top: 50%;
         transform: translateY(-50%);
         color: var(--gray-400);
+        font-size: 0.95rem;
+        pointer-events: none;
+        transition: color 0.3s ease;
+        z-index: 1;
     }
 
     .search-box input {
-        padding-left: 2.5rem;
-        border-radius: 50px;
+        height: 44px;
+        padding-left: 3rem;
+        padding-right: 1.25rem;
+        border-radius: 12px;
+        border: 1.5px solid #e5e7eb;
+        background-color: #f9fafb;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #374151;
+        transition: all 0.3s ease;
+        box-shadow: none !important;
+    }
+
+    .search-box input:focus {
+        background-color: #ffffff;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1) !important;
+    }
+
+    .search-box input:focus~i {
+        color: var(--primary);
+    }
+
+    .search-box input::placeholder {
+        color: #9ca3af;
+        font-weight: 400;
     }
 
     .status-badge {
@@ -329,6 +358,505 @@
             justify-content: center;
         }
     }
+
+    /* ============================================
+       Status Filter Tabs
+       ============================================ */
+    .defect-status-tabs {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        padding: 0.5rem;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+
+    .status-tab {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.25rem;
+        border: none;
+        background: transparent;
+        border-radius: 8px;
+        font-weight: 500;
+        color: var(--gray-600);
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .status-tab:hover {
+        background: var(--gray-100);
+        color: var(--gray-800);
+    }
+
+    .status-tab.active {
+        background: var(--primary);
+        color: white;
+        box-shadow: 0 2px 8px rgba(22, 163, 74, 0.3);
+    }
+
+    .status-tab i {
+        font-size: 0.9rem;
+    }
+
+    .tab-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 22px;
+        height: 22px;
+        padding: 0 6px;
+        border-radius: 11px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        background: var(--gray-200);
+        color: var(--gray-600);
+    }
+
+    .status-tab.active .tab-count {
+        background: rgba(255, 255, 255, 0.25);
+        color: white;
+    }
+
+    .tab-count-danger {
+        background: #FEE2E2;
+        color: #DC2626;
+    }
+
+    .tab-count-warning {
+        background: #FEF3C7;
+        color: #D97706;
+    }
+
+    .tab-count-success {
+        background: #D1FAE5;
+        color: #059669;
+    }
+
+    .tab-count-secondary {
+        background: #E5E7EB;
+        color: #6B7280;
+    }
+
+    /* ============================================
+       Summary Statistics Cards
+       ============================================ */
+    .summary-card {
+        display: flex;
+        align-items: center;
+        gap: 0.875rem;
+        padding: 0.875rem 1.25rem;
+        border-radius: 12px;
+        background: white;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        transition: all 0.2s ease;
+        border: 1px solid #f1f5f9;
+        height: 100%;
+    }
+
+    .summary-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        border-color: #e2e8f0;
+    }
+
+    .summary-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        flex-shrink: 0;
+    }
+
+    .summary-content {
+        display: flex;
+        align-items: baseline;
+        gap: 0.5rem;
+    }
+
+    .summary-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        line-height: 1;
+        color: #1e293b;
+    }
+
+    .summary-label {
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: #64748b;
+        white-space: nowrap;
+    }
+
+    /* Card Variants */
+    .summary-card-total .summary-icon {
+        background: #E0F2FE;
+        color: #0284C7;
+    }
+
+    .summary-card-total .summary-value {
+        color: #0284C7;
+    }
+
+    .summary-card-open .summary-icon {
+        background: #FEE2E2;
+        color: #DC2626;
+    }
+
+    .summary-card-open .summary-value {
+        color: #DC2626;
+    }
+
+    .summary-card-time .summary-icon {
+        background: #F3E8FF;
+        color: #9333EA;
+    }
+
+    .summary-card-time .summary-value {
+        color: #9333EA;
+    }
+
+    .summary-card-critical .summary-icon {
+        background: #FEF3C7;
+        color: #D97706;
+    }
+
+    .summary-card-critical .summary-value {
+        color: #D97706;
+    }
+
+    /* Quick Action Button in Table */
+    .btn-quick-resolve {
+        padding: 0.35rem 0.75rem;
+        font-size: 0.75rem;
+        border-radius: 50px;
+        background: #D1FAE5;
+        color: #059669;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-quick-resolve:hover {
+        background: #059669;
+        color: white;
+    }
+
+    @media (max-width: 768px) {
+        .defect-status-tabs {
+            flex-direction: column;
+        }
+
+        .summary-card {
+            margin-bottom: 0.5rem;
+        }
+    }
+
+    /* ============================================
+       Date Range Picker
+       ============================================ */
+    .date-range-picker {
+        padding: 1rem;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        border: 1px solid var(--gray-200);
+    }
+
+    .preset-buttons {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    /* Preset Button Enhancements */
+    .preset-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--gray-200);
+        background: white;
+        border-radius: 10px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: var(--gray-600);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        min-width: 85px;
+    }
+
+    .preset-btn .preset-name {
+        font-weight: 600;
+        font-size: 0.8rem;
+    }
+
+    .preset-btn .preset-date {
+        font-size: 0.7rem;
+        color: var(--gray-400);
+        margin-top: 2px;
+    }
+
+    .preset-btn.active .preset-date {
+        color: rgba(255, 255, 255, 0.8);
+    }
+
+    .preset-btn-calendar {
+        flex-direction: row;
+        gap: 0.5rem;
+    }
+
+    .preset-btn-calendar i {
+        font-size: 1rem;
+    }
+
+    /* ============================================
+       Calendar Picker Modal
+       ============================================ */
+    .calendar-picker-backdrop {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1050;
+        justify-content: center;
+        align-items: center;
+        animation: fadeIn 0.2s ease;
+    }
+
+    .calendar-picker-backdrop.show {
+        display: flex;
+    }
+
+    .calendar-picker-modal {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+        max-width: 700px;
+        width: 95%;
+        animation: slideUp 0.3s ease;
+    }
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .calendar-picker-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .calendar-picker-header h6 {
+        margin: 0;
+        font-weight: 600;
+        color: var(--gray-800);
+    }
+
+    .btn-close-calendar {
+        background: transparent;
+        border: none;
+        font-size: 1.25rem;
+        color: var(--gray-400);
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+
+    .btn-close-calendar:hover {
+        color: var(--gray-600);
+    }
+
+    .calendar-picker-body {
+        padding: 1.5rem;
+    }
+
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+    }
+
+    .calendar-month {
+        min-width: 280px;
+    }
+
+    .calendar-nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .calendar-nav button {
+        background: transparent;
+        border: none;
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        color: var(--gray-600);
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .calendar-nav button:hover {
+        background: var(--gray-100);
+        color: var(--primary);
+    }
+
+    .calendar-month-label {
+        font-weight: 600;
+        font-size: 1rem;
+        color: var(--gray-800);
+    }
+
+    .calendar-weekdays {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 2px;
+        margin-bottom: 0.5rem;
+    }
+
+    .calendar-weekdays span {
+        text-align: center;
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: var(--gray-400);
+        padding: 0.5rem 0;
+    }
+
+    .calendar-days {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 2px;
+    }
+
+    .calendar-day {
+        aspect-ratio: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.85rem;
+        color: var(--gray-700);
+        cursor: pointer;
+        border-radius: 8px;
+        transition: all 0.15s ease;
+        position: relative;
+    }
+
+    .calendar-day:hover:not(.empty):not(.disabled) {
+        background: #DCFCE7;
+        color: #16A34A;
+    }
+
+    .calendar-day.empty {
+        cursor: default;
+    }
+
+    .calendar-day.disabled {
+        color: var(--gray-300);
+        cursor: not-allowed;
+    }
+
+    .calendar-day.in-range {
+        background: #F0FDF4;
+        border-radius: 0;
+    }
+
+    .calendar-day.start-date,
+    .calendar-day.end-date {
+        background: var(--primary);
+        color: white;
+        font-weight: 600;
+    }
+
+    .calendar-day.start-date {
+        border-radius: 8px 0 0 8px;
+    }
+
+    .calendar-day.end-date {
+        border-radius: 0 8px 8px 0;
+    }
+
+    .calendar-day.start-date.end-date {
+        border-radius: 8px;
+    }
+
+    .calendar-day.today {
+        font-weight: 700;
+        color: var(--primary);
+    }
+
+    .calendar-day.today::after {
+        content: '';
+        position: absolute;
+        bottom: 4px;
+        width: 4px;
+        height: 4px;
+        background: var(--primary);
+        border-radius: 50%;
+    }
+
+    .calendar-picker-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.5rem;
+        border-top: 1px solid var(--gray-200);
+        background: var(--gray-50);
+        border-radius: 0 0 16px 16px;
+    }
+
+    .selected-range {
+        font-size: 0.9rem;
+        color: var(--gray-600);
+    }
+
+    .selected-range strong {
+        color: var(--primary);
+    }
+
+    .calendar-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    @media (max-width: 768px) {
+        .calendar-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        .calendar-month {
+            min-width: auto;
+        }
+
+        .preset-buttons {
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .preset-btn {
+            min-width: 70px;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -357,19 +885,103 @@
 
 <!-- ADVANCED ANALYTICS TAB -->
 <div id="tab-analytics" class="tab-content active">
-    <!-- Header with Export Buttons -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h4 class="mb-1"><i class="fas fa-brain text-primary me-2"></i>Advanced Quality Analytics</h4>
-            <p class="text-muted mb-0">Deep insights dari data QC Checklist parameters</p>
+    <!-- Header with Date Range Picker and Export Buttons -->
+    <div class="analytics-header mb-4">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+            <div>
+                <h4 class="mb-1"><i class="fas fa-brain text-primary me-2"></i>Advanced Quality Analytics</h4>
+                <p class="text-muted mb-0">Deep insights dari data QC Checklist parameters</p>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-success" onclick="exportCSV()">
+                    <i class="fas fa-file-csv me-1"></i> Export CSV
+                </button>
+                <button class="btn btn-outline-primary" onclick="window.print()">
+                    <i class="fas fa-print me-1"></i> Print Report
+                </button>
+            </div>
         </div>
-        <div class="d-flex gap-2">
-            <button class="btn btn-outline-success" onclick="exportCSV()">
-                <i class="fas fa-file-csv me-1"></i> Export CSV
-            </button>
-            <button class="btn btn-outline-primary" onclick="window.print()">
-                <i class="fas fa-print me-1"></i> Print Report
-            </button>
+
+        <!-- Date Range Picker -->
+        <div class="date-range-picker mt-3">
+            <div class="d-flex flex-wrap align-items-center gap-3">
+                <!-- Preset Buttons with Date Labels -->
+                <div class="preset-buttons">
+                    <button class="preset-btn" onclick="setDatePreset('today', this)">
+                        <span class="preset-name">Hari Ini</span>
+                        <span class="preset-date" id="presetDateToday"></span>
+                    </button>
+                    <button class="preset-btn active" onclick="setDatePreset('week', this)">
+                        <span class="preset-name">7 Hari</span>
+                        <span class="preset-date" id="presetDateWeek"></span>
+                    </button>
+                    <button class="preset-btn" onclick="setDatePreset('month', this)">
+                        <span class="preset-name">30 Hari</span>
+                        <span class="preset-date" id="presetDateMonth"></span>
+                    </button>
+                    <button class="preset-btn" onclick="setDatePreset('quarter', this)">
+                        <span class="preset-name">90 Hari</span>
+                        <span class="preset-date" id="presetDateQuarter"></span>
+                    </button>
+                    <button class="preset-btn preset-btn-calendar" onclick="openCalendarPicker()">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>Pilih Tanggal</span>
+                    </button>
+                </div>
+
+                <!-- Current Period Label -->
+                <div class="period-label">
+                    <i class="fas fa-clock text-primary me-1"></i>
+                    <span id="periodLabel">7 Hari Terakhir</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Calendar Picker Modal -->
+        <div class="calendar-picker-backdrop" id="calendarPickerBackdrop" onclick="closeCalendarPicker()">
+            <div class="calendar-picker-modal" onclick="event.stopPropagation()">
+                <div class="calendar-picker-header">
+                    <h6><i class="fas fa-calendar-week me-2"></i>Pilih Rentang Tanggal</h6>
+                    <button class="btn-close-calendar" onclick="closeCalendarPicker()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="calendar-picker-body">
+                    <div class="calendar-grid">
+                        <!-- Left Calendar -->
+                        <div class="calendar-month" id="calendarLeft">
+                            <div class="calendar-nav">
+                                <button onclick="navigateCalendar(-1)"><i class="fas fa-chevron-left"></i></button>
+                                <span class="calendar-month-label" id="leftMonthLabel">November 2024</span>
+                            </div>
+                            <div class="calendar-weekdays">
+                                <span>MIN</span><span>SEN</span><span>SEL</span><span>RAB</span><span>KAM</span><span>JUM</span><span>SAB</span>
+                            </div>
+                            <div class="calendar-days" id="leftCalendarDays"></div>
+                        </div>
+                        <!-- Right Calendar -->
+                        <div class="calendar-month" id="calendarRight">
+                            <div class="calendar-nav">
+                                <span class="calendar-month-label" id="rightMonthLabel">December 2024</span>
+                                <button onclick="navigateCalendar(1)"><i class="fas fa-chevron-right"></i></button>
+                            </div>
+                            <div class="calendar-weekdays">
+                                <span>MIN</span><span>SEN</span><span>SEL</span><span>RAB</span><span>KAM</span><span>JUM</span><span>SAB</span>
+                            </div>
+                            <div class="calendar-days" id="rightCalendarDays"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="calendar-picker-footer">
+                    <div class="selected-range">
+                        <span id="selectedRangeLabel">Belum ada tanggal dipilih</span>
+                    </div>
+                    <div class="calendar-actions">
+                        <button class="btn btn-outline-secondary btn-sm" onclick="closeCalendarPicker()">Batal</button>
+                        <button class="btn btn-primary btn-sm" onclick="applyCalendarRange()">Terapkan</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -542,20 +1154,84 @@
 
 <!-- INPUT & DATA TAB -->
 <div id="tab-input" class="tab-content">
+    <!-- Status Tabs -->
+    <div class="defect-status-tabs mb-4">
+        <button class="status-tab" data-status="" onclick="setStatusFilter(this, '')">
+            <i class="fas fa-list-ul"></i>
+            <span>Semua</span>
+            <span class="tab-count" id="countAll">0</span>
+        </button>
+        <button class="status-tab active" data-status="open" onclick="setStatusFilter(this, 'open')">
+            <i class="fas fa-exclamation-circle"></i>
+            <span>Open</span>
+            <span class="tab-count tab-count-danger" id="countOpen">0</span>
+        </button>
+        <button class="status-tab" data-status="in_progress" onclick="setStatusFilter(this, 'in_progress')">
+            <i class="fas fa-spinner"></i>
+            <span>In Progress</span>
+            <span class="tab-count tab-count-warning" id="countInProgress">0</span>
+        </button>
+        <button class="status-tab" data-status="resolved" onclick="setStatusFilter(this, 'resolved')">
+            <i class="fas fa-check-circle"></i>
+            <span>Resolved</span>
+            <span class="tab-count tab-count-success" id="countResolved">0</span>
+        </button>
+        <button class="status-tab" data-status="closed" onclick="setStatusFilter(this, 'closed')">
+            <i class="fas fa-archive"></i>
+            <span>Closed</span>
+            <span class="tab-count tab-count-secondary" id="countClosed">0</span>
+        </button>
+    </div>
+
+    <!-- Summary Statistics Cards -->
+    <div class="row mb-4" id="defectSummaryCards">
+        <div class="col-md-3">
+            <div class="summary-card summary-card-total">
+                <div class="summary-icon"><i class="fas fa-clipboard-list"></i></div>
+                <div class="summary-content">
+                    <div class="summary-value" id="statTotalDefects">0</div>
+                    <div class="summary-label">Total Defects</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="summary-card summary-card-open">
+                <div class="summary-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                <div class="summary-content">
+                    <div class="summary-value" id="statOpenIssues">0</div>
+                    <div class="summary-label">Open Issues</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="summary-card summary-card-time">
+                <div class="summary-icon"><i class="fas fa-clock"></i></div>
+                <div class="summary-content">
+                    <div class="summary-value" id="statAvgResolution">-</div>
+                    <div class="summary-label">Avg. Resolution</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="summary-card summary-card-critical">
+                <div class="summary-icon"><i class="fas fa-fire"></i></div>
+                <div class="summary-content">
+                    <div class="summary-value" id="statCriticalMajor">0</div>
+                    <div class="summary-label">Critical + Major</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table Controls -->
     <div class="table-controls">
         <div class="d-flex gap-3 align-items-center flex-grow-1">
             <div class="search-box">
-                <i class="fas fa-search"></i>
                 <input type="text" class="form-control" id="tableSearch"
                     placeholder="Cari No. Order, Produk, atau Defect..." onkeyup="debounce(loadDefects, 500)()">
+                <i class="fas fa-search"></i>
             </div>
-            <select class="form-select w-auto" id="statusFilter" onchange="loadDefects()">
-                <option value="">Semua Status</option>
-                <option value="open">Open - Butuh Perbaikan</option>
-                <option value="in_progress">Processing - Sedang Dikerjakan</option>
-                <option value="resolved">Resolved - Selesai</option>
-                <option value="closed">Closed - Verifikasi OK</option>
-            </select>
+            <input type="hidden" id="statusFilter" value="open">
             <select class="form-select w-auto" id="stageFilter" onchange="loadDefects()">
                 <option value="">Semua Tahapan</option>
                 <option value="Cutting">Cutting</option>
@@ -595,212 +1271,233 @@
 </div>
 
 
-<!-- MODAL FORM INPUT -->
+
+<!-- MODAL FORM INPUT - Modern Green Theme -->
 <div class="modal-backdrop" id="defectModal">
-    <div class="modal modal-xl fade-in-up">
-        <!-- Clean Header -->
-        <div class="modal-header bg-white border-bottom">
-            <div class="d-flex align-items-center gap-3">
-                <div class="icon-wrapper">
+    <div class="modal ncr-modal">
+        <!-- Modern Header -->
+        <div class="ncr-modal-header">
+            <div class="ncr-header-content">
+                <div class="ncr-header-icon">
                     <i class="fas fa-clipboard-check"></i>
                 </div>
-                <div>
-                    <h4 class="mb-0 fw-bold">Laporan Ketidaksesuaian Produk (NCR)</h4>
-                    <p class="text-muted mb-0" style="font-size: 0.875rem;">Formulir pencatatan temuan cacat produksi
-                        dan tindak lanjut</p>
+                <div class="ncr-header-text">
+                    <h4>Laporan Ketidaksesuaian Produk (NCR)</h4>
+                    <p>Formulir pencatatan temuan cacat produksi dan tindak lanjut</p>
                 </div>
             </div>
-            <button class="btn-close" onclick="closeModal('defectModal')"></button>
+            <button class="ncr-close-btn" onclick="closeModal('defectModal')">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
 
-        <div class="modal-body p-0" style="max-height: 75vh; overflow-y: auto;">
-            <input type="hidden" id="defectId">
+        <!-- Form Body -->
+        <div class="ncr-modal-body">
+            <input type="hidden" id="defectId" value="">
 
-            <div class="row g-0">
-                <!-- LEFT COLUMN: Product Context -->
-                <div class="col-lg-4 border-end" style="background: #F9FAFB;">
-                    <div class="p-4">
-                        <!-- Section Header -->
-                        <div class="section-label mb-4">
-                            <i class="fas fa-box-open me-2"></i>
-                            <span>Konteks Produksi</span>
+            <div class="ncr-layout">
+                <!-- LEFT SIDEBAR: Product Context -->
+                <div class="ncr-sidebar">
+                    <!-- Section Label -->
+                    <div class="ncr-section-label">
+                        <i class="fas fa-box-open"></i>
+                        <span>Konteks Produksi</span>
+                    </div>
+
+                    <!-- Order Selection -->
+                    <div class="ncr-form-group">
+                        <label class="ncr-label required">Sumber Order / Task</label>
+                        <select class="ncr-select" id="taskSelect"></select>
+                        <span class="ncr-helper-text">
+                            <i class="fas fa-info-circle"></i>
+                            Pilih SPK/Order yang sedang berjalan
+                        </span>
+                    </div>
+
+                    <!-- Product Info Display -->
+                    <div class="ncr-info-card">
+                        <div class="ncr-info-row">
+                            <span class="ncr-info-label">Customer</span>
+                            <input type="text" class="ncr-info-value" id="customerName" readonly placeholder="—">
                         </div>
-
-                        <!-- Order Selection -->
-                        <div class="mb-4">
-                            <label class="form-label required">Sumber Order / Task</label>
-                            <select class="form-select" id="taskSelect" style="width: 100%;"
-                                onchange="autoFillProductInfo()"></select>
-                            <small class="form-text text-muted">
-                                <i class="fas fa-info-circle me-1"></i>Pilih SPK/Order yang sedang berjalan
-                            </small>
+                        <div class="ncr-info-row">
+                            <span class="ncr-info-label">No. Order</span>
+                            <input type="text" class="ncr-info-value" id="orderCode" readonly placeholder="—">
                         </div>
-
-                        <!-- Product Info Card -->
-                        <div class="info-card mb-4">
-                            <div class="info-item">
-                                <label>Customer</label>
-                                <input type="text" class="info-value" id="customerName" readonly placeholder="-">
-                            </div>
-                            <div class="info-item">
-                                <label>No. Order</label>
-                                <input type="text" class="info-value" id="orderCode" readonly placeholder="-">
-                            </div>
-                            <div class="info-item mb-0">
-                                <label>Produk</label>
-                                <input type="text" class="info-value" id="productName" readonly placeholder="-">
-                            </div>
+                        <div class="ncr-info-row no-border">
+                            <span class="ncr-info-label">Produk</span>
+                            <input type="text" class="ncr-info-value" id="productName" readonly placeholder="—">
                         </div>
+                    </div>
 
-                        <!-- Process Stage Selection -->
-                        <div class="mb-3">
-                            <label class="form-label required">Tahapan Proses (Stage)</label>
-                            <div class="d-flex flex-column gap-2">
-                                <label class="stage-option">
-                                    <input type="radio" name="processStage" value="Cutting">
-                                    <div class="stage-content">
-                                        <div class="stage-title">Cutting</div>
-                                        <div class="stage-desc">Pemotongan kain</div>
-                                    </div>
-                                </label>
-                                <label class="stage-option">
-                                    <input type="radio" name="processStage" value="Sewing">
-                                    <div class="stage-content">
-                                        <div class="stage-title">Sewing</div>
-                                        <div class="stage-desc">Penjahitan & Perakitan</div>
-                                    </div>
-                                </label>
-                                <label class="stage-option">
-                                    <input type="radio" name="processStage" value="Sablon">
-                                    <div class="stage-content">
-                                        <div class="stage-title">Sablon / Bordir</div>
-                                        <div class="stage-desc">Aplikasi grafis</div>
-                                    </div>
-                                </label>
-                                <label class="stage-option">
-                                    <input type="radio" name="processStage" value="Finishing">
-                                    <div class="stage-content">
-                                        <div class="stage-title">Finishing</div>
-                                        <div class="stage-desc">Buang benang, setrika, packing</div>
-                                    </div>
-                                </label>
-                                <label class="stage-option">
-                                    <input type="radio" name="processStage" value="QC Akhir">
-                                    <div class="stage-content">
-                                        <div class="stage-title">QC Akhir</div>
-                                        <div class="stage-desc">Pemeriksaan final sebelum kirim</div>
-                                    </div>
-                                </label>
-                            </div>
+                    <!-- Process Stage Selection -->
+                    <div class="ncr-form-group">
+                        <label class="ncr-label required">Tahapan Proses (Stage)</label>
+                        <div class="ncr-stage-list">
+                            <label class="ncr-stage-item">
+                                <input type="radio" name="processStage" value="Cutting">
+                                <div class="ncr-stage-content">
+                                    <span class="ncr-stage-name">Cutting</span>
+                                    <span class="ncr-stage-desc">Pemotongan kain</span>
+                                </div>
+                                <div class="ncr-stage-check"><i class="fas fa-check"></i></div>
+                            </label>
+                            <label class="ncr-stage-item">
+                                <input type="radio" name="processStage" value="Sewing">
+                                <div class="ncr-stage-content">
+                                    <span class="ncr-stage-name">Sewing</span>
+                                    <span class="ncr-stage-desc">Penjahitan & Perakitan</span>
+                                </div>
+                                <div class="ncr-stage-check"><i class="fas fa-check"></i></div>
+                            </label>
+                            <label class="ncr-stage-item">
+                                <input type="radio" name="processStage" value="Sablon">
+                                <div class="ncr-stage-content">
+                                    <span class="ncr-stage-name">Sablon / Bordir</span>
+                                    <span class="ncr-stage-desc">Aplikasi grafis</span>
+                                </div>
+                                <div class="ncr-stage-check"><i class="fas fa-check"></i></div>
+                            </label>
+                            <label class="ncr-stage-item">
+                                <input type="radio" name="processStage" value="Finishing">
+                                <div class="ncr-stage-content">
+                                    <span class="ncr-stage-name">Finishing</span>
+                                    <span class="ncr-stage-desc">Buang benang, setrika, packing</span>
+                                </div>
+                                <div class="ncr-stage-check"><i class="fas fa-check"></i></div>
+                            </label>
+                            <label class="ncr-stage-item">
+                                <input type="radio" name="processStage" value="QC Akhir">
+                                <div class="ncr-stage-content">
+                                    <span class="ncr-stage-name">QC Akhir</span>
+                                    <span class="ncr-stage-desc">Pemeriksaan final sebelum kirim</span>
+                                </div>
+                                <div class="ncr-stage-check"><i class="fas fa-check"></i></div>
+                            </label>
                         </div>
                     </div>
                 </div>
 
-                <!-- RIGHT COLUMN: Form Inputs -->
-                <div class="col-lg-8 bg-white">
-                    <div class="p-4">
-                        <!-- Section 1: Detail Temuan -->
-                        <div class="form-section mb-4">
-                            <div class="section-header">
-                                <span class="section-number">1</span>
+                <!-- RIGHT MAIN CONTENT -->
+                <div class="ncr-main">
+                    <!-- Section 1: Detail Temuan -->
+                    <div class="ncr-form-section">
+                        <div class="ncr-section-header">
+                            <div class="ncr-step-number">1</div>
+                            <div class="ncr-step-info">
                                 <h6>Detail Temuan Defect</h6>
-                            </div>
-
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label required">Tanggal Temuan</label>
-                                    <input type="date" class="form-control" id="findingDate">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Lokasi / Line / Stasiun</label>
-                                    <input type="text" class="form-control" id="station"
-                                        placeholder="Ex: Line Sewing 2, Meja 4">
-                                </div>
-                                <div class="col-md-8">
-                                    <label class="form-label required">Jenis Defect</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text bg-white">
-                                            <i class="fas fa-exclamation-triangle text-warning"></i>
-                                        </span>
-                                        <input type="text" class="form-control" id="defectType"
-                                            placeholder="Contoh: Jahitan Loncat, Bolong, Noda Oli...">
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label required">Jumlah (Qty)</label>
-                                    <input type="number" class="form-control text-center fw-bold" id="defectQty"
-                                        value="1" min="1">
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">Keterangan Tambahan</label>
-                                    <textarea class="form-control" id="defectDescription" rows="2"
-                                        placeholder="Deskripsikan posisi defect atau detail visual lainnya..."></textarea>
-                                </div>
+                                <p>Informasi dasar mengenai temuan cacat</p>
                             </div>
                         </div>
 
-                        <!-- Section 2: Penanganan -->
-                        <div class="form-section mb-4">
-                            <div class="section-header">
-                                <span class="section-number">2</span>
+                        <div class="ncr-fields-grid">
+                            <div class="ncr-field half">
+                                <label class="ncr-label required">Tanggal Temuan</label>
+                                <input type="date" class="ncr-input" id="findingDate">
+                            </div>
+                            <div class="ncr-field half">
+                                <label class="ncr-label">Lokasi / Line / Stasiun</label>
+                                <input type="text" class="ncr-input" id="station" list="stationList"
+                                    placeholder="Ex: Line Sewing 2, Meja 4">
+                                <datalist id="stationList">
+                                    <option value="Cutting Area">
+                                    <option value="Sewing Line 1">
+                                    <option value="Sewing Line 2">
+                                    <option value="Sablon / Bordir">
+                                    <option value="Finishing Area">
+                                    <option value="QC Final Station">
+                                    <option value="Packing Area">
+                                    <option value="Gudang Bahan">
+                                </datalist>
+                            </div>
+                            <div class="ncr-field two-thirds">
+                                <label class="ncr-label required">Jenis Defect</label>
+                                <div class="ncr-input-icon">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <input type="text" class="ncr-input" id="defectType"
+                                        placeholder="Contoh: Jahitan Loncat, Bolong, Noda Oli...">
+                                </div>
+                            </div>
+                            <div class="ncr-field one-third">
+                                <label class="ncr-label required">Jumlah (Qty)</label>
+                                <input type="number" class="ncr-input ncr-input-qty" id="defectQty" value="1" min="1">
+                            </div>
+                            <div class="ncr-field full">
+                                <label class="ncr-label">Keterangan Tambahan</label>
+                                <textarea class="ncr-textarea" id="defectDescription" rows="2"
+                                    placeholder="Deskripsikan posisi defect atau detail visual lainnya..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 2: Penanganan -->
+                    <div class="ncr-form-section">
+                        <div class="ncr-section-header">
+                            <div class="ncr-step-number">2</div>
+                            <div class="ncr-step-info">
                                 <h6>Rencana Penanganan (Rework)</h6>
-                            </div>
-
-                            <div class="row g-3">
-                                <div class="col-12">
-                                    <label class="form-label">Tindakan Perbaikan</label>
-                                    <textarea class="form-control" id="actionTaken" rows="2"
-                                        placeholder="Apa yang harus dilakukan untuk memperbaiki? (Ex: Bongkar jahitan samping, Cuci ulang spot noda)"></textarea>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Penanggung Jawab</label>
-                                    <input type="text" class="form-control" id="responsibleDept"
-                                        placeholder="Ex: Operator A, Bagian Cutting">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Target Selesai</label>
-                                    <input type="date" class="form-control" id="targetDate">
-                                </div>
+                                <p>Tindakan perbaikan yang akan dilakukan</p>
                             </div>
                         </div>
 
-                        <!-- Section 3: Verifikasi -->
-                        <div class="verification-section">
-                            <div class="section-header mb-3">
-                                <span class="section-number">3</span>
-                                <h6>Verifikasi & Status Akhir</h6>
+                        <div class="ncr-fields-grid">
+                            <div class="ncr-field full">
+                                <label class="ncr-label">Tindakan Perbaikan</label>
+                                <textarea class="ncr-textarea" id="actionTaken" rows="2"
+                                    placeholder="Apa yang harus dilakukan untuk memperbaiki? (Ex: Bongkar jahitan samping, Cuci ulang spot noda)"></textarea>
                             </div>
+                            <div class="ncr-field full">
+                                <label class="ncr-label">Penanggung Jawab (Employee)</label>
+                                <select class="ncr-select" id="responsibleDept" style="width: 100%"></select>
+                            </div>
+                            <div class="ncr-field full">
+                                <label class="ncr-label">Target Selesai</label>
+                                <input type="date" class="ncr-input" id="targetDate">
+                            </div>
+                        </div>
+                    </div>
 
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label">Hasil Verifikasi QC</label>
-                                    <div class="btn-group w-100" role="group">
-                                        <input type="radio" class="btn-check" name="verificationResult" id="v_ok"
-                                            value="Sesuai" autocomplete="off">
-                                        <label class="btn btn-outline-success" for="v_ok">
-                                            <i class="fas fa-check me-1"></i>Sesuai (OK)
-                                        </label>
-                                        <input type="radio" class="btn-check" name="verificationResult" id="v_fail"
-                                            value="Tidak Sesuai" autocomplete="off">
-                                        <label class="btn btn-outline-danger" for="v_fail">
-                                            <i class="fas fa-times me-1"></i>Gagal (Fail)
-                                        </label>
-                                    </div>
+                    <!-- Section 3: Verifikasi -->
+                    <div class="ncr-form-section ncr-verification">
+                        <div class="ncr-section-header">
+                            <div class="ncr-step-number">3</div>
+                            <div class="ncr-step-info">
+                                <h6>Verifikasi & Status Akhir</h6>
+                                <p>Hasil pemeriksaan dan status tiket</p>
+                            </div>
+                        </div>
+
+                        <div class="ncr-fields-grid">
+                            <div class="ncr-field half">
+                                <label class="ncr-label">Hasil Verifikasi QC</label>
+                                <div class="ncr-toggle-group">
+                                    <label class="ncr-toggle-btn ncr-toggle-success">
+                                        <input type="radio" name="verificationResult" id="v_ok" value="Sesuai">
+                                        <span><i class="fas fa-check"></i> Sesuai (OK)</span>
+                                    </label>
+                                    <label class="ncr-toggle-btn ncr-toggle-danger">
+                                        <input type="radio" name="verificationResult" id="v_fail" value="Tidak Sesuai">
+                                        <span><i class="fas fa-times"></i> Gagal (Fail)</span>
+                                    </label>
                                 </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Status Tiket</label>
-                                    <select class="form-select" id="finalStatus">
-                                        <option value="open">Open - Belum Selesai</option>
-                                        <option value="in_progress">In Progress - Sedang Dikerjakan</option>
-                                        <option value="resolved">Resolved - Selesai Diperbaiki</option>
-                                        <option value="closed">Closed - Final (Arsip)</option>
-                                    </select>
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">Catatan Verifikasi</label>
-                                    <input type="text" class="form-control" id="verificationNotes"
-                                        placeholder="Tambahkan catatan verifikasi di sini...">
-                                </div>
+                            </div>
+                            <div class="ncr-field one-third">
+                                <label class="ncr-label">Status Tiket</label>
+                                <select class="ncr-select" id="finalStatus">
+                                    <option value="open">Open - Belum Selesai</option>
+                                    <option value="in_progress">In Progress - Sedang Dikerjakan</option>
+                                    <option value="resolved">Resolved - Selesai Diperbaiki</option>
+                                    <option value="closed">Closed - Final (Arsip)</option>
+                                </select>
+                            </div>
+                            <div class="ncr-field one-third">
+                                <label class="ncr-label">Tanggal Resolusi</label>
+                                <input type="date" class="ncr-input" id="resolutionDate">
+                            </div>
+                            <div class="ncr-field full">
+                                <label class="ncr-label">Catatan Verifikasi</label>
+                                <input type="text" class="ncr-input" id="verificationNotes"
+                                    placeholder="Tambahkan catatan verifikasi di sini...">
                             </div>
                         </div>
                     </div>
@@ -808,237 +1505,596 @@
             </div>
         </div>
 
-        <!-- Footer -->
-        <div class="modal-footer bg-white border-top">
-            <button class="btn btn-light px-4" onclick="closeModal('defectModal')">Batal</button>
-            <button class="btn btn-primary px-5" onclick="saveDefect()">
-                <i class="fas fa-save me-2"></i>Simpan Laporan
+        <!-- Modern Footer -->
+        <div class="ncr-modal-footer">
+            <button class="ncr-btn ncr-btn-cancel" onclick="closeModal('defectModal')">
+                <i class="fas fa-times"></i> Batal
+            </button>
+            <button class="ncr-btn ncr-btn-save" onclick="saveDefect()">
+                <i class="fas fa-save"></i> Simpan Laporan
             </button>
         </div>
     </div>
 </div>
 
 <style>
-    /* Modal Defect Form Styles */
-    .modal-xl {
-        max-width: 1100px;
+    /* ========================================
+       NCR MODAL - MODERN GREEN THEME
+       No gradients, no whitespace, premium feel
+       ======================================== */
+
+    .ncr-modal {
+        width: 95%;
+        max-width: 1140px;
+        background: #ffffff;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        display: flex;
+        flex-direction: column;
+        max-height: 92vh;
     }
 
-    /* Header Icon */
-    .icon-wrapper {
-        width: 48px;
-        height: 48px;
-        background: #EFF6FF;
+    /* Header */
+    .ncr-modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 28px;
+        background: #059669;
+        border-bottom: none;
+    }
+
+    .ncr-header-content {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .ncr-header-icon {
+        width: 52px;
+        height: 52px;
+        background: rgba(255, 255, 255, 0.2);
         border-radius: 12px;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: var(--primary);
-        font-size: 1.25rem;
+        font-size: 1.5rem;
+        color: #ffffff;
     }
 
-    /* Section Label */
-    .section-label {
+    .ncr-header-text h4 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #ffffff;
+        letter-spacing: -0.01em;
+    }
+
+    .ncr-header-text p {
+        margin: 4px 0 0 0;
+        font-size: 0.875rem;
+        color: rgba(255, 255, 255, 0.8);
+    }
+
+    .ncr-close-btn {
+        width: 40px;
+        height: 40px;
+        border: none;
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 10px;
+        color: #ffffff;
+        font-size: 1.125rem;
+        cursor: pointer;
+        transition: background 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .ncr-close-btn:hover {
+        background: rgba(255, 255, 255, 0.25);
+    }
+
+    /* Body */
+    .ncr-modal-body {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    .ncr-layout {
+        display: flex;
+        min-height: 100%;
+    }
+
+    /* Sidebar */
+    .ncr-sidebar {
+        width: 340px;
+        min-width: 340px;
+        background: #f8fafb;
+        padding: 24px;
+        border-right: 1px solid #e5e7eb;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .ncr-section-label {
+        display: flex;
+        align-items: center;
+        gap: 10px;
         font-size: 0.75rem;
-        font-weight: 600;
+        font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
-        color: var(--gray-600);
+        letter-spacing: 0.08em;
+        color: #059669;
+    }
+
+    .ncr-section-label i {
+        font-size: 0.875rem;
+    }
+
+    /* Form Groups */
+    .ncr-form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .ncr-label {
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: #374151;
+        margin: 0;
+    }
+
+    .ncr-label.required::after {
+        content: ' *';
+        color: #dc2626;
+    }
+
+    .ncr-select,
+    .ncr-input {
+        width: 100%;
+        padding: 12px 14px;
+        border: 1.5px solid #d1d5db;
+        border-radius: 10px;
+        font-size: 0.875rem;
+        color: #1f2937;
+        background: #ffffff;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        outline: none;
+    }
+
+    .ncr-select:focus,
+    .ncr-input:focus {
+        border-color: #059669;
+        box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
+    }
+
+    .ncr-textarea {
+        width: 100%;
+        padding: 12px 14px;
+        border: 1.5px solid #d1d5db;
+        border-radius: 10px;
+        font-size: 0.875rem;
+        color: #1f2937;
+        background: #ffffff;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        outline: none;
+        resize: vertical;
+        font-family: inherit;
+    }
+
+    .ncr-textarea:focus {
+        border-color: #059669;
+        box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
+    }
+
+    .ncr-helper-text {
+        font-size: 0.75rem;
+        color: #6b7280;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .ncr-helper-text i {
+        font-size: 0.7rem;
+        color: #9ca3af;
     }
 
     /* Info Card */
-    .info-card {
-        background: white;
-        border-radius: 8px;
-        padding: 1rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    .ncr-info-card {
+        background: #ffffff;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        overflow: hidden;
     }
 
-    .info-item {
-        margin-bottom: 1rem;
-        padding-bottom: 1rem;
-        border-bottom: 1px solid #E5E7EB;
+    .ncr-info-row {
+        padding: 14px 16px;
+        border-bottom: 1px solid #f3f4f6;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
     }
 
-    .info-item:last-child {
-        margin-bottom: 0;
-        padding-bottom: 0;
+    .ncr-info-row.no-border {
         border-bottom: none;
     }
 
-    .info-item label {
-        display: block;
-        font-size: 0.75rem;
-        font-weight: 600;
+    .ncr-info-label {
+        font-size: 0.6875rem;
+        font-weight: 700;
         text-transform: uppercase;
-        color: var(--gray-500);
-        margin-bottom: 0.25rem;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.05em;
+        color: #9ca3af;
     }
 
-    .info-value {
+    .ncr-info-value {
         border: none;
         background: transparent;
         padding: 0;
+        font-size: 0.9375rem;
         font-weight: 600;
-        color: var(--gray-800);
+        color: #111827;
         width: 100%;
         outline: none;
     }
 
-    /* Stage Options */
-    .stage-option {
+    .ncr-info-value::placeholder {
+        color: #d1d5db;
+    }
+
+    /* Stage List */
+    .ncr-stage-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .ncr-stage-item {
         display: flex;
         align-items: center;
-        padding: 0.75rem;
-        border: 1.5px solid #E5E7EB;
-        border-radius: 8px;
+        padding: 12px 14px;
+        background: #ffffff;
+        border: 1.5px solid #e5e7eb;
+        border-radius: 10px;
         cursor: pointer;
         transition: all 0.2s;
-        background: white;
+        position: relative;
     }
 
-    .stage-option:hover {
-        border-color: #CBD5E1;
-        background: #FAFAFA;
+    .ncr-stage-item:hover {
+        border-color: #cbd5e1;
+        background: #fafafa;
     }
 
-    .stage-option input[type="radio"] {
-        margin: 0;
-        margin-right: 0.75rem;
-        width: 18px;
-        height: 18px;
-        cursor: pointer;
+    .ncr-stage-item input[type="radio"] {
+        display: none;
     }
 
-    .stage-option input[type="radio"]:checked~.stage-content .stage-title {
-        color: var(--primary);
-    }
-
-    .stage-option:has(input:checked) {
-        border-color: var(--primary);
-        background: #EFF6FF;
-    }
-
-    .stage-content {
+    .ncr-stage-content {
         flex: 1;
     }
 
-    .stage-title {
-        font-weight: 600;
+    .ncr-stage-name {
+        display: block;
         font-size: 0.875rem;
-        color: var(--gray-800);
-        margin-bottom: 0.125rem;
+        font-weight: 600;
+        color: #1f2937;
     }
 
-    .stage-desc {
+    .ncr-stage-desc {
+        display: block;
         font-size: 0.75rem;
-        color: var(--gray-500);
+        color: #6b7280;
+        margin-top: 2px;
+    }
+
+    .ncr-stage-check {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        border: 2px solid #d1d5db;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: transparent;
+        transition: all 0.2s;
+        font-size: 0.7rem;
+    }
+
+    .ncr-stage-item:has(input:checked) {
+        border-color: #059669;
+        background: #ecfdf5;
+    }
+
+    .ncr-stage-item:has(input:checked) .ncr-stage-name {
+        color: #059669;
+    }
+
+    .ncr-stage-item:has(input:checked) .ncr-stage-check {
+        border-color: #059669;
+        background: #059669;
+        color: #ffffff;
+    }
+
+    /* Main Content */
+    .ncr-main {
+        flex: 1;
+        padding: 28px;
+        background: #ffffff;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
     }
 
     /* Form Sections */
-    .form-section {
-        padding-bottom: 1.5rem;
-        border-bottom: 1px solid #E5E7EB;
+    .ncr-form-section {
+        padding-bottom: 24px;
+        border-bottom: 1px solid #f3f4f6;
     }
 
-    .section-header {
+    .ncr-form-section:last-child {
+        padding-bottom: 0;
+        border-bottom: none;
+    }
+
+    .ncr-form-section.ncr-verification {
+        background: #f8fafb;
+        border-radius: 12px;
+        padding: 20px;
+        border: 1px solid #e5e7eb;
+        margin-top: 4px;
+    }
+
+    .ncr-section-header {
         display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        margin-bottom: 1.25rem;
+        align-items: flex-start;
+        gap: 14px;
+        margin-bottom: 20px;
     }
 
-    .section-number {
-        width: 28px;
-        height: 28px;
-        background: var(--primary);
-        color: white;
+    .ncr-step-number {
+        width: 32px;
+        height: 32px;
+        min-width: 32px;
+        background: #059669;
+        color: #ffffff;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 0.875rem;
-        font-weight: 600;
+        font-weight: 700;
     }
 
-    .section-header h6 {
+    .ncr-step-info h6 {
         margin: 0;
+        font-size: 0.9375rem;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .ncr-step-info p {
+        margin: 3px 0 0 0;
+        font-size: 0.8125rem;
+        color: #6b7280;
+    }
+
+    /* Fields Grid */
+    .ncr-fields-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    .ncr-field {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .ncr-field.full {
+        width: 100%;
+    }
+
+    .ncr-field.half {
+        width: calc(50% - 8px);
+    }
+
+    .ncr-field.two-thirds {
+        width: calc(66.666% - 8px);
+    }
+
+    .ncr-field.one-third {
+        width: calc(33.333% - 8px);
+    }
+
+    /* Input with Icon */
+    .ncr-input-icon {
+        position: relative;
+    }
+
+    .ncr-input-icon i {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #f59e0b;
+        font-size: 0.875rem;
+    }
+
+    .ncr-input-icon .ncr-input {
+        padding-left: 40px;
+    }
+
+    .ncr-input-qty {
+        text-align: center;
+        font-weight: 700;
+        font-size: 1.125rem;
+    }
+
+    /* Toggle Buttons */
+    .ncr-toggle-group {
+        display: flex;
+        gap: 10px;
+    }
+
+    .ncr-toggle-btn {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 12px 16px;
+        border: 1.5px solid #d1d5db;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: #ffffff;
+    }
+
+    .ncr-toggle-btn input {
+        display: none;
+    }
+
+    .ncr-toggle-btn span {
         font-size: 0.875rem;
         font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        color: var(--gray-700);
-    }
-
-    /* Verification Section */
-    .verification-section {
-        background: #F9FAFB;
-        border-radius: 8px;
-        padding: 1.25rem;
-        border: 1px solid #E5E7EB;
-    }
-
-    /* Form Labels */
-    .form-label {
-        font-weight: 500;
-        font-size: 0.875rem;
-        margin-bottom: 0.5rem;
-        color: var(--gray-700);
-    }
-
-    .form-label.required::after {
-        content: ' *';
-        color: #EF4444;
-    }
-
-    /* Form Controls */
-    .form-control,
-    .form-select {
-        border: 1px solid #D1D5DB;
-        border-radius: 6px;
-        padding: 0.625rem 0.875rem;
-        font-size: 0.875rem;
-        transition: border-color 0.2s, box-shadow 0.2s;
-    }
-
-    .form-control:focus,
-    .form-select:focus {
-        border-color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        outline: none;
-    }
-
-    .input-group-text {
-        border: 1px solid #D1D5DB;
-        border-right: none;
-    }
-
-    .input-group .form-control {
-        border-left: none;
-    }
-
-    .input-group:focus-within .input-group-text {
-        border-color: var(--primary);
-    }
-
-    /* Button Styles */
-    .btn-outline-success,
-    .btn-outline-danger {
-        font-size: 0.875rem;
-        padding: 0.625rem 1rem;
-        font-weight: 500;
-    }
-
-    /* Modal Footer */
-    .modal-footer {
-        padding: 1rem 1.5rem;
+        color: #6b7280;
         display: flex;
-        justify-content: space-between;
+        align-items: center;
+        gap: 6px;
     }
 
-    .modal-footer .btn {
-        font-weight: 500;
+    .ncr-toggle-btn:hover {
+        border-color: #9ca3af;
+    }
+
+    .ncr-toggle-success:has(input:checked) {
+        border-color: #059669;
+        background: #ecfdf5;
+    }
+
+    .ncr-toggle-success:has(input:checked) span {
+        color: #059669;
+    }
+
+    .ncr-toggle-danger:has(input:checked) {
+        border-color: #dc2626;
+        background: #fef2f2;
+    }
+
+    .ncr-toggle-danger:has(input:checked) span {
+        color: #dc2626;
+    }
+
+    /* Footer */
+    .ncr-modal-footer {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 12px;
+        padding: 18px 28px;
+        background: #f9fafb;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .ncr-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 24px;
+        border-radius: 10px;
+        font-size: 0.9375rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+    }
+
+    .ncr-btn-cancel {
+        background: #ffffff;
+        color: #6b7280;
+        border: 1.5px solid #d1d5db;
+    }
+
+    .ncr-btn-cancel:hover {
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+    .ncr-btn-save {
+        background: #059669;
+        color: #ffffff;
+        box-shadow: 0 4px 14px rgba(5, 150, 105, 0.25);
+    }
+
+    .ncr-btn-save:hover {
+        background: #047857;
+        box-shadow: 0 6px 20px rgba(5, 150, 105, 0.35);
+    }
+
+    /* Responsive */
+    @media (max-width: 992px) {
+        .ncr-layout {
+            flex-direction: column;
+        }
+
+        .ncr-sidebar {
+            width: 100%;
+            min-width: 100%;
+            border-right: none;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .ncr-field.half,
+        .ncr-field.two-thirds,
+        .ncr-field.one-third {
+            width: 100%;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .ncr-modal {
+            border-radius: 12px;
+        }
+
+        .ncr-modal-header {
+            padding: 16px 20px;
+        }
+
+        .ncr-header-icon {
+            width: 44px;
+            height: 44px;
+            font-size: 1.25rem;
+        }
+
+        .ncr-header-text h4 {
+            font-size: 1.0625rem;
+        }
+
+        .ncr-sidebar,
+        .ncr-main {
+            padding: 20px;
+        }
+
+        .ncr-toggle-group {
+            flex-direction: column;
+        }
+
+        .ncr-modal-footer {
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .ncr-btn {
+            width: 100%;
+            justify-content: center;
+        }
     }
 </style>
 
@@ -1263,6 +2319,65 @@
             grid-template-columns: 1fr;
         }
     }
+
+    /* Modern Select2 Styling */
+    .select2-container--default .select2-selection--single {
+        height: 42px !important;
+        background-color: #f9fafb !important;
+        border: 1px solid #e5e7eb !important;
+        border-radius: 8px !important;
+        display: flex !important;
+        align-items: center !important;
+        padding: 0 10px !important;
+        transition: all 0.2s ease !important;
+    }
+
+    .select2-container--default.select2-container--focus .select2-selection--single {
+        border-color: #10b981 !important;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
+        background-color: #fff !important;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        color: #374151 !important;
+        font-weight: 500 !important;
+        line-height: normal !important;
+        padding-left: 0 !important;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 40px !important;
+        right: 10px !important;
+    }
+
+    .select2-dropdown {
+        border: 1px solid #e5e7eb !important;
+        border-radius: 12px !important;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+        overflow: hidden !important;
+        margin-top: 5px !important;
+        z-index: 9999 !important;
+    }
+
+    .select2-search--dropdown .select2-search__field {
+        border-radius: 6px !important;
+        border: 1px solid #e5e7eb !important;
+        padding: 8px 12px !important;
+    }
+
+    .select2-results__option--highlighted[aria-selected] {
+        background-color: #10b981 !important;
+    }
+
+    .select2-results__option {
+        padding: 10px 15px !important;
+        font-size: 0.9rem !important;
+    }
+
+    /* Fix for modal z-index */
+    .select2-container--open {
+        z-index: 1060 !important;
+    }
 </style>
 
 <!-- SCRIPTS -->
@@ -1275,7 +2390,268 @@
     let paretoChart = null;
     let currentPeriod = 'month';
 
+    // ============================================
+    // Global Analytics Date Range State
+    // ============================================
+    let analyticsDateRange = {
+        startDate: null,
+        endDate: null,
+        preset: 'week',
+        days: 7
+    };
+
+    // Calendar Picker State
+    let calendarState = {
+        currentMonth: new Date(),
+        selectionStart: null,
+        selectionEnd: null,
+        selecting: false
+    };
+
+    const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+
+    // Initialize with default 7 days
+    function initDateRange() {
+        const end = new Date();
+        const start = new Date();
+        start.setDate(end.getDate() - 7);
+        analyticsDateRange.startDate = start;
+        analyticsDateRange.endDate = end;
+        analyticsDateRange.preset = 'week';
+        analyticsDateRange.days = 7;
+        updatePresetDateLabels();
+        updatePeriodLabel();
+    }
+
+    function formatShortDate(date) {
+        const d = date.getDate();
+        const m = date.getMonth() + 1;
+        return `${d}/${m}`;
+    }
+
+    function updatePresetDateLabels() {
+        const today = new Date();
+        const fmtOpts = { day: 'numeric', month: 'short' };
+
+        // Today
+        document.getElementById('presetDateToday').textContent = today.toLocaleDateString('id-ID', fmtOpts);
+
+        // 7 Days
+        const week = new Date();
+        week.setDate(today.getDate() - 7);
+        document.getElementById('presetDateWeek').textContent =
+            `${formatShortDate(week)} - ${formatShortDate(today)}`;
+
+        // 30 Days
+        const month = new Date();
+        month.setDate(today.getDate() - 30);
+        document.getElementById('presetDateMonth').textContent =
+            `${formatShortDate(month)} - ${formatShortDate(today)}`;
+
+        // 90 Days
+        const quarter = new Date();
+        quarter.setDate(today.getDate() - 90);
+        document.getElementById('presetDateQuarter').textContent =
+            `${formatShortDate(quarter)} - ${formatShortDate(today)}`;
+    }
+
+    function setDatePreset(preset, btn) {
+        const end = new Date();
+        const start = new Date();
+        let days = 7;
+        let label = '7 Hari Terakhir';
+
+        switch (preset) {
+            case 'today':
+                start.setHours(0, 0, 0, 0);
+                end.setHours(23, 59, 59, 999);
+                days = 1;
+                label = 'Hari Ini';
+                break;
+            case 'week':
+                start.setDate(end.getDate() - 7);
+                days = 7;
+                label = '7 Hari Terakhir';
+                break;
+            case 'month':
+                start.setDate(end.getDate() - 30);
+                days = 30;
+                label = '30 Hari Terakhir';
+                break;
+            case 'quarter':
+                start.setDate(end.getDate() - 90);
+                days = 90;
+                label = '90 Hari Terakhir';
+                break;
+        }
+
+        analyticsDateRange.startDate = start;
+        analyticsDateRange.endDate = end;
+        analyticsDateRange.preset = preset;
+        analyticsDateRange.days = days;
+
+        // Update UI
+        document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        updatePeriodLabel();
+
+        // Refresh all analytics
+        refreshAllAnalytics();
+    }
+
+    // ============================================
+    // Calendar Picker Functions
+    // ============================================
+    function openCalendarPicker() {
+        calendarState.currentMonth = new Date();
+        calendarState.selectionStart = new Date(analyticsDateRange.startDate);
+        calendarState.selectionEnd = new Date(analyticsDateRange.endDate);
+        calendarState.selecting = false;
+
+        document.getElementById('calendarPickerBackdrop').classList.add('show');
+        renderCalendars();
+        updateSelectedRangeLabel();
+    }
+
+    function closeCalendarPicker() {
+        document.getElementById('calendarPickerBackdrop').classList.remove('show');
+    }
+
+    function navigateCalendar(direction) {
+        calendarState.currentMonth.setMonth(calendarState.currentMonth.getMonth() + direction);
+        renderCalendars();
+    }
+
+    function renderCalendars() {
+        const leftMonth = new Date(calendarState.currentMonth);
+        const rightMonth = new Date(calendarState.currentMonth);
+        rightMonth.setMonth(rightMonth.getMonth() + 1);
+
+        document.getElementById('leftMonthLabel').textContent =
+            `${monthNames[leftMonth.getMonth()]} ${leftMonth.getFullYear()}`;
+        document.getElementById('rightMonthLabel').textContent =
+            `${monthNames[rightMonth.getMonth()]} ${rightMonth.getFullYear()}`;
+
+        renderMonthDays('leftCalendarDays', leftMonth);
+        renderMonthDays('rightCalendarDays', rightMonth);
+    }
+
+    function renderMonthDays(containerId, month) {
+        const container = document.getElementById(containerId);
+        const year = month.getFullYear();
+        const monthIndex = month.getMonth();
+        const firstDay = new Date(year, monthIndex, 1).getDay();
+        const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        let html = '';
+
+        // Empty cells for days before first of month
+        for (let i = 0; i < firstDay; i++) {
+            html += '<div class="calendar-day empty"></div>';
+        }
+
+        // Days of month
+        for (let day = 1; day <= daysInMonth; day++) {
+            const date = new Date(year, monthIndex, day);
+            let classes = 'calendar-day';
+
+            if (date.getTime() === today.getTime()) classes += ' today';
+
+            // Check if in range
+            if (calendarState.selectionStart && calendarState.selectionEnd) {
+                const start = new Date(calendarState.selectionStart);
+                const end = new Date(calendarState.selectionEnd);
+                start.setHours(0, 0, 0, 0);
+                end.setHours(0, 0, 0, 0);
+
+                if (date.getTime() === start.getTime()) classes += ' start-date';
+                if (date.getTime() === end.getTime()) classes += ' end-date';
+                if (date > start && date < end) classes += ' in-range';
+            }
+
+            html += `<div class="${classes}" onclick="selectCalendarDay(${year}, ${monthIndex}, ${day})">${day}</div>`;
+        }
+
+        container.innerHTML = html;
+    }
+
+    function selectCalendarDay(year, month, day) {
+        const date = new Date(year, month, day);
+
+        if (!calendarState.selecting || !calendarState.selectionStart) {
+            // First click - set start date
+            calendarState.selectionStart = date;
+            calendarState.selectionEnd = date;
+            calendarState.selecting = true;
+        } else {
+            // Second click - set end date
+            if (date < calendarState.selectionStart) {
+                calendarState.selectionEnd = calendarState.selectionStart;
+                calendarState.selectionStart = date;
+            } else {
+                calendarState.selectionEnd = date;
+            }
+            calendarState.selecting = false;
+        }
+
+        renderCalendars();
+        updateSelectedRangeLabel();
+    }
+
+    function updateSelectedRangeLabel() {
+        const label = document.getElementById('selectedRangeLabel');
+        if (calendarState.selectionStart && calendarState.selectionEnd) {
+            const opts = { day: 'numeric', month: 'short', year: 'numeric' };
+            label.innerHTML = `<strong>${calendarState.selectionStart.toLocaleDateString('id-ID', opts)}</strong> - <strong>${calendarState.selectionEnd.toLocaleDateString('id-ID', opts)}</strong>`;
+        } else {
+            label.textContent = 'Belum ada tanggal dipilih';
+        }
+    }
+
+    function applyCalendarRange() {
+        if (!calendarState.selectionStart || !calendarState.selectionEnd) {
+            showToast('Pilih rentang tanggal terlebih dahulu', 'error');
+            return;
+        }
+
+        analyticsDateRange.startDate = calendarState.selectionStart;
+        analyticsDateRange.endDate = calendarState.selectionEnd;
+        analyticsDateRange.preset = 'custom';
+        analyticsDateRange.days = Math.ceil((calendarState.selectionEnd - calendarState.selectionStart) / (1000 * 60 * 60 * 24)) + 1;
+
+        document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+        updatePeriodLabel();
+        closeCalendarPicker();
+        refreshAllAnalytics();
+    }
+
+    function updatePeriodLabel() {
+        const start = analyticsDateRange.startDate;
+        const end = analyticsDateRange.endDate;
+        const options = { day: 'numeric', month: 'short', year: 'numeric' };
+        document.getElementById('periodLabel').textContent =
+            `${start.toLocaleDateString('id-ID', options)} - ${end.toLocaleDateString('id-ID', options)}`;
+    }
+
+    function getDateParams() {
+        return {
+            start_date: analyticsDateRange.startDate.toISOString().split('T')[0],
+            end_date: analyticsDateRange.endDate.toISOString().split('T')[0]
+        };
+    }
+
+    function refreshAllAnalytics() {
+        loadAnalyticsData();
+        loadDefectTrend('weekly');
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
+        // Init Date Range
+        initDateRange();
+
         // Init Select2 Logic
         setupSelect2();
 
@@ -1344,7 +2720,11 @@
     }
 
     // --- Advanced Analytics Logic ---
-    async function loadAnalyticsData(days = 30) {
+    async function loadAnalyticsData() {
+        // Get date params from global state
+        const { start_date, end_date } = getDateParams();
+        const queryStr = `start_date=${start_date}&end_date=${end_date}`;
+
         // Show Loaders for Charts
         showChartLoading('processRadarChart');
         showChartLoading('paramBarChart');
@@ -1352,18 +2732,18 @@
 
         try {
             // Use parallel requests for better performance
-            const p1 = api.get(`/qc/dashboard/quality-score?days=${days}`)
+            const p1 = api.get(`/qc/dashboard/quality-score?${queryStr}`)
                 .then(res => {
                     updateQualityScore(res);
                 });
 
-            const p3 = api.get(`/qc/dashboard/process-comparison?days=${days}`)
+            const p3 = api.get(`/qc/dashboard/process-comparison?${queryStr}`)
                 .then(res => {
                     renderProcessRadar(res.stages);
                     hideChartLoading('processRadarChart');
                 });
 
-            const p4 = api.get(`/qc/dashboard/checklist-analysis?days=${days}`)
+            const p4 = api.get(`/qc/dashboard/checklist-analysis?${queryStr}`)
                 .then(res => {
                     renderParamBar(res.parameters);
                     hideChartLoading('paramBarChart');
@@ -1371,7 +2751,7 @@
                     document.getElementById('analysisCount').textContent = res.total_parameters_analyzed + ' parameters';
                 });
 
-            const p5 = api.get(`/qc/dashboard/defect-pareto?days=${days}`)
+            const p5 = api.get(`/qc/dashboard/defect-pareto?${queryStr}`)
                 .then(res => {
                     renderParetoChart(res.pareto_data);
                     hideChartLoading('paretoChart');
@@ -1765,6 +3145,47 @@
     }
 
     // --- Defect List Logic ---
+
+    // Set status filter from tabs
+    function setStatusFilter(btn, status) {
+        document.querySelectorAll('.status-tab').forEach(t => t.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('statusFilter').value = status;
+        loadDefects();
+    }
+
+    // Load defect stats for summary cards
+    async function loadDefectStats() {
+        try {
+            const res = await api.get('/qc/defects-stats');
+            document.getElementById('countAll').textContent = res.total || 0;
+            document.getElementById('countOpen').textContent = res.open || 0;
+            document.getElementById('countInProgress').textContent = res.in_progress || 0;
+            document.getElementById('countResolved').textContent = res.resolved || 0;
+            document.getElementById('countClosed').textContent = res.closed || 0;
+
+            document.getElementById('statTotalDefects').textContent = res.total || 0;
+            document.getElementById('statOpenIssues').textContent = res.open || 0;
+            document.getElementById('statAvgResolution').textContent = res.avg_resolution || '-';
+            document.getElementById('statCriticalMajor').textContent = (res.critical || 0) + (res.major || 0);
+        } catch (e) {
+            console.error('Failed to load defect stats:', e);
+        }
+    }
+
+    // Quick resolve action
+    async function quickResolve(id) {
+        if (!confirm('Tandai defect ini sebagai Resolved?')) return;
+        try {
+            await api.put(`/qc/defects/${id}`, { status: 'resolved' });
+            showToast('Defect berhasil ditandai Resolved', 'success');
+            loadDefects();
+            loadDefectStats();
+        } catch (e) {
+            showToast('Gagal mengubah status: ' + e.message, 'error');
+        }
+    }
+
     async function loadDefects() {
         const tbody = document.getElementById('defectTableBody');
         const status = document.getElementById('statusFilter').value;
@@ -1775,9 +3196,9 @@
 
         try {
             const query = new URLSearchParams({ status, stage, search });
-            const res = await api.get(`/qc/defects?${query}`);
+            const res = await api.get(`/qc/defects-query?${query}`);
 
-            if (res.defects.length === 0) {
+            if (!res || !res.defects || res.defects.length === 0) {
                 tbody.innerHTML = `
                     <tr>
                         <td colspan="7" class="text-center p-5 text-muted empty-state-modern">
@@ -1785,18 +3206,25 @@
                             <p>Tidak ada data defect yang ditemukan</p>
                         </td>
                     </tr>`;
+                loadDefectStats();
                 return;
             }
 
-            tbody.innerHTML = res.defects.map(d => `
+            // Sort: open first, then in_progress, then others
+            const statusOrder = { 'open': 0, 'in_progress': 1, 'resolved': 2, 'closed': 3 };
+            const sorted = res.defects.sort((a, b) => {
+                return (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9);
+            });
+
+            tbody.innerHTML = sorted.map(d => `
                 <tr>
                     <td class="ps-4">
-                        <div class="fw-bold text-dark">${new Date(d.created_at).toLocaleDateString()}</div>
-                        <div class="text-xs text-muted">${new Date(d.created_at).toLocaleTimeString().slice(0, 5)}</div>
+                        <div class="fw-bold text-dark">${d.created_at ? new Date(d.created_at).toLocaleDateString() : '-'}</div>
+                        <div class="text-xs text-muted">${d.created_at ? new Date(d.created_at).toLocaleTimeString().slice(0, 5) : ''}</div>
                     </td>
                     <td>
                         <div class="badge bg-light text-dark mb-1 border">${d.order_code || 'N/A'}</div>
-                        <div class="text-sm fw-medium text-truncate" style="max-width: 150px;" title="${d.product_name}">${d.product_name || '-'}</div>
+                        <div class="text-sm fw-medium text-truncate" style="max-width: 150px;" title="${d.product_name || ''}">${d.product_name || '-'}</div>
                     </td>
                     <td>
                         <div class="fw-bold text-primary">${d.defect_type}</div>
@@ -1806,12 +3234,19 @@
                     <td><div class="text-sm">${d.responsible_department || '-'}</div></td>
                     <td>${getStatusBadge(d.status)}</td>
                     <td class="text-end pe-4">
+                        ${d.status === 'open' || d.status === 'in_progress' ?
+                    `<button class="btn-quick-resolve me-1" onclick="quickResolve(${d.id})" title="Mark Resolved">
+                                <i class="fas fa-check"></i> Resolve
+                            </button>` : ''
+                }
                         <button class="btn btn-sm btn-icon btn-ghost text-primary" onclick="editDefect(${d.id})" title="Edit Detail">
                             <i class="fas fa-edit"></i>
                         </button>
                     </td>
                 </tr>
             `).join('');
+
+            loadDefectStats();
 
         } catch (e) {
             tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger p-4">Gagal memuat data: ${e.message}</td></tr>`;
@@ -1876,6 +3311,32 @@
         }).on('select2:select', function (e) {
             autoFillProductInfo(e.params.data);
         });
+
+        $('#responsibleDept').select2({
+            dropdownParent: $('#defectModal'),
+            placeholder: 'Cari Employee...',
+            allowClear: true,
+            ajax: {
+                url: '/api/employees',
+                dataType: 'json',
+                delay: 250,
+                data: function (params) {
+                    return {
+                        search: params.term,
+                        page: params.page || 1
+                    };
+                },
+                processResults: function (data) {
+                    const employees = (data.data && data.data.employees) || data.employees || [];
+                    return {
+                        results: employees.map(e => ({
+                            id: e.name, // Using name as value because back-end stores it as string
+                            text: `[${e.employee_code}] ${e.name} - ${e.position}`
+                        }))
+                    };
+                }
+            }
+        });
     }
 
     function openDefectModal() {
@@ -1885,8 +3346,10 @@
 
         // Reset Inputs
         const inputs = ['customerName', 'orderCode', 'productName', 'station', 'defectType',
-            'defectDescription', 'actionTaken', 'responsibleDept', 'targetDate', 'verificationNotes'];
+            'defectDescription', 'actionTaken', 'targetDate', 'verificationNotes', 'resolutionDate'];
         inputs.forEach(id => document.getElementById(id).value = '');
+
+        $('#responsibleDept').val(null).trigger('change');
 
         document.getElementById('defectQty').value = '1';
         document.getElementById('finalStatus').value = 'open';
@@ -1925,14 +3388,15 @@
             process_stage: processStageEl ? processStageEl.value : null,
             station: document.getElementById('station').value,
             defect_type: document.getElementById('defectType').value,
-            qty_defect: document.getElementById('defectQty').value,
+            qty_defect: parseInt(document.getElementById('defectQty').value) || 1,
             description: document.getElementById('defectDescription').value,
             action_taken: document.getElementById('actionTaken').value,
-            responsible_department: document.getElementById('responsibleDept').value,
+            responsible_department: $('#responsibleDept').val(),
             target_resolution_date: document.getElementById('targetDate').value,
             verification_result: verificationEl ? verificationEl.value : null,
             verification_notes: document.getElementById('verificationNotes').value,
-            status: document.getElementById('finalStatus').value
+            status: document.getElementById('finalStatus').value,
+            resolved_at_custom: document.getElementById('resolutionDate').value
         };
 
         if (!payload.defect_type) {
@@ -1984,8 +3448,72 @@
     }
 
     async function editDefect(id) {
-        // Future Enhancement: Load data into modal
-        alert('Edit functionality ready in backend, UI binding pending.');
+        try {
+            showLoading('Mengambil data detail...');
+            const defect = await api.get(`/qc/defects/${id}`);
+
+            // Populate hidden ID
+            document.getElementById('defectId').value = defect.id;
+
+            // Populate Select2
+            if (defect.production_task_id) {
+                const option = new Option(
+                    `[${defect.order_code}] ${defect.product_name}`,
+                    defect.production_task_id,
+                    true,
+                    true
+                );
+                $('#taskSelect').append(option).trigger('change');
+            }
+
+            // Populate Info Card (Readonly)
+            document.getElementById('customerName').value = defect.customer_name || '';
+            document.getElementById('orderCode').value = defect.order_code || '';
+            document.getElementById('productName').value = defect.product_name || '';
+
+            // Step 1: Detail Temuan
+            document.getElementById('findingDate').value = defect.created_at ? defect.created_at.split('T')[0] : '';
+            document.getElementById('station').value = defect.station || '';
+            document.getElementById('defectType').value = defect.defect_type || '';
+            document.getElementById('defectQty').value = defect.qty_defect || 1;
+            document.getElementById('defectDescription').value = defect.description || '';
+
+            // Step 2: Penanganan
+            document.getElementById('actionTaken').value = defect.action_taken || '';
+            document.getElementById('responsibleDept').value = defect.responsible_department || '';
+            document.getElementById('targetDate').value = defect.target_resolution_date || '';
+
+            // Step 3: Verifikasi
+            // Radio Stage
+            if (defect.process_stage) {
+                const stageRadio = document.querySelector(`input[name="processStage"][value="${defect.process_stage}"]`);
+                if (stageRadio) stageRadio.checked = true;
+            }
+
+            // Radio Verification Result
+            if (defect.verification_result) {
+                const verRadio = document.querySelector(`input[name="verificationResult"][value="${defect.verification_result}"]`);
+                if (verRadio) verRadio.checked = true;
+            }
+
+            document.getElementById('finalStatus').value = defect.status || 'open';
+            document.getElementById('verificationNotes').value = defect.verification_notes || '';
+            document.getElementById('resolutionDate').value = defect.resolved_at ? defect.resolved_at.split('T')[0] : '';
+
+            // Populate Employee Select2
+            if (defect.responsible_department) {
+                const empOption = new Option(defect.responsible_department, defect.responsible_department, true, true);
+                $('#responsibleDept').append(empOption).trigger('change');
+            } else {
+                $('#responsibleDept').val(null).trigger('change');
+            }
+
+            openModal('defectModal');
+            hideLoading();
+        } catch (e) {
+            hideLoading();
+            showToast('Gagal memuat detail defect: ' + e.message, 'error');
+        }
     }
 </script>
 {% endblock %}

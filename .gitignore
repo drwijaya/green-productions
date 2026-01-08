@@ -38,3 +38,9 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Google Credentials (NEVER COMMIT)
+google_credentials.json
+client_secrets.json
+token.json
+*-credentials.json

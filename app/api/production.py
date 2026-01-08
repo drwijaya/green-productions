@@ -1,6 +1,6 @@
 """Production API endpoints."""
 from datetime import datetime
-from flask import request, g
+from flask import request, g, jsonify
 from flask_login import login_required, current_user
 from . import api_bp
 from ..models.production import ProductionTask, ProcessType, TaskStatus, ProductionWorkerLog
@@ -269,7 +269,7 @@ def search_production_tasks():
         query = query.filter(
             db.or_(
                 Order.order_code.ilike(f'%{search}%'),
-                ProductionTask.product_name.ilike(f'%{search}%')
+                Order.model.ilike(f'%{search}%')
             )
         )
     
@@ -279,13 +279,14 @@ def search_production_tasks():
     for t in tasks:
         results.append({
             'id': t.id,
-            'text': f"[{t.order.order_code}] {t.product_name} - {t.process.value.title()}",
+            'text': f"[{t.order.order_code}] {t.order.model} - {t.process.title()}",
             # Additional info for auto-fill
             'customer_name': t.order.customer.name if t.order.customer else 'Unknown',
             'order_code': t.order.order_code,
-            'product_name': t.product_name,
-            'process_stage': t.process.value.title()
+            'product_name': t.order.model,
+            'process_stage': t.process.title()
         })
         
     return jsonify({'results': results})
+
 

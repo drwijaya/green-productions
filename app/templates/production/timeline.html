@@ -2534,10 +2534,13 @@ MOBILE RESPONSIVE STYLES
     // Store orders data for timeline view - Load from JSON island to avoid Jinja syntax errors
     let ordersData = [];
     try {
-        const rawJson = document.getElementById('timeline-orders-data').textContent;
-        // Clean up any potential Jinja whitespace artifacts if they still sneak in
-        // but JSON block is usually safer.
-        ordersData = JSON.parse(rawJson);
+        const timelineDataEl = document.getElementById('timeline-orders-data');
+        if (timelineDataEl) {
+            const rawJson = timelineDataEl.textContent;
+            // Clean up any potential Jinja whitespace artifacts if they still sneak in
+            // but JSON block is usually safer.
+            ordersData = JSON.parse(rawJson);
+        }
     } catch (e) {
         console.error("Failed to parse timeline data:", e);
         ordersData = [];
