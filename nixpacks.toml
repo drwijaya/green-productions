@@ -2,7 +2,7 @@
 # Installs LibreOffice for Word-to-PDF conversion
 
 [phases.setup]
-nixPkgs = ["libreoffice"]
+nixPkgs = ["python3", "libreoffice", "gcc"]
 
 [phases.install]
-cmds = ["pip install -r requirements.txt"]
+cmds = ["python3 -m pip install -r requirements.txt"]
