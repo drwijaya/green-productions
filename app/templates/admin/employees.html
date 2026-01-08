@@ -108,8 +108,17 @@
                         </td>
                         <td><span class="badge badge-{{ 'success' if e.is_active else 'secondary' }}">{{ 'Active' if
                                 e.is_active else 'Inactive' }}</span></td>
-                        <td><button class="btn btn-sm btn-outline" onclick="editEmployee({{ e.id }})"><i
-                                    class="fas fa-edit"></i></button></td>
+                        <td>
+                            <div class="action-buttons" style="display: flex; gap: 0.25rem;">
+                                <a href="{{ url_for('views.employee_detail', employee_id=e.id) }}"
+                                    class="btn btn-sm btn-outline-primary" title="Lihat Detail">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <button class="btn btn-sm btn-outline" onclick="editEmployee({{ e.id }})" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </div>
+                        </td>
                     </tr>
                     {% else %}
                     <tr>
@@ -337,6 +346,22 @@
         <div class="modal-footer">
             <button class="btn btn-secondary" onclick="closeModal('newEmployeeModal')">Batal</button>
             <button class="btn btn-primary" onclick="saveEmployee()"><i class="fas fa-save"></i> Simpan</button>
+        </div>
+    </div>
+</div>
+
+<!-- Work History Modal -->
+<div class="modal-backdrop" id="historyModal">
+    <div class="modal" style="max-width: 750px;">
+        <div class="modal-header">
+            <h3 class="modal-title"><i class="fas fa-history"></i> Riwayat Pekerjaan</h3>
+            <button class="modal-close" onclick="closeModal('historyModal')">&times;</button>
+        </div>
+        <div class="modal-body" id="historyContent" style="max-height: 500px; overflow-y: auto;">
+            <div class="text-center p-4"><i class="fas fa-spinner fa-spin"></i> Memuat...</div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('historyModal')">Tutup</button>
         </div>
     </div>
 </div>
@@ -878,5 +903,153 @@
             showToast('Terjadi kesalahan: ' + e.message, 'error');
         }
     }
+
+    // Work History Modal
+    async function viewWorkHistory(id) {
+        document.getElementById('historyContent').innerHTML = '<div class="text-center p-4"><i class="fas fa-spinner fa-spin"></i> Memuat...</div>';
+        document.getElementById('historyModal').classList.add('active');
+
+        try {
+            const response = await fetch(`/api/employees/${id}/work-history`);
+            const result = await response.json();
+
+            if (!result.success) {
+                throw new Error(result.message || 'Gagal memuat data');
+            }
+
+            const data = result.data;
+            const emp = data.employee;
+            const history = data.history || [];
+
+            let historyHtml = '';
+            if (history.length > 0) {
+                historyHtml = `
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th>Tipe</th>
+                                <th>No. Order</th>
+                                <th>Proses</th>
+                                <th>Qty</th>
+                                <th>Tanggal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${history.map(h => `
+                                <tr>
+                                    <td>
+                                        <span class="type-badge type-${h.type}">
+                                            <i class="fas ${h.type === 'supervisor' ? 'fa-user-tie' : 'fa-hard-hat'}"></i>
+                                            ${h.type === 'supervisor' ? 'Supervisor' : 'Worker'}
+                                        </span>
+                                    </td>
+                                    <td><strong>${h.order_code}</strong></td>
+                                    <td><span class="process-badge">${formatProcess(h.process)}</span></td>
+                                    <td>${h.type === 'supervisor' ? h.qty_completed + '/' + h.qty_target : h.qty_done}</td>
+                                    <td>${formatDate(h.date)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } else {
+                historyHtml = '<div class="empty-state-mini"><i class="fas fa-inbox"></i><span>Belum ada riwayat pekerjaan</span></div>';
+            }
+
+            document.getElementById('historyContent').innerHTML = `
+                <div class="employee-info-header" style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; padding: 1rem; background: var(--bg-secondary); border-radius: 10px;">
+                    <div class="emp-avatar" style="width: 50px; height: 50px; background: linear-gradient(135deg, var(--primary), #38ef7d); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1.2rem;">
+                        ${emp.name ? emp.name.charAt(0).toUpperCase() : '?'}
+                    </div>
+                    <div>
+                        <h4 style="margin: 0;">${emp.name}</h4>
+                        <span style="color: var(--text-secondary); font-size: 0.85rem;">${emp.employee_code} • ${emp.position || 'N/A'}</span>
+                    </div>
+                </div>
+                <h5 style="margin-bottom: 1rem; color: var(--primary);"><i class="fas fa-list-alt"></i> Riwayat Pekerjaan</h5>
+                ${historyHtml}
+            `;
+        } catch (e) {
+            document.getElementById('historyContent').innerHTML = `<div class="text-center text-danger p-4"><i class="fas fa-exclamation-circle"></i> ${e.message || 'Gagal memuat data'}</div>`;
+        }
+    }
+
+    function formatProcess(process) {
+        const map = {
+            'cutting': 'Cutting',
+            'sewing': 'Sewing',
+            'sablon': 'Sablon',
+            'finishing': 'Finishing',
+            'packing': 'Packing'
+        };
+        return map[process] || process || '-';
+    }
+
+    function formatDate(dateStr) {
+        if (!dateStr) return '-';
+        const d = new Date(dateStr);
+        return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
 </script>
+
+<style>
+    .history-table {
+        width: 100%;
+        font-size: 0.85rem;
+        border-collapse: collapse;
+    }
+
+    .history-table th {
+        background: var(--bg-secondary);
+        padding: 0.75rem;
+        text-align: left;
+        font-weight: 600;
+    }
+
+    .history-table td {
+        padding: 0.75rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .type-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.25rem 0.6rem;
+        border-radius: 50px;
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+
+    .type-badge.type-supervisor {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+    }
+
+    .type-badge.type-worker {
+        background: linear-gradient(135deg, #4facfe, #00f2fe);
+        color: white;
+    }
+
+    .process-badge {
+        background: #f3f4f6;
+        color: #374151;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .empty-state-mini {
+        text-align: center;
+        padding: 2rem;
+        color: var(--text-secondary);
+    }
+
+    .empty-state-mini i {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+</style>
 {% endblock %}

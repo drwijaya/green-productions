@@ -314,3 +314,60 @@ def get_positions():
     ]
     return api_response(data=positions)
 
+
+@api_bp.route('/employees/<int:employee_id>/work-history', methods=['GET'])
+@login_required
+def get_employee_work_history(employee_id):
+    """Get employee work history: tasks supervised + worker logs."""
+    from ..models.production import ProductionTask, ProductionWorkerLog
+    
+    employee = Employee.query.get_or_404(employee_id)
+    
+    # Get tasks where employee is supervisor
+    supervised_tasks = ProductionTask.query.filter_by(
+        line_supervisor_id=employee_id
+    ).order_by(ProductionTask.created_at.desc()).limit(20).all()
+    
+    # Get worker log entries
+    worker_logs = ProductionWorkerLog.query.filter_by(
+        employee_id=employee_id
+    ).order_by(ProductionWorkerLog.created_at.desc()).limit(20).all()
+    
+    history = []
+    
+    # Add supervised tasks
+    for task in supervised_tasks:
+        history.append({
+            'type': 'supervisor',
+            'task_id': task.id,
+            'order_code': task.order.order_code if task.order else '-',
+            'product': task.order.model if task.order else '-',
+            'process': task.process,
+            'qty_target': task.qty_target,
+            'qty_completed': task.qty_completed,
+            'status': task.status,
+            'date': task.created_at.isoformat() if task.created_at else None
+        })
+    
+    # Add worker contributions
+    for log in worker_logs:
+        task = log.task
+        history.append({
+            'type': 'worker',
+            'task_id': log.task_id,
+            'order_code': task.order.order_code if task and task.order else '-',
+            'product': task.order.model if task and task.order else '-',
+            'process': task.process if task else '-',
+            'qty_done': log.qty_completed,
+            'qty_defect': log.qty_defect,
+            'date': log.created_at.isoformat() if log.created_at else None
+        })
+    
+    # Sort by date descending
+    history.sort(key=lambda x: x.get('date') or '', reverse=True)
+    
+    return api_response(data={
+        'employee': employee.to_dict(),
+        'history': history[:30]  # Limit to 30 entries
+    })
+

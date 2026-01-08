@@ -1,0 +1,453 @@
+{% extends "base.html" %}
+{% block title %}{{ customer.name }} - Customer Detail{% endblock %}
+{% block page_title %}Detail Customer{% endblock %}
+
+{% block content %}
+<style>
+    .detail-header {
+        display: flex;
+        align-items: flex-start;
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .customer-avatar {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, var(--primary), #38ef7d);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 2rem;
+        font-weight: 700;
+        flex-shrink: 0;
+    }
+
+    .customer-info h2 {
+        margin: 0 0 0.25rem 0;
+        font-size: 1.5rem;
+    }
+
+    .customer-info .sub-info {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+    }
+
+    .stat-icon.blue {
+        background: rgba(59, 130, 246, 0.15);
+        color: #3b82f6;
+    }
+
+    .stat-icon.green {
+        background: rgba(16, 185, 129, 0.15);
+        color: #10b981;
+    }
+
+    .stat-icon.orange {
+        background: rgba(249, 115, 22, 0.15);
+        color: #f97316;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+
+    .stat-label {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .info-item {
+        background: var(--bg-secondary);
+        padding: 1rem;
+        border-radius: 8px;
+    }
+
+    .info-item label {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        display: block;
+        margin-bottom: 0.25rem;
+    }
+
+    .info-item span {
+        font-weight: 600;
+    }
+
+    .shortcut-buttons {
+        display: flex;
+        gap: 0.75rem;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+    }
+
+    .shortcut-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.25rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        transition: all 0.2s;
+        text-decoration: none;
+    }
+
+    .shortcut-btn.primary {
+        background: var(--primary);
+        color: white;
+    }
+
+    .shortcut-btn.primary:hover {
+        background: var(--primary-dark);
+        transform: translateY(-2px);
+    }
+
+    .shortcut-btn.secondary {
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+    }
+
+    .shortcut-btn.secondary:hover {
+        background: var(--bg-tertiary);
+    }
+
+    .search-box {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+    }
+
+    .search-box input {
+        flex: 1;
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 0.9rem;
+    }
+
+    .search-box input:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.15);
+    }
+
+    .order-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .order-table th {
+        background: var(--bg-secondary);
+        padding: 0.75rem 1rem;
+        text-align: left;
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+    }
+
+    .order-table td {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border-color);
+        vertical-align: middle;
+    }
+
+    .order-table tr:hover {
+        background: var(--bg-secondary);
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 0.3rem 0.75rem;
+        border-radius: 50px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .status-badge.draft {
+        background: #f3f4f6;
+        color: #6b7280;
+    }
+
+    .status-badge.in_production {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+
+    .status-badge.qc_pending {
+        background: #fef3c7;
+        color: #d97706;
+    }
+
+    .status-badge.completed {
+        background: #d1fae5;
+        color: #059669;
+    }
+
+    .status-badge.cancelled {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+</style>
+
+<!-- Back Button -->
+<a href="{{ url_for('views.customers') }}" class="btn btn-sm btn-secondary mb-4">
+    <i class="fas fa-arrow-left"></i> Kembali ke Daftar
+</a>
+
+<!-- Header -->
+<div class="detail-header">
+    <div class="customer-avatar">{{ customer.name[0] if customer.name else '?' }}</div>
+    <div class="customer-info">
+        <h2>{{ customer.name }}</h2>
+        <div class="sub-info">
+            {% if customer.company_name %}{{ customer.company_name }} • {% endif %}
+            {{ customer.city or 'Lokasi tidak diketahui' }}
+        </div>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+    <div class="stat-card">
+        <div class="stat-icon blue"><i class="fas fa-shopping-cart"></i></div>
+        <div>
+            <div class="stat-value">{{ total_orders }}</div>
+            <div class="stat-label">Total Pesanan</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon orange"><i class="fas fa-cogs"></i></div>
+        <div>
+            <div class="stat-value">{{ in_production }}</div>
+            <div class="stat-label">Sedang Produksi</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+        <div>
+            <div class="stat-value">{{ completed_orders }}</div>
+            <div class="stat-label">Selesai</div>
+        </div>
+    </div>
+</div>
+
+<!-- Info Grid -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h4><i class="fas fa-info-circle"></i> Informasi Customer</h4>
+    </div>
+    <div class="card-body">
+        <div class="info-grid">
+            <div class="info-item"><label>Contact Person</label><span>{{ customer.contact_person or '-' }}</span></div>
+            <div class="info-item"><label>Phone</label><span>{{ customer.phone or '-' }}</span></div>
+            <div class="info-item"><label>Email</label><span>{{ customer.email or '-' }}</span></div>
+            <div class="info-item"><label>City</label><span>{{ customer.city or '-' }}</span></div>
+        </div>
+        {% if customer.address %}
+        <div class="info-item"><label>Alamat Lengkap</label><span>{{ customer.address }}</span></div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Shortcuts -->
+<div class="shortcut-buttons">
+    <a href="{{ url_for('views.orders') }}?customer_id={{ customer.id }}" class="shortcut-btn primary">
+        <i class="fas fa-plus"></i> Buat Pesanan Baru
+    </a>
+    <button class="shortcut-btn secondary" onclick="editCustomer()">
+        <i class="fas fa-edit"></i> Edit Customer
+    </button>
+</div>
+
+<!-- Order History -->
+<div class="card">
+    <div class="card-header">
+        <h4><i class="fas fa-history"></i> Riwayat Pesanan</h4>
+    </div>
+    <div class="card-body">
+        <div class="search-box">
+            <i class="fas fa-search" style="color: var(--text-secondary);"></i>
+            <input type="text" id="orderSearch" placeholder="Cari no. order atau produk..." onkeyup="filterOrders()">
+        </div>
+        <div class="table-container">
+            <table class="order-table" id="orderTable">
+                <thead>
+                    <tr>
+                        <th>No. Order</th>
+                        <th>Produk</th>
+                        <th>Qty</th>
+                        <th>Status</th>
+                        <th>Deadline</th>
+                        <th>Tanggal Order</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders.items %}
+                    <tr data-order="{{ order.order_code|lower }}"
+                        data-product="{{ order.model|lower if order.model else '' }}">
+                        <td><strong>{{ order.order_code }}</strong></td>
+                        <td>{{ order.model or '-' }}</td>
+                        <td>{{ order.qty_total }}</td>
+                        <td><span class="status-badge {{ order.status }}">{{ order.status|replace('_', ' ')|title
+                                }}</span></td>
+                        <td>{{ order.deadline.strftime('%d %b %Y') if order.deadline else '-' }}</td>
+                        <td>{{ order.order_date.strftime('%d %b %Y') if order.order_date else '-' }}</td>
+                        <td>
+                            <a href="{{ url_for('views.order_detail', order_id=order.id) }}"
+                                class="btn btn-sm btn-outline">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr id="emptyRow">
+                        <td colspan="7" class="text-center text-muted py-4">Belum ada pesanan</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if orders.pages > 1 %}
+        <div class="pagination mt-4">
+            {% for p in orders.iter_pages() %}
+            {% if p %}
+            <a href="?page={{ p }}" class="btn btn-sm {{ 'btn-primary' if p == orders.page else 'btn-outline' }}">{{ p
+                }}</a>
+            {% else %}
+            <span>...</span>
+            {% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-backdrop" id="editModal">
+    <div class="modal" style="max-width: 550px;">
+        <div class="modal-header">
+            <h3 class="modal-title">Edit Customer</h3>
+            <button class="modal-close" onclick="closeModal('editModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="customerForm">
+                <input type="hidden" name="id" value="{{ customer.id }}">
+                <div class="form-group">
+                    <label class="form-label">Nama *</label>
+                    <input type="text" class="form-input" name="name" value="{{ customer.name }}" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Company</label>
+                    <input type="text" class="form-input" name="company_name" value="{{ customer.company_name or '' }}">
+                </div>
+                <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label">Contact Person</label>
+                        <input type="text" class="form-input" name="contact_person"
+                            value="{{ customer.contact_person or '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Phone</label>
+                        <input type="text" class="form-input" name="phone" value="{{ customer.phone or '' }}">
+                    </div>
+                </div>
+                <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-input" name="email" value="{{ customer.email or '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">City</label>
+                        <input type="text" class="form-input" name="city" value="{{ customer.city or '' }}">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Address</label>
+                    <textarea class="form-textarea" name="address" rows="2">{{ customer.address or '' }}</textarea>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('editModal')">Batal</button>
+            <button class="btn btn-primary" onclick="saveCustomer()"><i class="fas fa-save"></i> Simpan</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function filterOrders() {
+        const search = document.getElementById('orderSearch').value.toLowerCase();
+        const rows = document.querySelectorAll('#orderTable tbody tr[data-order]');
+
+        rows.forEach(row => {
+            const order = row.dataset.order || '';
+            const product = row.dataset.product || '';
+            row.style.display = (order.includes(search) || product.includes(search)) ? '' : 'none';
+        });
+    }
+
+    function editCustomer() {
+        document.getElementById('editModal').classList.add('active');
+    }
+
+    async function saveCustomer() {
+        const form = document.getElementById('customerForm');
+        const data = Object.fromEntries(new FormData(form));
+        const id = data.id;
+        delete data.id;
+
+        try {
+            await api.put(`/customers/${id}`, data);
+            showToast('Customer berhasil diupdate', 'success');
+            closeModal('editModal');
+            location.reload();
+        } catch (e) {
+            showToast(e.message || 'Gagal menyimpan', 'error');
+        }
+    }
+</script>
+{% endblock %}

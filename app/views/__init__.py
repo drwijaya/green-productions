@@ -304,6 +304,30 @@ def customers():
     return render_template('admin/customers.html', customers=customers)
 
 
+@views_bp.route('/customers/<int:customer_id>')
+@login_required
+def customer_detail(customer_id):
+    """Customer detail page with order history."""
+    customer = Customer.query.get_or_404(customer_id)
+    
+    # Get all orders for this customer
+    page = request.args.get('page', 1, type=int)
+    orders = customer.orders.order_by(Order.created_at.desc()).paginate(page=page, per_page=15)
+    
+    # Stats
+    total_orders = customer.orders.count()
+    completed_orders = customer.orders.filter(Order.status == 'completed').count()
+    in_production = customer.orders.filter(Order.status == 'in_production').count()
+    
+    return render_template('admin/customer_detail.html', 
+        customer=customer, 
+        orders=orders,
+        total_orders=total_orders,
+        completed_orders=completed_orders,
+        in_production=in_production
+    )
+
+
 @views_bp.route('/employees')
 @login_required
 def employees():
@@ -311,6 +335,39 @@ def employees():
     page = request.args.get('page', 1, type=int)
     employees = Employee.query.order_by(Employee.name).paginate(page=page, per_page=20)
     return render_template('admin/employees.html', employees=employees)
+
+
+@views_bp.route('/employees/<int:employee_id>')
+@login_required
+def employee_detail(employee_id):
+    """Employee detail page with work history."""
+    from ..models.production import ProductionTask, ProductionWorkerLog
+    
+    employee = Employee.query.get_or_404(employee_id)
+    
+    # Get supervised tasks
+    supervised_tasks = ProductionTask.query.filter_by(
+        line_supervisor_id=employee_id
+    ).order_by(ProductionTask.created_at.desc()).limit(50).all()
+    
+    # Get worker logs
+    worker_logs = ProductionWorkerLog.query.filter_by(
+        employee_id=employee_id
+    ).order_by(ProductionWorkerLog.created_at.desc()).limit(50).all()
+    
+    # Stats
+    total_supervised = len(supervised_tasks)
+    total_contributions = len(worker_logs)
+    total_qty_done = sum(log.qty_completed for log in worker_logs)
+    
+    return render_template('admin/employee_detail.html',
+        employee=employee,
+        supervised_tasks=supervised_tasks,
+        worker_logs=worker_logs,
+        total_supervised=total_supervised,
+        total_contributions=total_contributions,
+        total_qty_done=total_qty_done
+    )
 
 
 @views_bp.route('/users')

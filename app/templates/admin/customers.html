@@ -5,8 +5,7 @@
 {% block content %}
 <div class="page-header mb-4">
     <p class="text-muted">Kelola data customer</p>
-    <button class="btn btn-primary" onclick="openModal('newCustomerModal')"><i class="fas fa-plus"></i> Tambah
-        Customer</button>
+    <button class="btn btn-primary" onclick="openAddModal()"><i class="fas fa-plus"></i> Tambah Customer</button>
 </div>
 
 <div class="card">
@@ -33,7 +32,17 @@
                         <td>{{ c.phone or '-' }}</td>
                         <td>{{ c.city or '-' }}</td>
                         <td><span class="badge badge-primary">{{ c.orders.count() }}</span></td>
-                        <td><button class="btn btn-sm btn-outline"><i class="fas fa-edit"></i></button></td>
+                        <td>
+                            <div class="action-buttons">
+                                <a href="{{ url_for('views.customer_detail', customer_id=c.id) }}"
+                                    class="btn btn-sm btn-outline-primary" title="Lihat Detail">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <button class="btn btn-sm btn-outline" onclick="editCustomer({{ c.id }})" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </div>
+                        </td>
                     </tr>
                     {% else %}
                     <tr>
@@ -46,50 +55,348 @@
     </div>
 </div>
 
-<div class="modal-backdrop" id="newCustomerModal">
-    <div class="modal">
+<!-- Add/Edit Customer Modal -->
+<div class="modal-backdrop" id="customerModal">
+    <div class="modal" style="max-width: 550px;">
         <div class="modal-header">
-            <h3 class="modal-title">Tambah Customer</h3><button class="modal-close"
-                onclick="closeModal('newCustomerModal')">&times;</button>
+            <h3 class="modal-title" id="customerModalTitle">Tambah Customer</h3>
+            <button class="modal-close" onclick="closeModal('customerModal')">&times;</button>
         </div>
         <div class="modal-body">
             <form id="customerForm">
-                <div class="form-group"><label class="form-label">Nama *</label><input type="text" class="form-input"
-                        name="name" required></div>
-                <div class="form-group"><label class="form-label">Company</label><input type="text" class="form-input"
-                        name="company_name"></div>
-                <div class="form-group"><label class="form-label">Contact Person</label><input type="text"
-                        class="form-input" name="contact_person"></div>
-                <div class="form-group"><label class="form-label">Phone</label><input type="text" class="form-input"
-                        name="phone"></div>
-                <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input"
-                        name="email"></div>
-                <div class="form-group"><label class="form-label">City</label><input type="text" class="form-input"
-                        name="city"></div>
-                <div class="form-group"><label class="form-label">Address</label><textarea class="form-textarea"
-                        name="address" rows="2"></textarea></div>
+                <input type="hidden" name="id" id="customerId">
+                <div class="form-group">
+                    <label class="form-label">Nama *</label>
+                    <input type="text" class="form-input" name="name" id="custName" required
+                        placeholder="Nama customer">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Company</label>
+                    <input type="text" class="form-input" name="company_name" id="custCompany"
+                        placeholder="Nama perusahaan">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Contact Person</label>
+                        <input type="text" class="form-input" name="contact_person" id="custContact"
+                            placeholder="Nama kontak">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Phone</label>
+                        <input type="text" class="form-input" name="phone" id="custPhone" placeholder="08xxxxxxxxxx">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-input" name="email" id="custEmail"
+                            placeholder="email@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">City</label>
+                        <input type="text" class="form-input" name="city" id="custCity" placeholder="Kota">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Address</label>
+                    <textarea class="form-textarea" name="address" id="custAddress" rows="2"
+                        placeholder="Alamat lengkap"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Notes</label>
+                    <textarea class="form-textarea" name="notes" id="custNotes" rows="2"
+                        placeholder="Catatan tambahan"></textarea>
+                </div>
             </form>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-secondary" onclick="closeModal('newCustomerModal')">Batal</button>
+            <button class="btn btn-secondary" onclick="closeModal('customerModal')">Batal</button>
             <button class="btn btn-primary" onclick="saveCustomer()"><i class="fas fa-save"></i> Simpan</button>
         </div>
     </div>
 </div>
 
+<!-- Customer Detail Modal -->
+<div class="modal-backdrop" id="detailModal">
+    <div class="modal" style="max-width: 700px;">
+        <div class="modal-header">
+            <h3 class="modal-title"><i class="fas fa-user"></i> Detail Customer</h3>
+            <button class="modal-close" onclick="closeModal('detailModal')">&times;</button>
+        </div>
+        <div class="modal-body" id="detailContent">
+            <div class="text-center p-4"><i class="fas fa-spinner fa-spin"></i> Memuat...</div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('detailModal')">Tutup</button>
+            <button class="btn btn-primary" id="editFromDetailBtn" onclick="editFromDetail()"><i
+                    class="fas fa-edit"></i> Edit</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .customer-info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .info-item {
+        padding: 0.75rem;
+        background: var(--bg-secondary, #f8f9fa);
+        border-radius: 8px;
+    }
+
+    .info-item label {
+        font-size: 0.75rem;
+        color: var(--text-secondary, #6b7280);
+        display: block;
+        margin-bottom: 0.25rem;
+    }
+
+    .info-item span {
+        font-weight: 600;
+        color: var(--text-primary, #111827);
+    }
+
+    .order-history-section {
+        margin-top: 1.5rem;
+    }
+
+    .order-history-section h5 {
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .order-history-table {
+        width: 100%;
+        font-size: 0.85rem;
+    }
+
+    .order-history-table th {
+        background: var(--bg-secondary, #f8f9fa);
+        padding: 0.75rem;
+        text-align: left;
+        font-weight: 600;
+    }
+
+    .order-history-table td {
+        padding: 0.75rem;
+        border-bottom: 1px solid var(--border-color, #e5e7eb);
+    }
+
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 50px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .status-badge.draft {
+        background: #f3f4f6;
+        color: #6b7280;
+    }
+
+    .status-badge.in_production {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+
+    .status-badge.completed {
+        background: #d1fae5;
+        color: #059669;
+    }
+
+    .status-badge.cancelled {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+
+    .empty-state-mini {
+        text-align: center;
+        padding: 2rem;
+        color: var(--text-secondary, #9ca3af);
+    }
+
+    .empty-state-mini i {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+
+    @media (max-width: 768px) {
+
+        .form-row,
+        .customer-info-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
 <script>
+    let currentCustomerId = null;
+
+    function openAddModal() {
+        resetForm();
+        document.getElementById('customerModalTitle').textContent = 'Tambah Customer';
+        document.getElementById('customerModal').classList.add('active');
+    }
+
+    function resetForm() {
+        document.getElementById('customerForm').reset();
+        document.getElementById('customerId').value = '';
+        currentCustomerId = null;
+    }
+
+    async function viewCustomer(id) {
+        currentCustomerId = id;
+        document.getElementById('detailContent').innerHTML = '<div class="text-center p-4"><i class="fas fa-spinner fa-spin"></i> Memuat...</div>';
+        document.getElementById('detailModal').classList.add('active');
+
+        try {
+            const res = await api.get(`/customers/${id}`);
+            const c = res.data;
+
+            let ordersHtml = '';
+            if (c.recent_orders && c.recent_orders.length > 0) {
+                ordersHtml = `
+                    <table class="order-history-table">
+                        <thead>
+                            <tr>
+                                <th>No. Order</th>
+                                <th>Produk</th>
+                                <th>Qty</th>
+                                <th>Status</th>
+                                <th>Tanggal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${c.recent_orders.map(o => `
+                                <tr>
+                                    <td><strong>${o.order_code}</strong></td>
+                                    <td>${o.model || '-'}</td>
+                                    <td>${o.qty_total || 0}</td>
+                                    <td><span class="status-badge ${o.status}">${formatStatus(o.status)}</span></td>
+                                    <td>${formatDate(o.order_date)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } else {
+                ordersHtml = `<div class="empty-state-mini"><i class="fas fa-inbox"></i><span>Belum ada pesanan</span></div>`;
+            }
+
+            document.getElementById('detailContent').innerHTML = `
+                <div class="customer-info-grid">
+                    <div class="info-item"><label>Nama</label><span>${c.name || '-'}</span></div>
+                    <div class="info-item"><label>Company</label><span>${c.company_name || '-'}</span></div>
+                    <div class="info-item"><label>Contact Person</label><span>${c.contact_person || '-'}</span></div>
+                    <div class="info-item"><label>Phone</label><span>${c.phone || '-'}</span></div>
+                    <div class="info-item"><label>Email</label><span>${c.email || '-'}</span></div>
+                    <div class="info-item"><label>City</label><span>${c.city || '-'}</span></div>
+                </div>
+                ${c.address ? `<div class="info-item" style="margin-bottom: 1rem;"><label>Alamat</label><span>${c.address}</span></div>` : ''}
+                <div class="order-history-section">
+                    <h5><i class="fas fa-history"></i> Riwayat Pesanan (${c.order_count || 0} total)</h5>
+                    ${ordersHtml}
+                </div>
+            `;
+        } catch (e) {
+            document.getElementById('detailContent').innerHTML = `<div class="text-center text-danger p-4"><i class="fas fa-exclamation-circle"></i> Gagal memuat data</div>`;
+        }
+    }
+
+    async function editCustomer(id) {
+        resetForm();
+        document.getElementById('customerModalTitle').textContent = 'Edit Customer';
+
+        try {
+            const res = await api.get(`/customers/${id}`);
+            const c = res.data;
+            currentCustomerId = id;
+
+            document.getElementById('customerId').value = c.id;
+            document.getElementById('custName').value = c.name || '';
+            document.getElementById('custCompany').value = c.company_name || '';
+            document.getElementById('custContact').value = c.contact_person || '';
+            document.getElementById('custPhone').value = c.phone || '';
+            document.getElementById('custEmail').value = c.email || '';
+            document.getElementById('custCity').value = c.city || '';
+            document.getElementById('custAddress').value = c.address || '';
+            document.getElementById('custNotes').value = c.notes || '';
+
+            document.getElementById('customerModal').classList.add('active');
+        } catch (e) {
+            showToast('Gagal memuat data customer', 'error');
+        }
+    }
+
+    function editFromDetail() {
+        closeModal('detailModal');
+        if (currentCustomerId) {
+            editCustomer(currentCustomerId);
+        }
+    }
+
     async function saveCustomer() {
         const form = document.getElementById('customerForm');
         const data = Object.fromEntries(new FormData(form));
-        if (!data.name) { showToast('Nama wajib diisi', 'error'); return; }
+        const id = data.id;
+        delete data.id;
+
+        if (!data.name) {
+            showToast('Nama wajib diisi', 'error');
+            return;
+        }
+
         try {
-            await api.post('/customers', data);
-            showToast('Customer berhasil ditambahkan', 'success');
-            closeModal('newCustomerModal');
+            if (id) {
+                await api.put(`/customers/${id}`, data);
+                showToast('Customer berhasil diupdate', 'success');
+            } else {
+                await api.post('/customers', data);
+                showToast('Customer berhasil ditambahkan', 'success');
+            }
+            closeModal('customerModal');
             location.reload();
         } catch (e) {
-            showToast(e.message, 'error');
+            showToast(e.message || 'Gagal menyimpan', 'error');
         }
+    }
+
+    function formatStatus(status) {
+        const map = {
+            'draft': 'Draft',
+            'in_production': 'Produksi',
+            'qc_pending': 'QC Pending',
+            'completed': 'Selesai',
+            'cancelled': 'Dibatalkan'
+        };
+        return map[status] || status;
+    }
+
+    function formatDate(dateStr) {
+        if (!dateStr) return '-';
+        const d = new Date(dateStr);
+        return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
     }
 </script>
 {% endblock %}

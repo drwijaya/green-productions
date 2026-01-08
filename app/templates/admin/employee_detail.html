@@ -1,0 +1,506 @@
+{% extends "base.html" %}
+{% block title %}{{ employee.name }} - Employee Detail{% endblock %}
+{% block page_title %}Detail Karyawan{% endblock %}
+
+{% block content %}
+<style>
+    .detail-header {
+        display: flex;
+        align-items: flex-start;
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .employee-avatar {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 2rem;
+        font-weight: 700;
+        flex-shrink: 0;
+    }
+
+    .employee-info h2 {
+        margin: 0 0 0.25rem 0;
+        font-size: 1.5rem;
+    }
+
+    .employee-info .sub-info {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    .position-badges {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-top: 0.5rem;
+    }
+
+    .position-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 50px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: white;
+    }
+
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+    }
+
+    .stat-icon.purple {
+        background: rgba(139, 92, 246, 0.15);
+        color: #8b5cf6;
+    }
+
+    .stat-icon.blue {
+        background: rgba(59, 130, 246, 0.15);
+        color: #3b82f6;
+    }
+
+    .stat-icon.green {
+        background: rgba(16, 185, 129, 0.15);
+        color: #10b981;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+
+    .stat-label {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .info-item {
+        background: var(--bg-secondary);
+        padding: 1rem;
+        border-radius: 8px;
+    }
+
+    .info-item label {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        display: block;
+        margin-bottom: 0.25rem;
+    }
+
+    .info-item span {
+        font-weight: 600;
+    }
+
+    .shortcut-buttons {
+        display: flex;
+        gap: 0.75rem;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+    }
+
+    .shortcut-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.25rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        transition: all 0.2s;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+    }
+
+    .shortcut-btn.primary {
+        background: var(--primary);
+        color: white;
+    }
+
+    .shortcut-btn.secondary {
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+    }
+
+    .tabs {
+        display: flex;
+        gap: 0;
+        border-bottom: 2px solid var(--border-color);
+        margin-bottom: 1.5rem;
+    }
+
+    .tab-btn {
+        padding: 0.75rem 1.5rem;
+        background: none;
+        border: none;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        cursor: pointer;
+        position: relative;
+        transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+        color: var(--primary);
+    }
+
+    .tab-btn.active::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: var(--primary);
+    }
+
+    .tab-content {
+        display: none;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+
+    .search-box {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+    }
+
+    .search-box input {
+        flex: 1;
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 0.9rem;
+    }
+
+    .search-box input:focus {
+        outline: none;
+        border-color: var(--primary);
+    }
+
+    .history-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .history-table th {
+        background: var(--bg-secondary);
+        padding: 0.75rem 1rem;
+        text-align: left;
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+    }
+
+    .history-table td {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border-color);
+        vertical-align: middle;
+    }
+
+    .history-table tr:hover {
+        background: var(--bg-secondary);
+    }
+
+    .type-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.25rem 0.6rem;
+        border-radius: 50px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: white;
+    }
+
+    .type-badge.supervisor {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+    }
+
+    .type-badge.worker {
+        background: linear-gradient(135deg, #4facfe, #00f2fe);
+    }
+
+    .process-badge {
+        background: #f3f4f6;
+        color: #374151;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 0.25rem 0.6rem;
+        border-radius: 50px;
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+
+    .status-badge.pending {
+        background: #f3f4f6;
+        color: #6b7280;
+    }
+
+    .status-badge.in_progress {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+
+    .status-badge.completed {
+        background: #d1fae5;
+        color: #059669;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: var(--text-secondary);
+    }
+
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        display: block;
+        opacity: 0.5;
+    }
+</style>
+
+<!-- Back Button -->
+<a href="{{ url_for('views.employees') }}" class="btn btn-sm btn-secondary mb-4">
+    <i class="fas fa-arrow-left"></i> Kembali ke Daftar
+</a>
+
+<!-- Header -->
+<div class="detail-header">
+    <div class="employee-avatar">{{ employee.name[0] if employee.name else '?' }}</div>
+    <div class="employee-info">
+        <h2>{{ employee.name }}</h2>
+        <div class="sub-info">{{ employee.employee_code }} • {{ employee.employment_type|title if
+            employee.employment_type else 'Karyawan' }}</div>
+        <div class="position-badges">
+            {% set positions = (employee.position or '').split(',') %}
+            {% for pos in positions %}
+            {% set pos = pos.strip() %}
+            {% if pos == 'owner' %}
+            <span class="position-badge" style="background: linear-gradient(135deg, #667eea, #764ba2);"><i
+                    class="fas fa-crown"></i> Owner</span>
+            {% elif pos == 'admin' %}
+            <span class="position-badge" style="background: linear-gradient(135deg, #11998e, #38ef7d);"><i
+                    class="fas fa-user-shield"></i> Admin</span>
+            {% elif pos == 'qc_line' %}
+            <span class="position-badge" style="background: linear-gradient(135deg, #f093fb, #f5576c);"><i
+                    class="fas fa-clipboard-check"></i> QC Line</span>
+            {% elif pos == 'sewing' %}
+            <span class="position-badge" style="background: linear-gradient(135deg, #4facfe, #00f2fe);"><i
+                    class="fas fa-tshirt"></i> Sewing</span>
+            {% elif pos == 'cutting' %}
+            <span class="position-badge" style="background: linear-gradient(135deg, #a8edea, #fed6e3); color: #333;"><i
+                    class="fas fa-cut"></i> Cutting</span>
+            {% elif pos == 'sablon' %}
+            <span class="position-badge" style="background: linear-gradient(135deg, #fa709a, #fee140);"><i
+                    class="fas fa-paint-brush"></i> Sablon</span>
+            {% elif pos == 'finishing' %}
+            <span class="position-badge" style="background: linear-gradient(135deg, #d299c2, #fef9d7); color: #333;"><i
+                    class="fas fa-magic"></i> Finishing</span>
+            {% elif pos == 'packing' %}
+            <span class="position-badge" style="background: linear-gradient(135deg, #89f7fe, #66a6ff);"><i
+                    class="fas fa-box"></i> Packing</span>
+            {% elif pos %}
+            <span class="position-badge" style="background: #6b7280;">{{ pos }}</span>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+    <div class="stat-card">
+        <div class="stat-icon purple"><i class="fas fa-user-tie"></i></div>
+        <div>
+            <div class="stat-value">{{ total_supervised }}</div>
+            <div class="stat-label">Task Disupervisi</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon blue"><i class="fas fa-hard-hat"></i></div>
+        <div>
+            <div class="stat-value">{{ total_contributions }}</div>
+            <div class="stat-label">Kontribusi Kerja</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon green"><i class="fas fa-check-double"></i></div>
+        <div>
+            <div class="stat-value">{{ total_qty_done }}</div>
+            <div class="stat-label">Total Qty Selesai</div>
+        </div>
+    </div>
+</div>
+
+<!-- Info Card -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h4><i class="fas fa-id-card"></i> Informasi Karyawan</h4>
+    </div>
+    <div class="card-body">
+        <div class="info-grid">
+            <div class="info-item"><label>Kode Karyawan</label><span>{{ employee.employee_code }}</span></div>
+            <div class="info-item"><label>Phone</label><span>{{ employee.phone or '-' }}</span></div>
+            <div class="info-item"><label>Email</label><span>{{ employee.email or '-' }}</span></div>
+            <div class="info-item"><label>Tanggal Bergabung</label><span>{{ employee.join_date.strftime('%d %b %Y') if
+                    employee.join_date else '-' }}</span></div>
+        </div>
+    </div>
+</div>
+
+<!-- Shortcuts -->
+<div class="shortcut-buttons">
+    <button class="shortcut-btn secondary" onclick="window.location.href='{{ url_for('views.employees') }}'">
+        <i class="fas fa-edit"></i> Edit Karyawan
+    </button>
+</div>
+
+<!-- Work History -->
+<div class="card">
+    <div class="card-header">
+        <h4><i class="fas fa-history"></i> Riwayat Pekerjaan</h4>
+    </div>
+    <div class="card-body">
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('all')">Semua</button>
+            <button class="tab-btn" onclick="switchTab('supervisor')">Supervisor ({{ total_supervised }})</button>
+            <button class="tab-btn" onclick="switchTab('worker')">Worker ({{ total_contributions }})</button>
+        </div>
+
+        <div class="search-box">
+            <i class="fas fa-search" style="color: var(--text-secondary);"></i>
+            <input type="text" id="historySearch" placeholder="Cari no. order..." onkeyup="filterHistory()">
+        </div>
+
+        <div class="table-container">
+            <table class="history-table" id="historyTable">
+                <thead>
+                    <tr>
+                        <th>Tipe</th>
+                        <th>No. Order</th>
+                        <th>Proses</th>
+                        <th>Qty</th>
+                        <th>Status</th>
+                        <th>Tanggal</th>
+                    </tr>
+                </thead>
+                <tbody id="historyBody">
+                    {% for task in supervised_tasks %}
+                    <tr data-type="supervisor" data-order="{{ task.order.order_code|lower if task.order else '' }}">
+                        <td><span class="type-badge supervisor"><i class="fas fa-user-tie"></i> Supervisor</span></td>
+                        <td><strong>{{ task.order.order_code if task.order else '-' }}</strong></td>
+                        <td><span class="process-badge">{{ task.process|title }}</span></td>
+                        <td>{{ task.qty_completed }}/{{ task.qty_target }}</td>
+                        <td><span class="status-badge {{ task.status }}">{{ task.status|replace('_', ' ')|title
+                                }}</span></td>
+                        <td>{{ task.created_at.strftime('%d %b %Y') if task.created_at else '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                    {% for log in worker_logs %}
+                    <tr data-type="worker"
+                        data-order="{{ log.task.order.order_code|lower if log.task and log.task.order else '' }}">
+                        <td><span class="type-badge worker"><i class="fas fa-hard-hat"></i> Worker</span></td>
+                        <td><strong>{{ log.task.order.order_code if log.task and log.task.order else '-' }}</strong>
+                        </td>
+                        <td><span class="process-badge">{{ log.task.process|title if log.task else '-' }}</span></td>
+                        <td>{{ log.qty_completed }}</td>
+                        <td>-</td>
+                        <td>{{ log.created_at.strftime('%d %b %Y') if log.created_at else '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                    {% if not supervised_tasks and not worker_logs %}
+                    <tr id="emptyRow">
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <i class="fas fa-inbox"></i>
+                                <span>Belum ada riwayat pekerjaan</span>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentTab = 'all';
+
+    function switchTab(tab) {
+        currentTab = tab;
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+        filterHistory();
+    }
+
+    function filterHistory() {
+        const search = document.getElementById('historySearch').value.toLowerCase();
+        const rows = document.querySelectorAll('#historyBody tr[data-type]');
+
+        rows.forEach(row => {
+            const type = row.dataset.type;
+            const order = row.dataset.order || '';
+
+            const matchesTab = currentTab === 'all' || type === currentTab;
+            const matchesSearch = order.includes(search);
+
+            row.style.display = (matchesTab && matchesSearch) ? '' : 'none';
+        });
+    }
+</script>
+{% endblock %}
