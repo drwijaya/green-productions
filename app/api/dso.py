@@ -169,6 +169,66 @@ def export_dso_pdf(dso_id):
         return api_response(message=f'Error exporting PDF: {str(e)}', status=500)
 
 
+@api_bp.route('/dso/bulk-export', methods=['POST'])
+@login_required
+def bulk_export_dso():
+    """Bulk export multiple DSOs to ZIP file."""
+    import zipfile
+    import io
+    from flask import send_file
+    from ..services.word_service import export_dso_to_word, export_dso_to_pdf
+    
+    data = request.get_json()
+    dso_ids = data.get('dso_ids', [])
+    export_format = data.get('format', 'word')  # 'word' or 'pdf'
+    
+    if not dso_ids:
+        return api_response(message='No DSO IDs provided', status=400)
+    
+    if len(dso_ids) > 50:
+        return api_response(message='Maximum 50 DSOs per bulk export', status=400)
+    
+    try:
+        # Create ZIP file in memory
+        zip_buffer = io.BytesIO()
+        
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            for dso_id in dso_ids:
+                dso = DSO.query.get(dso_id)
+                if not dso:
+                    continue
+                
+                try:
+                    if export_format == 'pdf':
+                        doc_buffer = export_dso_to_pdf(dso)
+                        ext = 'pdf'
+                    else:
+                        doc_buffer = export_dso_to_word(dso)
+                        ext = 'docx'
+                    
+                    filename = f"DSO_{dso.order.order_code}_v{dso.version}.{ext}"
+                    zip_file.writestr(filename, doc_buffer.getvalue())
+                except Exception as e:
+                    print(f"Error exporting DSO {dso_id}: {e}")
+                    continue
+        
+        zip_buffer.seek(0)
+        
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        zip_filename = f"DSO_Bulk_Export_{timestamp}.zip"
+        
+        return send_file(
+            zip_buffer,
+            as_attachment=True,
+            download_name=zip_filename,
+            mimetype='application/zip'
+        )
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return api_response(message=f'Error creating bulk export: {str(e)}', status=500)
+
+
 @api_bp.route('/dso/<int:dso_id>', methods=['PUT'])
 @login_required
 @require_roles(UserRole.ADMIN, UserRole.OWNER, UserRole.ADMIN_PRODUKSI)
