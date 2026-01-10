@@ -177,8 +177,18 @@ def orders():
 @views_bp.route('/orders/<int:order_id>')
 @login_required
 def order_detail(order_id):
-    """Order detail page."""
+    """Order detail page by ID."""
     order = Order.query.get_or_404(order_id)
+    dsos = order.dso.order_by(DSO.version.desc()).all()
+    tasks = order.production_tasks.order_by(ProductionTask.sequence).all()
+    return render_template('orders/detail.html', order=order, dsos=dsos, tasks=tasks)
+
+
+@views_bp.route('/orders/<order_code>')
+@login_required
+def order_detail_by_code(order_code):
+    """Order detail page by order code (human-readable URL)."""
+    order = Order.query.filter_by(order_code=order_code).first_or_404()
     dsos = order.dso.order_by(DSO.version.desc()).all()
     tasks = order.production_tasks.order_by(ProductionTask.sequence).all()
     return render_template('orders/detail.html', order=order, dsos=dsos, tasks=tasks)
@@ -187,8 +197,19 @@ def order_detail(order_id):
 @views_bp.route('/dso/<int:dso_id>')
 @login_required
 def dso_detail(dso_id):
-    """DSO detail/edit page."""
+    """DSO detail/edit page by ID."""
     dso = DSO.query.get_or_404(dso_id)
+    return render_template('dso/detail.html', dso=dso)
+
+
+@views_bp.route('/dso/<order_code>/<int:version>')
+@login_required
+def dso_detail_by_code(order_code, version):
+    """DSO detail/edit page by order code and version."""
+    # Find order by order_code
+    order = Order.query.filter_by(order_code=order_code).first_or_404()
+    # Find DSO by order and version
+    dso = DSO.query.filter_by(order_id=order.id, version=version).first_or_404()
     return render_template('dso/detail.html', dso=dso)
 
 
@@ -310,7 +331,7 @@ def qc_list():
 @views_bp.route('/production/qc/<int:task_id>')
 @login_required
 def qc_inspect(task_id):
-    """QC inspection/checklist page for a task."""
+    """QC inspection/checklist page for a task by ID."""
     import traceback
     try:
         from datetime import datetime
@@ -326,6 +347,37 @@ def qc_inspect(task_id):
                                operator_names=operator_names)
     except Exception as e:
         print(f"QC_INSPECT ERROR: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({'error': str(e), 'trace': traceback.format_exc()}), 500
+
+
+@views_bp.route('/production/qc/<order_code>/<process>')
+@login_required
+def qc_inspect_by_code(order_code, process):
+    """QC inspection/checklist page by order code and process (station)."""
+    import traceback
+    try:
+        from datetime import datetime
+        
+        # Find order by order_code  
+        order = Order.query.filter_by(order_code=order_code).first_or_404()
+        
+        # Find production task by order and process
+        task = ProductionTask.query.filter_by(
+            order_id=order.id, 
+            process=process.lower()
+        ).first_or_404()
+        
+        # Get assigned workers for this task
+        workers = task.worker_logs.all()
+        operator_names = [log.employee.name for log in workers if log.employee] if workers else []
+        
+        return render_template('qc/inspect.html', 
+                               task=task, 
+                               now=datetime.now(),
+                               operator_names=operator_names)
+    except Exception as e:
+        print(f"QC_INSPECT_BY_CODE ERROR: {str(e)}")
         print(traceback.format_exc())
         return jsonify({'error': str(e), 'trace': traceback.format_exc()}), 500
 
@@ -564,3 +616,25 @@ def materials_qc(request_id):
 def vendors_list():
     """Vendors list page."""
     return render_template('vendors/list.html')
+
+
+# Scanner Routes
+@views_bp.route('/scan')
+@login_required
+def scanner():
+    """QR Code scanner page."""
+    return render_template('scan/index.html')
+
+
+@views_bp.route('/scan/result/<order_code>')
+@login_required
+def scanner_result(order_code):
+    """Scanner result page - shows menu options for scanned invoice."""
+    order = Order.query.filter_by(order_code=order_code).first()
+    
+    if not order:
+        flash(f'Invoice {order_code} tidak ditemukan', 'error')
+        return redirect(url_for('views.scanner'))
+    
+    return render_template('scan/result.html', order=order)
+

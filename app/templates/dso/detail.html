@@ -84,12 +84,33 @@
     /* Header Section */
     .doc-header-grid {
         display: grid;
-        grid-template-columns: 200px 1fr 250px;
+        grid-template-columns: 200px 1fr auto 250px;
         gap: 1rem;
         align-items: center;
         margin-bottom: 2rem;
         border-bottom: 2px solid #0f172a;
         padding-bottom: 1rem;
+    }
+
+    .dso-qrcode {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 0.5rem;
+    }
+
+    .dso-qrcode img {
+        border: 1px solid #e2e8f0;
+        border-radius: 4px;
+        background: white;
+    }
+
+    .dso-qrcode-label {
+        font-size: 0.65rem;
+        color: #64748b;
+        text-align: center;
+        margin-top: 0.25rem;
     }
 
     .info-box-table {
@@ -176,7 +197,7 @@
 <!-- Action Header (Outside Paper) -->
 <div class="actions-header">
     <div>
-        <a href="{{ url_for('views.order_detail', order_id=dso.order_id) }}" class="btn btn-outline-secondary btn-sm">
+        <a href="/orders/{{ dso.order.order_code }}" class="btn btn-outline-secondary btn-sm">
             <i class="fas fa-arrow-left me-1"></i> Kembali
         </a>
     </div>
@@ -204,6 +225,10 @@
         </div>
         <div class="text-center">
             <h4 class="mb-0 fw-bold text-uppercase">Design Specification Order (DSO)</h4>
+        </div>
+        <div class="dso-qrcode">
+            <img id="dsoQrcodeImage" src="" alt="QR Code" style="width: 70px; height: 70px; display: none;">
+            <div class="dso-qrcode-label" id="dsoQrcodeLabel" style="display: none;">{{ dso.order.order_code }}</div>
         </div>
         <div>
             <table class="info-box-table text-center" style="font-size: 0.8rem;">
@@ -579,6 +604,23 @@
     document.addEventListener('DOMContentLoaded', () => {
         calcDewasa();
         calcAnak();
+        loadDsoQRCode();
     });
+
+    async function loadDsoQRCode() {
+        try {
+            const orderId = {{ dso.order_id }};
+            const response = await api.get('/barcodes/qc-qrcode/' + orderId);
+            if (response.success && response.data.qr_image) {
+                const qrImg = document.getElementById('dsoQrcodeImage');
+                const qrLabel = document.getElementById('dsoQrcodeLabel');
+                qrImg.src = response.data.qr_image;
+                qrImg.style.display = 'block';
+                qrLabel.style.display = 'block';
+            }
+        } catch (error) {
+            console.log('DSO QR code loading failed:', error);
+        }
+    }
 </script>
 {% endblock %}

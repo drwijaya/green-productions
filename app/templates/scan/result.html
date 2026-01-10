@@ -1,0 +1,391 @@
+{% extends "base.html" %}
+
+{% block title %}{{ order.order_code }} - Hasil Scan{% endblock %}
+{% block page_title %}Invoice Ditemukan{% endblock %}
+
+{% block content %}
+<style>
+    .result-container {
+        max-width: 500px;
+        margin: 0 auto;
+        padding: 1rem;
+    }
+
+    .result-card {
+        background: var(--white);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--gray-200);
+        overflow: hidden;
+        box-shadow: var(--shadow-lg);
+    }
+
+    .result-header {
+        background: linear-gradient(135deg, #10B981, #059669);
+        color: white;
+        padding: 1.5rem;
+        text-align: center;
+    }
+
+    .result-header .success-icon {
+        width: 60px;
+        height: 60px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+        font-size: 1.75rem;
+    }
+
+    .result-header h2 {
+        margin: 0;
+        font-size: 1.5rem;
+    }
+
+    .result-header p {
+        margin: 0.5rem 0 0;
+        opacity: 0.9;
+        font-size: 0.875rem;
+    }
+
+    .order-info {
+        padding: 1.25rem;
+        background: var(--gray-50);
+        border-bottom: 1px solid var(--gray-100);
+    }
+
+    .order-info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .order-info-item {
+        text-align: center;
+    }
+
+    .order-info-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--gray-500);
+        margin-bottom: 0.25rem;
+    }
+
+    .order-info-value {
+        font-weight: 600;
+        color: var(--gray-800);
+        font-size: 0.9rem;
+    }
+
+    .menu-section {
+        padding: 1.25rem;
+    }
+
+    .menu-section h4 {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--gray-500);
+        margin-bottom: 1rem;
+        text-align: center;
+    }
+
+    .menu-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .menu-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        background: var(--gray-50);
+        border-radius: var(--radius);
+        text-decoration: none;
+        color: var(--gray-800);
+        transition: all 0.2s;
+        border: 2px solid transparent;
+    }
+
+    .menu-item:hover {
+        background: var(--primary-50);
+        border-color: var(--primary);
+        transform: translateX(4px);
+    }
+
+    .menu-item:hover .menu-icon {
+        transform: scale(1.1);
+    }
+
+    .menu-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: var(--radius);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.125rem;
+        color: white;
+        flex-shrink: 0;
+        transition: transform 0.2s;
+    }
+
+    .menu-icon.blue {
+        background: #3B82F6;
+    }
+
+    .menu-icon.purple {
+        background: #8B5CF6;
+    }
+
+    .menu-icon.orange {
+        background: #F97316;
+    }
+
+    .menu-icon.teal {
+        background: #14B8A6;
+    }
+
+    .menu-icon.pink {
+        background: #EC4899;
+    }
+
+    .menu-icon.indigo {
+        background: #6366F1;
+    }
+
+    .menu-icon.yellow {
+        background: #EAB308;
+    }
+
+    .menu-content {
+        flex: 1;
+    }
+
+    .menu-title {
+        font-weight: 600;
+        margin-bottom: 0.125rem;
+    }
+
+    .menu-desc {
+        font-size: 0.75rem;
+        color: var(--gray-500);
+    }
+
+    .menu-arrow {
+        color: var(--gray-400);
+        transition: transform 0.2s;
+    }
+
+    .menu-item:hover .menu-arrow {
+        transform: translateX(4px);
+        color: var(--primary);
+    }
+
+    .qc-section {
+        padding: 0 1.25rem 1.25rem;
+    }
+
+    .qc-section h4 {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--gray-500);
+        margin-bottom: 0.75rem;
+    }
+
+    .qc-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+    }
+
+    .qc-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.875rem 0.5rem;
+        background: var(--gray-50);
+        border-radius: var(--radius);
+        text-decoration: none;
+        color: var(--gray-700);
+        transition: all 0.2s;
+        border: 2px solid transparent;
+        text-align: center;
+    }
+
+    .qc-item:hover {
+        background: var(--primary-50);
+        border-color: var(--primary);
+        transform: translateY(-2px);
+    }
+
+    .qc-item i {
+        font-size: 1.25rem;
+        color: var(--primary);
+    }
+
+    .qc-item span {
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .result-footer {
+        padding: 1rem 1.25rem;
+        background: var(--gray-50);
+        border-top: 1px solid var(--gray-100);
+        text-align: center;
+    }
+
+    .result-footer .btn {
+        width: 100%;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 50px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .status-draft {
+        background: #F3F4F6;
+        color: #6B7280;
+    }
+
+    .status-in_production {
+        background: #DBEAFE;
+        color: #1D4ED8;
+    }
+
+    .status-qc_pending {
+        background: #FEF3C7;
+        color: #D97706;
+    }
+
+    .status-completed {
+        background: #D1FAE5;
+        color: #059669;
+    }
+
+    @media (max-width: 480px) {
+        .result-container {
+            padding: 0.5rem;
+        }
+
+        .qc-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+</style>
+
+<div class="result-container">
+    <div class="result-card">
+        <div class="result-header">
+            <div class="success-icon">
+                <i class="fas fa-check"></i>
+            </div>
+            <h2>{{ order.order_code }}</h2>
+            <p>{{ order.model }}</p>
+        </div>
+
+        <div class="order-info">
+            <div class="order-info-grid">
+                <div class="order-info-item">
+                    <div class="order-info-label">Customer</div>
+                    <div class="order-info-value">{{ order.customer.name if order.customer else '-' }}</div>
+                </div>
+                <div class="order-info-item">
+                    <div class="order-info-label">Qty</div>
+                    <div class="order-info-value">{{ order.qty_total }} pcs</div>
+                </div>
+                <div class="order-info-item">
+                    <div class="order-info-label">Deadline</div>
+                    <div class="order-info-value">{{ order.deadline.strftime('%d/%m/%Y') if order.deadline else '-' }}
+                    </div>
+                </div>
+                <div class="order-info-item">
+                    <div class="order-info-label">Status</div>
+                    <div class="order-info-value">
+                        <span class="status-badge status-{{ order.status }}">
+                            {{ order.status.replace('_', ' ').title() }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="menu-section">
+            <h4>Pilih Menu</h4>
+            <div class="menu-list">
+                <a href="/orders/{{ order.order_code }}" class="menu-item">
+                    <div class="menu-icon blue">
+                        <i class="fas fa-file-invoice"></i>
+                    </div>
+                    <div class="menu-content">
+                        <div class="menu-title">Detail Invoice</div>
+                        <div class="menu-desc">Lihat informasi lengkap invoice</div>
+                    </div>
+                    <i class="fas fa-chevron-right menu-arrow"></i>
+                </a>
+
+                {% if order.dso_status != 'not_created' %}
+                <a href="/dso/{{ order.order_code }}/1" class="menu-item">
+                    <div class="menu-icon purple">
+                        <i class="fas fa-drafting-compass"></i>
+                    </div>
+                    <div class="menu-content">
+                        <div class="menu-title">Design Specification (DSO)</div>
+                        <div class="menu-desc">Lihat spesifikasi desain</div>
+                    </div>
+                    <i class="fas fa-chevron-right menu-arrow"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="qc-section">
+            <h4>QC Checklist</h4>
+            <div class="qc-grid">
+                <a href="/production/qc/{{ order.order_code }}/cutting" class="qc-item">
+                    <i class="fas fa-cut"></i>
+                    <span>Cutting</span>
+                </a>
+                <a href="/production/qc/{{ order.order_code }}/sewing" class="qc-item">
+                    <i class="fas fa-tshirt"></i>
+                    <span>Sewing</span>
+                </a>
+                <a href="/production/qc/{{ order.order_code }}/sablon" class="qc-item">
+                    <i class="fas fa-paint-roller"></i>
+                    <span>Sablon</span>
+                </a>
+                <a href="/production/qc/{{ order.order_code }}/finishing" class="qc-item">
+                    <i class="fas fa-magic"></i>
+                    <span>Finishing</span>
+                </a>
+                <a href="/production/qc/{{ order.order_code }}/packing" class="qc-item">
+                    <i class="fas fa-box"></i>
+                    <span>Packing</span>
+                </a>
+                <a href="{{ url_for('views.production') }}" class="qc-item">
+                    <i class="fas fa-industry"></i>
+                    <span>Production</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="result-footer">
+            <a href="{{ url_for('views.scanner') }}" class="btn btn-outline">
+                <i class="fas fa-qrcode"></i> Scan Invoice Lain
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

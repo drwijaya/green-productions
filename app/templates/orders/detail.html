@@ -214,7 +214,7 @@
                         <div class="step-status">{{ task.status.replace('_', ' ').title() }}</div>
                     </div>
                     {% if task.status in ['in_progress', 'completed'] %}
-                    <a href="{{ url_for('views.qc_inspect', task_id=task.id) }}" class="btn btn-xs btn-outline"
+                    <a href="/production/qc/{{ order.order_code }}/{{ task.process }}" class="btn btn-xs btn-outline"
                         title="QC Task">
                         <i class="fas fa-clipboard-check"></i>
                     </a>
@@ -276,7 +276,7 @@
                     <div class="qc-task-name">{{ task.process.title() }}</div>
                     <div class="qc-task-meta">Status: {{ task.status.replace('_', ' ').title() }}</div>
                 </div>
-                <a href="{{ url_for('views.qc_inspect', task_id=task.id) }}" class="btn btn-sm btn-outline">
+                <a href="/production/qc/{{ order.order_code }}/{{ task.process }}" class="btn btn-sm btn-outline">
                     <i class="fas fa-clipboard-check"></i> QC
                 </a>
             </div>
@@ -329,7 +329,7 @@
                         <td>{{ dso.warna or '-' }}</td>
                         <td>{{ dso.created_at.strftime('%d/%m/%Y %H:%M') if dso.created_at else '-' }}</td>
                         <td>
-                            <a href="{{ url_for('views.dso_detail', dso_id=dso.id) }}" class="btn btn-sm btn-outline">
+                            <a href="/dso/{{ order.order_code }}/{{ dso.version }}" class="btn btn-sm btn-outline">
                                 <i class="fas fa-eye"></i> View
                             </a>
                         </td>

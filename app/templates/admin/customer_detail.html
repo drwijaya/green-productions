@@ -336,8 +336,7 @@
                         <td>{{ order.deadline.strftime('%d %b %Y') if order.deadline else '-' }}</td>
                         <td>{{ order.order_date.strftime('%d %b %Y') if order.order_date else '-' }}</td>
                         <td>
-                            <a href="{{ url_for('views.order_detail', order_id=order.id) }}"
-                                class="btn btn-sm btn-outline">
+                            <a href="/orders/{{ order.order_code }}" class="btn btn-sm btn-outline">
                                 <i class="fas fa-eye"></i>
                             </a>
                         </td>

@@ -1,0 +1,320 @@
+{% extends "base.html" %}
+
+{% block title %}Scan Invoice{% endblock %}
+{% block page_title %}Invoice Scanner{% endblock %}
+
+{% block content %}
+<style>
+    .scanner-container {
+        max-width: 500px;
+        margin: 0 auto;
+        padding: 1rem;
+    }
+
+    .scanner-card {
+        background: var(--white);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--gray-200);
+        overflow: hidden;
+        box-shadow: var(--shadow-lg);
+    }
+
+    .scanner-header {
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        color: white;
+        padding: 1.5rem;
+        text-align: center;
+    }
+
+    .scanner-header h2 {
+        margin: 0;
+        font-size: 1.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .scanner-header p {
+        margin: 0.5rem 0 0;
+        opacity: 0.9;
+        font-size: 0.875rem;
+    }
+
+    .scanner-body {
+        padding: 1.5rem;
+    }
+
+    #reader {
+        width: 100%;
+        border-radius: var(--radius);
+        overflow: hidden;
+    }
+
+    #reader video {
+        border-radius: var(--radius);
+    }
+
+    .manual-input-section {
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--gray-200);
+    }
+
+    .manual-input-section h4 {
+        font-size: 0.9rem;
+        color: var(--gray-600);
+        margin-bottom: 0.75rem;
+        text-align: center;
+    }
+
+    .input-group {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .input-group input {
+        flex: 1;
+        padding: 0.875rem 1rem;
+        border: 2px solid var(--gray-200);
+        border-radius: var(--radius);
+        font-size: 1rem;
+        transition: border-color 0.2s;
+    }
+
+    .input-group input:focus {
+        outline: none;
+        border-color: var(--primary);
+    }
+
+    .input-group button {
+        padding: 0.875rem 1.5rem;
+        white-space: nowrap;
+    }
+
+    .scanner-footer {
+        padding: 1rem 1.5rem;
+        background: var(--gray-50);
+        text-align: center;
+        border-top: 1px solid var(--gray-100);
+    }
+
+    .scanner-footer p {
+        margin: 0;
+        font-size: 0.8rem;
+        color: var(--gray-500);
+    }
+
+    .scan-status {
+        text-align: center;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: var(--radius);
+        display: none;
+    }
+
+    .scan-status.scanning {
+        display: block;
+        background: #DBEAFE;
+        color: #1D4ED8;
+    }
+
+    .scan-status.success {
+        display: block;
+        background: #D1FAE5;
+        color: #059669;
+    }
+
+    .scan-status.error {
+        display: block;
+        background: #FEE2E2;
+        color: #DC2626;
+    }
+
+    .camera-toggle {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 1rem;
+    }
+
+    .camera-toggle button {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    @media (max-width: 480px) {
+        .scanner-container {
+            padding: 0.5rem;
+        }
+
+        .scanner-header {
+            padding: 1rem;
+        }
+
+        .scanner-body {
+            padding: 1rem;
+        }
+    }
+</style>
+
+<div class="scanner-container">
+    <div class="scanner-card">
+        <div class="scanner-header">
+            <h2><i class="fas fa-qrcode"></i> Scan Invoice QR Code</h2>
+            <p>Arahkan kamera ke QR code pada dokumen</p>
+        </div>
+
+        <div class="scanner-body">
+            <div id="scanStatus" class="scan-status"></div>
+
+            <div class="camera-toggle">
+                <button id="toggleCamera" class="btn btn-outline" onclick="toggleCamera()">
+                    <i class="fas fa-camera"></i> Aktifkan Kamera
+                </button>
+            </div>
+
+            <div id="reader"></div>
+
+            <div class="manual-input-section">
+                <h4>Atau masukkan nomor invoice manual</h4>
+                <div class="input-group">
+                    <input type="text" id="manualInput" placeholder="INV-202601-0001"
+                        onkeypress="if(event.key==='Enter') searchInvoice()">
+                    <button class="btn btn-primary" onclick="searchInvoice()">
+                        <i class="fas fa-search"></i> Cari
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="scanner-footer">
+            <p><i class="fas fa-info-circle"></i> QR code dapat ditemukan pada dokumen DSO atau QC Checklist</p>
+        </div>
+    </div>
+</div>
+
+<!-- html5-qrcode library -->
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+<script>
+    let html5QrCode = null;
+    let isScanning = false;
+
+    function toggleCamera() {
+        if (isScanning) {
+            stopScanner();
+        } else {
+            startScanner();
+        }
+    }
+
+    function updateStatus(type, message) {
+        const status = document.getElementById('scanStatus');
+        status.className = 'scan-status ' + type;
+        status.innerHTML = message;
+    }
+
+    function startScanner() {
+        const toggleBtn = document.getElementById('toggleCamera');
+
+        html5QrCode = new Html5Qrcode("reader");
+
+        updateStatus('scanning', '<i class="fas fa-spinner fa-spin"></i> Mengaktifkan kamera...');
+
+        html5QrCode.start(
+            { facingMode: "environment" },
+            {
+                fps: 10,
+                qrbox: { width: 250, height: 250 }
+            },
+            onScanSuccess,
+            onScanFailure
+        ).then(() => {
+            isScanning = true;
+            toggleBtn.innerHTML = '<i class="fas fa-stop"></i> Matikan Kamera';
+            toggleBtn.classList.remove('btn-outline');
+            toggleBtn.classList.add('btn-danger');
+            updateStatus('scanning', '<i class="fas fa-search"></i> Mencari QR code...');
+        }).catch((err) => {
+            updateStatus('error', '<i class="fas fa-exclamation-circle"></i> Gagal mengakses kamera: ' + err);
+            console.error('Camera error:', err);
+        });
+    }
+
+    function stopScanner() {
+        const toggleBtn = document.getElementById('toggleCamera');
+
+        if (html5QrCode && isScanning) {
+            html5QrCode.stop().then(() => {
+                isScanning = false;
+                toggleBtn.innerHTML = '<i class="fas fa-camera"></i> Aktifkan Kamera';
+                toggleBtn.classList.remove('btn-danger');
+                toggleBtn.classList.add('btn-outline');
+                document.getElementById('scanStatus').style.display = 'none';
+            }).catch(err => console.error('Stop error:', err));
+        }
+    }
+
+    function onScanSuccess(decodedText, decodedResult) {
+        updateStatus('success', '<i class="fas fa-check-circle"></i> QR Code terdeteksi!');
+
+        // Stop scanner
+        stopScanner();
+
+        // Process the scanned text
+        processScannedCode(decodedText);
+    }
+
+    function onScanFailure(error) {
+        // Ignore scan failures (no QR found in frame)
+    }
+
+    function processScannedCode(code) {
+        let orderCode = code.trim();
+
+        // Handle old format QC-{order_id}
+        if (orderCode.startsWith('QC-')) {
+            // This is old format, we need to look it up
+            const orderId = orderCode.replace('QC-', '');
+            showToast('Format lama terdeteksi, mencari invoice...', 'info');
+            lookupOrderById(orderId);
+            return;
+        }
+
+        // New format - direct order_code
+        navigateToResult(orderCode);
+    }
+
+    async function lookupOrderById(orderId) {
+        try {
+            const response = await api.get('/orders/' + orderId);
+            if (response.data && response.data.order_code) {
+                navigateToResult(response.data.order_code);
+            }
+        } catch (error) {
+            showToast('Invoice tidak ditemukan', 'error');
+        }
+    }
+
+    function navigateToResult(orderCode) {
+        window.location.href = '/scan/result/' + encodeURIComponent(orderCode);
+    }
+
+    function searchInvoice() {
+        const input = document.getElementById('manualInput').value.trim();
+        if (!input) {
+            showToast('Masukkan nomor invoice', 'warning');
+            return;
+        }
+        navigateToResult(input);
+    }
+
+    // Cleanup on page leave
+    window.addEventListener('beforeunload', () => {
+        if (html5QrCode && isScanning) {
+            html5QrCode.stop();
+        }
+    });
+</script>
+{% endblock %}

@@ -29,6 +29,12 @@
                 <span class="process-badge {{ task.process }}">Checklist {{ task.process.title() }}</span>
             </div>
         </div>
+        <div class="doc-qrcode" id="qrcodeContainer">
+            <img id="qrcodeImage" src="" alt="QR Code" style="width: 80px; height: 80px; display: none;">
+            <div class="qrcode-label" id="qrcodeLabel"
+                style="font-size: 0.65rem; color: var(--gray-500); text-align: center; display: none;">{{
+                task.order.order_code }}</div>
+        </div>
         <div class="doc-info">
             <div class="info-row">
                 <span class="label">No. Dokumen</span>
@@ -250,11 +256,25 @@
     /* Document Header */
     .doc-header {
         display: grid;
-        grid-template-columns: auto 1fr auto;
+        grid-template-columns: auto 1fr auto auto;
         gap: 1.5rem;
         padding: 1.5rem;
         border-bottom: 2px solid var(--gray-200);
         background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    }
+
+    .doc-qrcode {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 0 0.5rem;
+    }
+
+    .doc-qrcode img {
+        border: 1px solid var(--gray-200);
+        border-radius: var(--radius-sm);
+        background: white;
     }
 
     .doc-logo {
@@ -886,9 +906,27 @@
         const docNum = `QC-${currentProcess.toUpperCase().substring(0, 3)}-${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
         document.getElementById('docNumber').textContent = docNum;
 
+        // Load QR code for QC checklist
+        await loadQRCode();
+
         // Load existing QC sheet data if available
         await loadExistingData();
     });
+
+    async function loadQRCode() {
+        try {
+            const response = await api.get(`/barcodes/qc-qrcode/${orderId}`);
+            if (response.success && response.data.qr_image) {
+                const qrImg = document.getElementById('qrcodeImage');
+                const qrLabel = document.getElementById('qrcodeLabel');
+                qrImg.src = response.data.qr_image;
+                qrImg.style.display = 'block';
+                qrLabel.style.display = 'block';
+            }
+        } catch (error) {
+            console.log('QR code loading failed:', error);
+        }
+    }
 
     async function loadExistingData() {
         try {
@@ -952,7 +990,8 @@
         const config = checklistConfig[currentProcess] || checklistConfig.sewing;
         const tbody = document.getElementById('checklistBody');
         const defectSelect = document.getElementById('defectType');
-        const targetQty = {{ task.qty_target }};
+        const targetQty = {{ task.qty_target }
+    };
 
     tbody.innerHTML = '';
     checklistData = [];
@@ -1037,7 +1076,8 @@
         }
 
         const id = 'custom_' + Date.now();
-        const targetQty = parseInt(document.getElementById('totalInspected').value) || {{ task.qty_target }};
+        const targetQty = parseInt(document.getElementById('totalInspected').value) || {{ task.qty_target }
+    };
 
     addParameterRow(id, name, targetQty, true);
     closeModal('addParamModal');

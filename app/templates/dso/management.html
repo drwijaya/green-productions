@@ -501,8 +501,9 @@
                 </a>
             `;
         } else {
+            const latestVersion = order.latest_dso ? order.latest_dso.version : 1;
             actionButtons = `
-                <a href="/dso/${latestDsoId}" class="btn btn-primary">
+                <a href="/dso/${order.order_code}/${latestVersion}" class="btn btn-primary">
                     <i class="fas fa-edit"></i> Edit DSO
                 </a>
                 <a href="/orders/${order.id}" class="btn btn-outline">
@@ -600,10 +601,13 @@
             showToast('DSO berhasil dibuat!', 'success');
 
             // The response from api_response has {success, status, data}
-            if (response && response.data && response.data.id) {
+            // Redirect with human-readable URL
+            if (response && response.data && response.data.order_code) {
+                const version = response.data.version || 1;
+                window.location.href = `/dso/${response.data.order_code}/${version}`;
+            } else if (response && response.data && response.data.id) {
+                // Fallback to ID if order_code not available
                 window.location.href = `/dso/${response.data.id}`;
-            } else if (response && response.id) {
-                window.location.href = `/dso/${response.id}`;
             } else {
                 window.location.reload();
             }

@@ -106,7 +106,11 @@ def create_dso(order_id):
     
     db.session.commit()
     
-    return api_response(data=dso.to_dict(include_relations=True), message='DSO created successfully', status=201)
+    # Include order_code in response for human-readable URL redirect
+    response_data = dso.to_dict(include_relations=True)
+    response_data['order_code'] = order.order_code
+    
+    return api_response(data=response_data, message='DSO created successfully', status=201)
 
 
 @api_bp.route('/dso/<int:dso_id>', methods=['GET'])

@@ -10,7 +10,34 @@ from ..models.employee import Employee
 from ..models.user import UserRole
 from ..extensions import db
 from ..utils.decorators import require_roles, api_response, log_activity
-from ..services.barcode_service import generate_barcode_image
+from ..services.barcode_service import generate_barcode_image, generate_qr_code_base64
+
+
+@api_bp.route('/barcodes/qc-qrcode/<int:order_id>', methods=['GET'])
+@login_required
+def get_qc_qrcode(order_id):
+    """Generate QR code for Invoice.
+    
+    Returns a base64-encoded QR code image that can be embedded directly in HTML.
+    The QR code contains the order_code (e.g., INV-202601-0001)
+    """
+    order = Order.query.get_or_404(order_id)
+    
+    # Generate QR code data - use order_code for human-readable scanning
+    qr_data = order.order_code
+    
+    # Generate base64 QR code
+    qr_base64 = generate_qr_code_base64(qr_data, size=6)
+    
+    if not qr_base64:
+        return api_response(message='Failed to generate QR code', status=500)
+    
+    return api_response(data={
+        'order_id': order_id,
+        'order_code': order.order_code,
+        'qr_data': qr_data,
+        'qr_image': qr_base64
+    })
 
 
 @api_bp.route('/barcodes', methods=['GET'])

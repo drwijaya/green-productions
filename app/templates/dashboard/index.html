@@ -101,7 +101,7 @@
                     {% for order in production_orders %}
                     <div class="production-item">
                         <div class="production-info">
-                            <a href="{{ url_for('views.order_detail', order_id=order.id) }}" class="production-code">
+                            <a href="/orders/{{ order.order_code }}" class="production-code">
                                 {{ order.order_code }}
                             </a>
                             <span class="production-model">{{ order.model }}</span>
@@ -161,7 +161,7 @@
                             {% for order in recent_orders %}
                             <tr>
                                 <td>
-                                    <a href="{{ url_for('views.order_detail', order_id=order.id) }}">
+                                    <a href="/orders/{{ order.order_code }}">
                                         <strong>{{ order.order_code }}</strong>
                                     </a>
                                 </td>

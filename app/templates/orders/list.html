@@ -65,7 +65,7 @@
                     {% for order in orders.items %}
                     <tr>
                         <td>
-                            <a href="{{ url_for('views.order_detail', order_id=order.id) }}">
+                            <a href="/orders/{{ order.order_code }}">
                                 <strong>{{ order.order_code }}</strong>
                             </a>
                         </td>
@@ -86,8 +86,7 @@
                         </td>
                         <td>
                             <div class="action-buttons">
-                                <a href="{{ url_for('views.order_detail', order_id=order.id) }}"
-                                    class="btn btn-sm btn-outline" title="View">
+                                <a href="/orders/{{ order.order_code }}" class="btn btn-sm btn-outline" title="View">
                                     <i class="fas fa-eye"></i>
                                 </a>
                                 {% if order.dso.first() %}

@@ -10,6 +10,7 @@ class BarcodeType(Enum):
     TASK = 'task'
     ITEM = 'item'
     BATCH = 'batch'
+    QC_CHECKLIST = 'qc_checklist'
 
 
 class Barcode(db.Model):
