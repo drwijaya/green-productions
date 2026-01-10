@@ -120,17 +120,19 @@
 
 <style>
     .auth-page {
-        min-height: 100vh;
+        height: 100vh;
         display: flex;
+        overflow: hidden;
     }
 
     .auth-container {
-        flex: 0 0 450px;
+        flex: 1;
         display: flex;
         align-items: center;
         justify-content: center;
         padding: 2rem;
-        background: var(--bg-secondary);
+        background: var(--bg-primary);
+        z-index: 2;
     }
 
     .auth-card {
@@ -139,7 +141,7 @@
         box-shadow: var(--shadow-xl);
         padding: 2.5rem;
         width: 100%;
-        max-width: 420px;
+        max-width: 400px;
     }
 
     .auth-header {
@@ -200,16 +202,31 @@
         background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 58, 95, 0.9) 100%), url('https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1920&q=80');
         background-size: cover;
         background-position: center;
+        background-attachment: fixed;
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         justify-content: center;
         padding: 4rem;
         color: white;
         overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: var(--primary) transparent;
+    }
+
+    .auth-bg::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .auth-bg::-webkit-scrollbar-thumb {
+        background-color: var(--primary);
+        border-radius: 10px;
     }
 
     .auth-bg-content {
-        max-width: 800px;
+        max-width: 600px;
+        width: 100%;
+        margin: auto 0;
+        padding-bottom: 2rem;
     }
 
     .company-badge {
@@ -225,7 +242,7 @@
     }
 
     .auth-bg-content h2 {
-        font-size: 3rem;
+        font-size: 2.5rem;
         font-weight: 800;
         color: white;
         margin-bottom: 1.5rem;
@@ -233,7 +250,7 @@
     }
 
     .company-intro {
-        font-size: 1.15rem;
+        font-size: 1.05rem;
         line-height: 1.8;
         opacity: 0.95;
         margin-bottom: 1.5rem;
@@ -241,7 +258,7 @@
     }
 
     .company-desc {
-        font-size: 1rem;
+        font-size: 0.95rem;
         line-height: 1.7;
         opacity: 0.8;
         margin-bottom: 2.5rem;
@@ -249,8 +266,8 @@
 
     .vision-mission-grid {
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 2rem;
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
         margin-bottom: 3rem;
     }
 
@@ -307,41 +324,36 @@
         gap: 0.75rem;
         background: white;
         color: var(--secondary-dark);
-        padding: 1rem 2rem;
+        padding: 0.875rem 1.75rem;
         border-radius: var(--radius-md);
         font-weight: 700;
         text-decoration: none;
         transition: all 0.3s ease;
+        font-size: 0.9rem;
     }
 
     .visit-website:hover {
         background: var(--primary);
         color: white;
-        transform: translateX(5px);
-    }
-
-    @media (max-width: 1200px) {
-        .auth-bg {
-            padding: 2rem;
-        }
-
-        .vision-mission-grid {
-            grid-template-columns: 1fr;
-            gap: 1rem;
-        }
+        transform: translateY(-3px);
     }
 
     @media (max-width: 1024px) {
+        .auth-page {
+            overflow-y: auto;
+            height: auto;
+        }
+
         .auth-bg {
             display: none;
+        }
+
+        .auth-container {
+            min-height: 100vh;
         }
     }
 
     @media (max-width: 480px) {
-        .auth-container {
-            flex: 1;
-        }
-
         .auth-card {
             padding: 1.5rem;
         }
