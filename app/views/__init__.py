@@ -80,19 +80,69 @@ def logout():
 @login_required
 def dashboard():
     """Main dashboard."""
+    from datetime import datetime, timedelta
+    from ..models.material import MaterialRequest
+    from ..models.audit import ActivityLog
+    from ..models.qc import QCSheet
+    
     # Get stats
     total_orders = Order.query.count()
     active_orders = Order.query.filter(Order.status.in_(['in_production', 'qc_pending'])).count()
-    pending_qc = Order.query.filter_by(status='qc_pending').count()
+    
+    # Pending QC - count production tasks that need QC inspection
+    pending_qc_tasks = ProductionTask.query.filter(
+        ProductionTask.status.in_(['in_progress', 'completed'])
+    ).outerjoin(QCSheet).filter(QCSheet.id == None).count()
+    
+    # Additional stats
+    total_customers = Customer.query.count()
+    total_employees = Employee.query.filter_by(is_active=True).count()
+    
+    # Pending material requests - use correct status values
+    pending_materials = MaterialRequest.query.filter(
+        MaterialRequest.status.in_(['requested', 'in_transit', 'arrived', 'qc_pending'])
+    ).count()
     
     # Recent orders
     recent_orders = Order.query.order_by(Order.created_at.desc()).limit(5).all()
     
+    # Production orders with details - include orders with in_progress or assigned tasks
+    production_orders = Order.query.filter(
+        Order.status.in_(['in_production', 'draft', 'qc_pending'])
+    ).join(ProductionTask).filter(
+        ProductionTask.status.in_(['pending', 'assigned', 'in_progress'])
+    ).distinct().order_by(Order.deadline.asc().nullslast()).limit(5).all()
+    
+    # Calculate production progress for each order
+    for order in production_orders:
+        total_tasks = order.production_tasks.count()
+        completed_tasks = order.production_tasks.filter(
+            ProductionTask.status == 'completed'
+        ).count()
+        order.progress = int((completed_tasks / total_tasks * 100)) if total_tasks > 0 else 0
+    
+    # Recent activities from activity log
+    recent_activities = ActivityLog.query.order_by(
+        ActivityLog.timestamp.desc()
+    ).limit(8).all()
+    
+    # Calculate Quality Score from QC Analytics Service
+    from ..services.qc_analytics import QCAnalyticsService
+    quality_data = QCAnalyticsService.calculate_quality_score()
+    quality_score = quality_data['quality_score']
+    
     return render_template('dashboard/index.html',
         total_orders=total_orders,
         active_orders=active_orders,
-        pending_qc=pending_qc,
-        recent_orders=recent_orders
+        pending_qc=pending_qc_tasks,
+        total_customers=total_customers,
+        total_employees=total_employees,
+        pending_materials=pending_materials,
+        recent_orders=recent_orders,
+        production_orders=production_orders,
+        recent_activities=recent_activities,
+        now=datetime.now().date(),
+        quality_score=quality_score
     )
 
 

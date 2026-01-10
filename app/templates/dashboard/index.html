@@ -4,22 +4,31 @@
 {% block page_title %}Dashboard{% endblock %}
 
 {% block content %}
+<!-- Welcome Section -->
+<div class="dashboard-welcome">
+    <div class="welcome-content">
+        <h1 class="welcome-title">Selamat Datang, {{ current_user.full_name or current_user.username }}!</h1>
+        <p class="welcome-subtitle">Berikut ringkasan aktivitas produksi Anda</p>
+    </div>
+    <div class="welcome-date">
+        <i class="fas fa-calendar-alt"></i>
+        <span id="currentDate"></span>
+    </div>
+</div>
+
 <!-- Stats Cards -->
-<div class="stats-grid">
-    <div class="stat-card">
+<div class="stats-grid stats-grid-6">
+    <a href="{{ url_for('views.orders') }}" class="stat-card stat-card-modern stat-card-link">
         <div class="stat-icon primary">
             <i class="fas fa-clipboard-list"></i>
         </div>
         <div class="stat-content">
             <div class="stat-value">{{ total_orders }}</div>
             <div class="stat-label">Total Invoices</div>
-            <div class="stat-change positive">
-                <i class="fas fa-arrow-up"></i> 12% dari bulan lalu
-            </div>
         </div>
-    </div>
+    </a>
 
-    <div class="stat-card">
+    <a href="{{ url_for('views.production') }}" class="stat-card stat-card-modern stat-card-link">
         <div class="stat-icon info">
             <i class="fas fa-industry"></i>
         </div>
@@ -27,9 +36,9 @@
             <div class="stat-value">{{ active_orders }}</div>
             <div class="stat-label">Produksi Aktif</div>
         </div>
-    </div>
+    </a>
 
-    <div class="stat-card">
+    <a href="{{ url_for('views.qc_monitoring') }}" class="stat-card stat-card-modern stat-card-link">
         <div class="stat-icon warning">
             <i class="fas fa-clock"></i>
         </div>
@@ -37,156 +46,521 @@
             <div class="stat-value">{{ pending_qc }}</div>
             <div class="stat-label">Pending QC</div>
         </div>
-    </div>
+    </a>
 
-    <div class="stat-card">
+    <a href="{{ url_for('views.qc_monitoring') }}" class="stat-card stat-card-modern stat-card-link">
         <div class="stat-icon success">
             <i class="fas fa-check-double"></i>
         </div>
         <div class="stat-content">
-            <div class="stat-value" id="passRate">-</div>
-            <div class="stat-label">QC Pass Rate</div>
+            <div class="stat-value" id="passRate">{{ quality_score }}%</div>
+            <div class="stat-label">Quality Score</div>
         </div>
-    </div>
+    </a>
+
+    <a href="{{ url_for('views.materials_list') }}" class="stat-card stat-card-modern stat-card-link">
+        <div class="stat-icon secondary">
+            <i class="fas fa-boxes"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value">{{ pending_materials }}</div>
+            <div class="stat-label">Material Requests</div>
+        </div>
+    </a>
+
+    <a href="{{ url_for('views.customers') }}" class="stat-card stat-card-modern stat-card-link">
+        <div class="stat-icon accent">
+            <i class="fas fa-users"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value">{{ total_customers }}</div>
+            <div class="stat-label">Customers</div>
+        </div>
+    </a>
 </div>
 
-<div class="dashboard-grid">
-    <!-- Recent Invoices -->
-    <div class="card">
-        <div class="card-header">
-            <h3 class="card-title">Invoice Terbaru</h3>
-            <a href="{{ url_for('views.orders') }}" class="btn btn-sm btn-outline">
-                Lihat Semua
-            </a>
-        </div>
-        <div class="card-body">
-            {% if recent_orders %}
-            <div class="table-container">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Invoice Code</th>
-                            <th>Model</th>
-                            <th>Customer</th>
-                            <th>Qty</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for order in recent_orders %}
-                        <tr>
-                            <td>
-                                <a href="{{ url_for('views.order_detail', order_id=order.id) }}">
-                                    <strong>{{ order.order_code }}</strong>
-                                </a>
-                            </td>
-                            <td>{{ order.model }}</td>
-                            <td>{{ order.customer.name if order.customer else '-' }}</td>
-                            <td>{{ order.qty_total }}</td>
-                            <td>
-                                <span class="status status-{{ order.status }}">
-                                    {{ order.status.replace('_', ' ').title() }}
-                                </span>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% else %}
-            <div class="empty-state">
-                <div class="empty-state-icon">
-                    <i class="fas fa-inbox"></i>
-                </div>
-                <div class="empty-state-title">Belum ada invoice</div>
-                <div class="empty-state-text">Buat invoice pertama Anda untuk memulai</div>
-                <a href="{{ url_for('views.orders') }}" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> Buat Invoice
+<!-- Main Dashboard Grid -->
+<div class="dashboard-main-grid">
+    <!-- Left Column -->
+    <div class="dashboard-left">
+        <!-- Production Overview -->
+        <div class="card card-modern">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-chart-line"></i>
+                    Production Overview
+                </h3>
+                <a href="{{ url_for('views.production') }}" class="btn btn-sm btn-outline">
+                    <i class="fas fa-external-link-alt"></i>
+                    Lihat Semua
                 </a>
             </div>
-            {% endif %}
+            <div class="card-body">
+                {% if production_orders %}
+                <div class="production-list">
+                    {% for order in production_orders %}
+                    <div class="production-item">
+                        <div class="production-info">
+                            <a href="{{ url_for('views.order_detail', order_id=order.id) }}" class="production-code">
+                                {{ order.order_code }}
+                            </a>
+                            <span class="production-model">{{ order.model }}</span>
+                        </div>
+                        <div class="production-progress-container">
+                            <div class="production-progress-bar">
+                                <div class="production-progress-fill" style="width: {{ order.progress }}%"></div>
+                            </div>
+                            <span class="production-percentage">{{ order.progress }}%</span>
+                        </div>
+                        <div
+                            class="production-deadline {% if order.deadline and order.deadline < now %}deadline-passed{% endif %}">
+                            {% if order.deadline %}
+                            <i class="fas fa-calendar-day"></i>
+                            {{ order.deadline.strftime('%d %b') }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state-sm">
+                    <i class="fas fa-industry"></i>
+                    <p>Tidak ada produksi aktif</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Recent Invoices -->
+        <div class="card card-modern">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-file-invoice"></i>
+                    Invoice Terbaru
+                </h3>
+                <a href="{{ url_for('views.orders') }}" class="btn btn-sm btn-outline">
+                    Lihat Semua
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_orders %}
+                <div class="table-container">
+                    <table class="table table-compact">
+                        <thead>
+                            <tr>
+                                <th>Invoice Code</th>
+                                <th>Model</th>
+                                <th>Customer</th>
+                                <th>Qty</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in recent_orders %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('views.order_detail', order_id=order.id) }}">
+                                        <strong>{{ order.order_code }}</strong>
+                                    </a>
+                                </td>
+                                <td>{{ order.model }}</td>
+                                <td>{{ order.customer.name if order.customer else '-' }}</td>
+                                <td>{{ order.qty_total }}</td>
+                                <td>
+                                    <span class="status status-{{ order.status }}">
+                                        {{ order.status.replace('_', ' ').title() }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">
+                        <i class="fas fa-inbox"></i>
+                    </div>
+                    <div class="empty-state-title">Belum ada invoice</div>
+                    <div class="empty-state-text">Buat invoice pertama Anda untuk memulai</div>
+                    <a href="{{ url_for('views.orders') }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Buat Invoice
+                    </a>
+                </div>
+                {% endif %}
+            </div>
         </div>
     </div>
 
-    <!-- Quick Actions -->
-    <div class="card">
-        <div class="card-header">
-            <h3 class="card-title">Quick Actions</h3>
+    <!-- Right Column -->
+    <div class="dashboard-right">
+        <!-- Quick Actions -->
+        <div class="card card-modern">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-bolt"></i>
+                    Quick Actions
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="quick-actions-grid">
+                    <a href="{{ url_for('views.orders') }}" class="quick-action-item">
+                        <div class="quick-action-icon primary">
+                            <i class="fas fa-file-invoice"></i>
+                        </div>
+                        <span>Invoices</span>
+                    </a>
+
+                    <a href="{{ url_for('views.dso_management') }}" class="quick-action-item">
+                        <div class="quick-action-icon warning">
+                            <i class="fas fa-drafting-compass"></i>
+                        </div>
+                        <span>DSO</span>
+                    </a>
+
+                    <a href="{{ url_for('views.production') }}" class="quick-action-item">
+                        <div class="quick-action-icon success">
+                            <i class="fas fa-industry"></i>
+                        </div>
+                        <span>Produksi</span>
+                    </a>
+
+                    <a href="{{ url_for('views.qc_monitoring') }}" class="quick-action-item">
+                        <div class="quick-action-icon info">
+                            <i class="fas fa-microscope"></i>
+                        </div>
+                        <span>QC Monitor</span>
+                    </a>
+
+                    <a href="{{ url_for('views.materials_list') }}" class="quick-action-item">
+                        <div class="quick-action-icon secondary">
+                            <i class="fas fa-boxes"></i>
+                        </div>
+                        <span>Materials</span>
+                    </a>
+
+                    <a href="{{ url_for('views.vendors_list') }}" class="quick-action-item">
+                        <div class="quick-action-icon accent">
+                            <i class="fas fa-truck"></i>
+                        </div>
+                        <span>Vendors</span>
+                    </a>
+
+                    <a href="{{ url_for('views.customers') }}" class="quick-action-item">
+                        <div class="quick-action-icon primary">
+                            <i class="fas fa-user-tie"></i>
+                        </div>
+                        <span>Customers</span>
+                    </a>
+
+                    <a href="{{ url_for('views.employees') }}" class="quick-action-item">
+                        <div class="quick-action-icon info">
+                            <i class="fas fa-users-cog"></i>
+                        </div>
+                        <span>Employees</span>
+                    </a>
+
+                    <a href="{{ url_for('views.reports') }}" class="quick-action-item">
+                        <div class="quick-action-icon success">
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                        <span>Reports</span>
+                    </a>
+
+                    <a href="{{ url_for('views.sop_list') }}" class="quick-action-item">
+                        <div class="quick-action-icon warning">
+                            <i class="fas fa-book"></i>
+                        </div>
+                        <span>SOP</span>
+                    </a>
+                </div>
+            </div>
         </div>
-        <div class="card-body">
-            <div class="quick-actions">
-                <a href="{{ url_for('views.orders') }}" class="quick-action-btn">
-                    <div class="quick-action-icon primary">
-                        <i class="fas fa-file-invoice"></i>
-                    </div>
-                    <span>Invoices</span>
-                </a>
 
-                <a href="{{ url_for('views.dso_management') }}" class="quick-action-btn">
-                    <div class="quick-action-icon warning">
-                        <i class="fas fa-drafting-compass"></i>
+        <!-- Recent Activity -->
+        <div class="card card-modern">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-history"></i>
+                    Aktivitas Terbaru
+                </h3>
+            </div>
+            <div class="card-body">
+                {% if recent_activities %}
+                <div class="activity-timeline">
+                    {% for activity in recent_activities %}
+                    <div class="activity-item">
+                        <div class="activity-icon 
+                            {% if 'create' in activity.action.lower() %}icon-success
+                            {% elif 'update' in activity.action.lower() %}icon-info
+                            {% elif 'delete' in activity.action.lower() %}icon-danger
+                            {% else %}icon-default{% endif %}">
+                            {% if 'create' in activity.action.lower() %}
+                            <i class="fas fa-plus"></i>
+                            {% elif 'update' in activity.action.lower() %}
+                            <i class="fas fa-edit"></i>
+                            {% elif 'delete' in activity.action.lower() %}
+                            <i class="fas fa-trash"></i>
+                            {% else %}
+                            <i class="fas fa-circle"></i>
+                            {% endif %}
+                        </div>
+                        <div class="activity-content">
+                            <div class="activity-text">
+                                <strong>{{ activity.user.username if activity.user else 'System' }}</strong>
+                                {{ activity.action }}
+                                {% if activity.module %}
+                                <span class="activity-entity">{{ activity.module }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="activity-time">
+                                <i class="fas fa-clock"></i>
+                                {{ activity.timestamp.strftime('%d %b, %H:%M') }}
+                            </div>
+                        </div>
                     </div>
-                    <span>DSO Management</span>
-                </a>
-
-                <a href="{{ url_for('views.production') }}" class="quick-action-btn">
-                    <div class="quick-action-icon success">
-                        <i class="fas fa-industry"></i>
-                    </div>
-                    <span>Monitor Produksi</span>
-                </a>
-
-                <a href="{{ url_for('views.qc_monitoring') }}" class="quick-action-btn">
-                    <div class="quick-action-icon info">
-                        <i class="fas fa-microscope"></i>
-                    </div>
-                    <span>QC Monitoring</span>
-                </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state-sm">
+                    <i class="fas fa-history"></i>
+                    <p>Belum ada aktivitas</p>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
 
 <style>
-    .dashboard-grid {
+    /* Dashboard Welcome */
+    .dashboard-welcome {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.5rem 2rem;
+        background: var(--bg-primary);
+        border-radius: var(--radius-lg);
+        margin-bottom: 1.5rem;
+        box-shadow: var(--shadow);
+    }
+
+    .welcome-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--gray-900);
+        margin-bottom: 0.25rem;
+    }
+
+    .welcome-subtitle {
+        color: var(--gray-500);
+        font-size: 0.9375rem;
+    }
+
+    .welcome-date {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--gray-600);
+        font-weight: 500;
+    }
+
+    /* Stats Grid 6 columns */
+    .stats-grid-6 {
+        grid-template-columns: repeat(6, 1fr);
+    }
+
+    .stat-card-modern {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid var(--gray-100);
+    }
+
+    .stat-card-modern::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: var(--primary);
+        opacity: 0;
+        transition: opacity var(--transition);
+    }
+
+    .stat-card-modern:hover::before {
+        opacity: 1;
+    }
+
+    .stat-icon.secondary {
+        background: var(--secondary);
+    }
+
+    .stat-card-link {
+        text-decoration: none;
+        color: inherit;
+        cursor: pointer;
+    }
+
+    .stat-card-link:hover {
+        color: inherit;
+    }
+
+    .stat-icon.accent {
+        background: var(--accent);
+    }
+
+    /* Dashboard Main Grid */
+    .dashboard-main-grid {
         display: grid;
-        grid-template-columns: 2fr 1fr;
+        grid-template-columns: 1.5fr 1fr;
         gap: 1.5rem;
     }
 
-    .quick-actions {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
+    .dashboard-left,
+    .dashboard-right {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    /* Card Modern */
+    .card-modern {
+        border: 1px solid var(--gray-100);
+        transition: box-shadow var(--transition);
+    }
+
+    .card-modern:hover {
+        box-shadow: var(--shadow-md);
+    }
+
+    .card-modern .card-title {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .card-modern .card-title i {
+        color: var(--primary);
+    }
+
+    /* Production List */
+    .production-list {
+        display: flex;
+        flex-direction: column;
         gap: 1rem;
     }
 
-    .quick-action-btn {
+    .production-item {
+        display: grid;
+        grid-template-columns: 1fr 1.5fr auto;
+        gap: 1rem;
+        align-items: center;
+        padding: 0.75rem;
+        background: var(--gray-50);
+        border-radius: var(--radius);
+        transition: background var(--transition-fast);
+    }
+
+    .production-item:hover {
+        background: var(--gray-100);
+    }
+
+    .production-code {
+        font-weight: 600;
+        color: var(--primary);
+    }
+
+    .production-model {
+        font-size: 0.8125rem;
+        color: var(--gray-500);
+        display: block;
+    }
+
+    .production-progress-container {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .production-progress-bar {
+        flex: 1;
+        height: 8px;
+        background: var(--gray-200);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .production-progress-fill {
+        height: 100%;
+        background: var(--primary);
+        border-radius: 4px;
+        transition: width var(--transition);
+    }
+
+    .production-percentage {
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--gray-700);
+        min-width: 40px;
+        text-align: right;
+    }
+
+    .production-deadline {
+        font-size: 0.8125rem;
+        color: var(--gray-500);
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+    }
+
+    .production-deadline.deadline-passed {
+        color: var(--danger);
+    }
+
+    /* Quick Actions Grid */
+    .quick-actions-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 0.75rem;
+    }
+
+    .quick-action-item {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 0.75rem;
-        padding: 1.25rem;
+        gap: 0.5rem;
+        padding: 1rem 0.5rem;
         background: var(--gray-50);
-        border-radius: var(--radius-md);
+        border-radius: var(--radius);
         text-decoration: none;
         color: var(--gray-700);
         transition: all var(--transition-fast);
+        border: 1px solid transparent;
     }
 
-    .quick-action-btn:hover {
-        background: var(--gray-100);
+    .quick-action-item:hover {
+        background: var(--primary-50);
+        border-color: var(--primary);
         transform: translateY(-2px);
     }
 
+    .quick-action-item:hover .quick-action-icon {
+        transform: scale(1.1);
+    }
+
     .quick-action-icon {
-        width: 48px;
-        height: 48px;
+        width: 40px;
+        height: 40px;
         border-radius: var(--radius);
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.25rem;
+        font-size: 1.125rem;
         color: white;
+        transition: transform var(--transition-fast);
     }
 
     .quick-action-icon.primary {
@@ -205,37 +579,180 @@
         background: var(--warning);
     }
 
-    .quick-action-btn span {
-        font-size: 0.875rem;
+    .quick-action-icon.secondary {
+        background: var(--secondary);
+    }
+
+    .quick-action-icon.accent {
+        background: var(--accent);
+    }
+
+    .quick-action-item span {
+        font-size: 0.75rem;
+        font-weight: 500;
+        text-align: center;
+    }
+
+    /* Activity Timeline */
+    .activity-timeline {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .activity-item {
+        display: flex;
+        gap: 0.75rem;
+        align-items: flex-start;
+        padding: 0.75rem;
+        background: var(--gray-50);
+        border-radius: var(--radius);
+        transition: background var(--transition-fast);
+    }
+
+    .activity-item:hover {
+        background: var(--gray-100);
+    }
+
+    .activity-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        flex-shrink: 0;
+    }
+
+    .activity-icon.icon-success {
+        background: #D1FAE5;
+        color: #065F46;
+    }
+
+    .activity-icon.icon-info {
+        background: #DBEAFE;
+        color: #1E40AF;
+    }
+
+    .activity-icon.icon-danger {
+        background: #FEE2E2;
+        color: #991B1B;
+    }
+
+    .activity-icon.icon-default {
+        background: var(--gray-200);
+        color: var(--gray-600);
+    }
+
+    .activity-content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .activity-text {
+        font-size: 0.8125rem;
+        color: var(--gray-700);
+        line-height: 1.4;
+    }
+
+    .activity-entity {
+        color: var(--primary);
         font-weight: 500;
     }
 
-    @media (max-width: 1024px) {
-        .dashboard-grid {
+    .activity-time {
+        font-size: 0.75rem;
+        color: var(--gray-400);
+        margin-top: 0.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    /* Empty State Small */
+    .empty-state-sm {
+        text-align: center;
+        padding: 2rem;
+        color: var(--gray-400);
+    }
+
+    .empty-state-sm i {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-state-sm p {
+        font-size: 0.875rem;
+    }
+
+    /* Table Compact */
+    .table-compact th,
+    .table-compact td {
+        padding: 0.625rem 0.75rem;
+        font-size: 0.8125rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 1440px) {
+        .stats-grid-6 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .quick-actions-grid {
+            grid-template-columns: repeat(5, 1fr);
+        }
+    }
+
+    @media (max-width: 1200px) {
+        .dashboard-main-grid {
             grid-template-columns: 1fr;
+        }
+
+        .dashboard-right {
+            order: -1;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .stats-grid-6 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .dashboard-welcome {
+            flex-direction: column;
+            text-align: center;
+            gap: 1rem;
+        }
+
+        .quick-actions-grid {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        .production-item {
+            grid-template-columns: 1fr;
+            gap: 0.5rem;
         }
     }
 
     @media (max-width: 480px) {
-        .quick-actions {
+        .stats-grid-6 {
             grid-template-columns: 1fr;
+        }
+
+        .quick-actions-grid {
+            grid-template-columns: repeat(3, 1fr);
         }
     }
 </style>
 
 <script>
-    // Load QC stats
-    document.addEventListener('DOMContentLoaded', async () => {
-        try {
-            const response = await api.get('/qc/stats');
-            if (response.data && response.data.inspections) {
-                const { passed, total } = response.data.inspections;
-                const rate = total > 0 ? ((passed / total) * 100).toFixed(1) : 0;
-                document.getElementById('passRate').textContent = rate + '%';
-            }
-        } catch (e) {
-            console.log('Could not load QC stats');
-        }
+    // Set current date
+    document.getElementById('currentDate').textContent = new Date().toLocaleDateString('id-ID', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
     });
 </script>
 {% endblock %}
