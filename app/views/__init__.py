@@ -1,5 +1,5 @@
 """Views blueprint for frontend pages."""
-from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify
+from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify, send_from_directory
 from flask_login import login_required, current_user, login_user, logout_user
 from ..models.user import User, UserRole
 from ..models.order import Order, OrderStatus
@@ -27,6 +27,20 @@ def health_check():
         'status': 'ok',
         'database': db_status
     }), 200
+
+
+@views_bp.route('/manifest.json')
+def manifest():
+    import os
+    from flask import current_app
+    return send_from_directory(os.path.join(current_app.root_path, 'static'), 'manifest.json')
+
+
+@views_bp.route('/sw.js')
+def service_worker():
+    import os
+    from flask import current_app
+    return send_from_directory(os.path.join(current_app.root_path, 'static'), 'sw.js')
 
 
 @views_bp.route('/')
