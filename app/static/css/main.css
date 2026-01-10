@@ -1084,3 +1084,36 @@ a:hover {
 .hidden {
     display: none !important;
 }
+
+/* QR Scanner Button in Sidebar */
+.nav-qr-scanner {
+    padding: 0.5rem 1rem;
+    margin-bottom: 1rem;
+}
+
+.btn-qr-scanner {
+    background: #10B981;
+    /* Precise emerald green matching the image */
+    color: white !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 0.875rem;
+    border-radius: 1rem;
+    font-weight: 600;
+    font-size: 1.125rem;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);
+}
+
+.btn-qr-scanner:hover {
+    background: #059669;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3);
+}
+
+.btn-qr-scanner i {
+    font-size: 1.75rem;
+}
