@@ -990,8 +990,7 @@
         const config = checklistConfig[currentProcess] || checklistConfig.sewing;
         const tbody = document.getElementById('checklistBody');
         const defectSelect = document.getElementById('defectType');
-        const targetQty = {{ task.qty_target }
-    };
+        const targetQty = {{ task.qty_target }};
 
     tbody.innerHTML = '';
     checklistData = [];
@@ -1076,8 +1075,7 @@
         }
 
         const id = 'custom_' + Date.now();
-        const targetQty = parseInt(document.getElementById('totalInspected').value) || {{ task.qty_target }
-    };
+        const targetQty = parseInt(document.getElementById('totalInspected').value) || {{ task.qty_target }};
 
     addParameterRow(id, name, targetQty, true);
     closeModal('addParamModal');
