@@ -896,8 +896,8 @@
                 <button class="btn btn-outline-success" onclick="exportCSV()">
                     <i class="fas fa-file-csv me-1"></i> Export CSV
                 </button>
-                <button class="btn btn-outline-primary" onclick="window.print()">
-                    <i class="fas fa-print me-1"></i> Print Report
+                <button class="btn btn-outline-primary" onclick="exportPDF()">
+                    <i class="fas fa-file-pdf me-1"></i> Download Report
                 </button>
             </div>
         </div>
@@ -3019,8 +3019,34 @@
         });
     }
 
+    async function exportPDF() {
+        try {
+            showToast('Sedang menyiapkan PDF...', 'info');
+
+            const start = analyticsDateRange.startDate.toISOString().split('T')[0];
+            const end = analyticsDateRange.endDate.toISOString().split('T')[0];
+
+            const url = `/api/qc/dashboard/export-pdf?start_date=${start}&end_date=${end}`;
+
+            // Create a temporary link and click it
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `QC_Report_${start}_to_${end}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+
+            showToast('PDF berhasil diunduh', 'success');
+        } catch (error) {
+            console.error('PDF Export Error:', error);
+            showToast('Gagal mengunduh PDF', 'error');
+        }
+    }
+
     function exportCSV() {
-        window.location.href = '/api/qc/dashboard/export-csv?days=30';
+        const start = analyticsDateRange.startDate.toISOString().split('T')[0];
+        const end = analyticsDateRange.endDate.toISOString().split('T')[0];
+        window.location.href = `/api/qc/dashboard/export-csv?start_date=${start}&end_date=${end}`;
     }
 
     // --- Defect Rate Trend Logic ---

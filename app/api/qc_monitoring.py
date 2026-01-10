@@ -1,4 +1,5 @@
 from flask import request, jsonify
+import io
 from flask_login import login_required, current_user
 from sqlalchemy import func, extract, case
 from datetime import datetime, timedelta
@@ -587,3 +588,36 @@ def export_qc_csv():
         mimetype='text/csv',
         headers={'Content-Disposition': f'attachment; filename=qc_report_{datetime.now().strftime("%Y%m%d")}.csv'}
     )
+
+
+@api_bp.route('/qc/dashboard/export-pdf', methods=['GET'])
+@login_required
+def export_qc_pdf():
+    """Export QC analytics data as PDF format."""
+    from flask import send_file
+    from ..services.pdf_service import generate_qc_analytics_pdf
+    
+    start_date, end_date = parse_date_params()
+    days = (end_date - start_date).days
+    
+    # Generate the same report data used for UI
+    report = QCAnalyticsService.generate_summary_report('week' if days <= 7 else 'month')
+    
+    # Override period labels to be more precise for PDF
+    report['period_start'] = start_date.strftime('%d %b %Y')
+    report['period_end'] = end_date.strftime('%d %b %Y')
+    
+    result = generate_qc_analytics_pdf(report)
+    
+    if result['success']:
+        buffer = io.BytesIO(result['pdf'])
+        filename = f"QC_Analytics_Report_{datetime.now().strftime('%Y%m%d')}.pdf"
+        
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='application/pdf'
+        )
+    else:
+        return jsonify({'error': result.get('error', 'Failed to generate PDF')}), 500
