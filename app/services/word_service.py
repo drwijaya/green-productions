@@ -5,6 +5,7 @@ from docx import Document
 from docx.shared import Inches, Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 import requests
+from .barcode_service import generate_qr_code
 
 
 def export_dso_to_word(dso):
@@ -56,6 +57,9 @@ def export_dso_to_word(dso):
         '{{CATATAN CUSTOMER 5}}': dso.catatan_customer_5 or '',
         '{{CATATAN CUSTOMER 6}}': dso.catatan_customer_6 or '',
         '{{LABEL}}': dso.label or '',
+        
+        # Customer Info (for QC Sheet page)
+        '{{CUSTOMER}}': order.customer.name if order.customer else '',
         
         # Size Chart Dewasa - Pendek
         '{{AD}}': str(dewasa.pendek_xs if dewasa else 0),
@@ -167,6 +171,36 @@ def export_dso_to_word(dso):
                     if '{{GAMBAR}}' in cell.text:
                         for paragraph in cell.paragraphs:
                             paragraph.text = paragraph.text.replace('{{GAMBAR}}', '')
+    
+    # Handle QR Invoice placeholder {{QRINV}}
+    if order.order_code:
+        qr_buffer = generate_qr_code(order.order_code, size=6)
+        if qr_buffer:
+            for table in doc.tables:
+                for row in table.rows:
+                    for cell in row.cells:
+                        if '{{QRINV}}' in cell.text:
+                            # Clear the cell
+                            for paragraph in cell.paragraphs:
+                                paragraph.clear()
+                            
+                            # Add QR code image
+                            try:
+                                paragraph = cell.paragraphs[0] if cell.paragraphs else cell.add_paragraph()
+                                run = paragraph.add_run()
+                                run.add_picture(qr_buffer, width=Inches(0.65))
+                                paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                            except Exception as e:
+                                print(f"Error adding QR code: {e}")
+                                cell.paragraphs[0].add_run("(QR tidak tersedia)")
+    else:
+        # Remove placeholder if no order code
+        for table in doc.tables:
+            for row in table.rows:
+                for cell in row.cells:
+                    if '{{QRINV}}' in cell.text:
+                        for paragraph in cell.paragraphs:
+                            paragraph.text = paragraph.text.replace('{{QRINV}}', '')
     
     # Save to BytesIO buffer
     buffer = io.BytesIO()

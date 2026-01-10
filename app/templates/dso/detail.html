@@ -4,529 +4,906 @@
 
 {% block content %}
 <style>
-    /* Document Container to mimic paper */
-    .dso-paper-container {
-        max-width: 1000px;
+    /* ===== Modern Form Layout ===== */
+    .modern-form-container {
+        max-width: 1200px;
         margin: 0 auto;
-        background: white;
-        padding: 2rem;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        border-radius: 8px;
-        font-family: 'Inter', sans-serif;
+        background: #f8f9fa;
+        min-height: calc(100vh - 200px);
     }
 
-    /* Actions Header */
-    .actions-header {
-        max-width: 1000px;
-        margin: 0 auto 1.5rem auto;
+    /* Header Bar - Green */
+    .form-header {
+        background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+        color: white;
+        padding: 1.25rem 1.5rem;
         display: flex;
-        justify-content: space-between;
         align-items: center;
-    }
-
-    /* Table Styles Override for Document Look */
-    .doc-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 1.5rem;
-        border: 1px solid #c0c0c0;
-    }
-
-    .doc-table th,
-    .doc-table td {
-        border: 1px solid #c0c0c0;
-        padding: 0.5rem 0.75rem;
-        vertical-align: middle;
-        font-size: 0.9rem;
-    }
-
-    .doc-table th {
-        background-color: #f8fafc;
-        font-weight: 600;
-        color: #475569;
-        text-transform: uppercase;
-        font-size: 0.8rem;
-    }
-
-    /* Label Columns */
-    .label-col {
-        background-color: #f8fafc;
-        width: 120px;
-        font-weight: 600;
-        color: #475569;
-        text-transform: uppercase;
-        font-size: 0.8rem;
-    }
-
-    /* Seamless Inputs */
-    .doc-input {
-        width: 100%;
-        border: none;
-        background: transparent;
-        padding: 0;
-        font-weight: 500;
-        color: #0f172a;
-        outline: none;
-        font-family: inherit;
-    }
-
-    .doc-input:focus {
-        background: #f0f9ff;
-        box-shadow: 0 2px 0 #3b82f6;
-        /* Bottom border effect */
-    }
-
-    .doc-input::placeholder {
-        color: #cbd5e1;
-        font-style: italic;
-    }
-
-    /* Header Section */
-    .doc-header-grid {
-        display: grid;
-        grid-template-columns: 200px 1fr auto 250px;
         gap: 1rem;
-        align-items: center;
-        margin-bottom: 2rem;
-        border-bottom: 2px solid #0f172a;
-        padding-bottom: 1rem;
+        border-radius: 12px 12px 0 0;
+        position: relative;
     }
 
-    .dso-qrcode {
+    .form-header-icon {
+        width: 44px;
+        height: 44px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+
+    .form-header h4 {
+        margin: 0;
+        font-weight: 700;
+        font-size: 1.25rem;
+        color: white;
+    }
+
+    .form-header p {
+        margin: 0;
+        opacity: 0.9;
+        font-size: 0.875rem;
+    }
+
+    .form-header-close {
+        position: absolute;
+        right: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        color: white;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 1.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s;
+    }
+
+    .form-header-close:hover {
+        background: rgba(255, 255, 255, 0.3);
+    }
+
+    /* Two Column Layout */
+    .form-layout {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 0;
+        background: white;
+        border-radius: 0 0 12px 12px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+
+    /* Left Sidebar */
+    .form-sidebar {
+        background: #f8f9fa;
+        border-right: 1px solid #e5e7eb;
+        padding: 1.5rem;
+    }
+
+    .sidebar-title {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #10B981;
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 1.25rem;
+    }
+
+    .sidebar-section {
+        margin-bottom: 1.25rem;
+    }
+
+    .sidebar-section label {
+        display: block;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        color: #6b7280;
+        font-weight: 600;
+        margin-bottom: 0.35rem;
+        letter-spacing: 0.3px;
+    }
+
+    .sidebar-value {
+        font-size: 0.95rem;
+        color: #111827;
+        font-weight: 500;
+        padding: 0.5rem 0.75rem;
+        background: white;
+        border-radius: 6px;
+        border: 1px solid #e5e7eb;
+    }
+
+    .sidebar-value.highlight {
+        color: #dc2626;
+        font-weight: 700;
+    }
+
+    .sidebar-qr {
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        padding: 0.5rem;
-    }
-
-    .dso-qrcode img {
-        border: 1px solid #e2e8f0;
-        border-radius: 4px;
+        padding: 1.25rem;
         background: white;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        margin-top: 1rem;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     }
 
-    .dso-qrcode-label {
-        font-size: 0.65rem;
-        color: #64748b;
-        text-align: center;
-        margin-top: 0.25rem;
+    .sidebar-qr img {
+        width: 100px;
+        height: 100px;
+        display: block;
+        margin-bottom: 0.5rem;
     }
 
-    .info-box-table {
-        width: 100%;
-        border: 1px solid #000;
+    .sidebar-qr-label {
+        font-size: 0.7rem;
+        color: #6b7280;
+        margin-top: 0.5rem;
     }
 
-    .info-box-table td {
-        border: 1px solid #000;
-        padding: 4px 8px;
-        font-weight: bold;
+    /* Main Content */
+    .form-main {
+        padding: 1.5rem 2rem;
+        background: white;
+        overflow-y: initial;
     }
 
-    .bg-green {
-        background-color: #22c55e;
-        color: white;
+    /* Section with numbered header */
+    .form-section {
+        margin-bottom: 2.5rem;
     }
 
-    .bg-red {
-        background-color: #ef4444;
-        color: white;
-    }
-
-    /* Visual Design Section */
-    .visual-section-header {
-        background: #3b82f6;
-        color: white;
-        text-align: center;
-        font-weight: bold;
-        padding: 0.5rem;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        border: 1px solid #2563eb;
-    }
-
-    .visual-area {
-        border: 1px solid #c0c0c0;
-        border-top: none;
-        min-height: 400px;
+    .section-header {
         display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #fff;
-        position: relative;
+        align-items: flex-start;
+        gap: 0.875rem;
         margin-bottom: 1.5rem;
     }
 
-    /* Number Cells */
-    .num-cell {
-        width: 40px;
-        text-align: center;
-        background: #f8fafc;
+    .section-number {
+        width: 32px;
+        height: 32px;
+        min-width: 32px;
+        background: #10B981;
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.95rem;
+    }
+
+    .section-header h5 {
+        margin: 0;
+        font-weight: 700;
+        color: #111827;
+        font-size: 1.1rem;
+    }
+
+    .section-header p {
+        margin: 0;
+        color: #6b7280;
+        font-size: 0.85rem;
+    }
+
+    /* Modern Input Fields */
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.25rem;
+    }
+
+    .form-grid.cols-3 {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .form-group {
+        margin-bottom: 0.5rem;
+    }
+
+    .form-group.full-width {
+        grid-column: 1 / -1;
+    }
+
+    .form-group label {
+        display: block;
+        font-size: 0.85rem;
         font-weight: 600;
-        color: #64748b;
+        color: #374151;
+        margin-bottom: 0.5rem;
     }
 
-    .size-input-cell input {
+    .form-group label .required {
+        color: #dc2626;
+    }
+
+    .modern-input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        color: #111827;
+        background: white;
+        transition: all 0.2s;
+    }
+
+    .modern-input:focus {
+        outline: none;
+        border-color: #10B981;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    }
+
+    .modern-input::placeholder {
+        color: #9ca3af;
+    }
+
+    .modern-textarea {
+        min-height: 120px;
+        resize: vertical;
+    }
+
+    /* ACC List Styling */
+    .acc-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .acc-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .acc-number {
+        width: 28px;
+        height: 28px;
+        background: #f3f4f6;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #6b7280;
+    }
+
+    .acc-item input {
+        flex: 1;
+    }
+
+    /* Visual Upload Area */
+    .upload-area {
+        border: 2px dashed #d1d5db;
+        border-radius: 12px;
+        padding: 2.5rem;
         text-align: center;
+        background: #f9fafb;
+        cursor: pointer;
+        transition: all 0.2s;
+        min-height: 350px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        position: relative;
     }
 
-    /* Upload Button Overlay */
+    .upload-area:hover {
+        border-color: #10B981;
+        background: #f0fdf4;
+    }
+
+    .upload-area.has-image {
+        padding: 1rem;
+        border-style: solid;
+        border-color: #e5e7eb;
+    }
+
+    .upload-area img {
+        max-width: 100%;
+        max-height: 400px;
+        object-fit: contain;
+        border-radius: 8px;
+    }
+
+    .upload-icon {
+        font-size: 3.5rem;
+        color: #10B981;
+        margin-bottom: 1rem;
+    }
+
+    .upload-text {
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 0.5rem;
+    }
+
+    .upload-hint {
+        font-size: 0.85rem;
+        color: #6b7280;
+    }
+
     .upload-overlay {
         position: absolute;
         top: 0;
         left: 0;
         right: 0;
         bottom: 0;
-        background: rgba(255, 255, 255, 0.8);
+        background: rgba(255, 255, 255, 0.9);
         display: flex;
         flex-direction: column;
-        justify-content: center;
         align-items: center;
+        justify-content: center;
         opacity: 0;
         transition: opacity 0.2s;
-        cursor: pointer;
+        border-radius: 10px;
     }
 
-    .visual-area:hover .upload-overlay,
-    .visual-area.empty .upload-overlay {
+    .upload-area:hover .upload-overlay {
         opacity: 1;
+    }
+
+    /* Size Chart Table */
+    .size-chart-container {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .size-chart-title {
+        font-weight: 800;
+        font-size: 0.9rem;
+        color: #374151;
+        margin-bottom: 1rem;
+        padding-left: 0.5rem;
+    }
+
+    .size-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid #e5e7eb;
+    }
+
+    .size-table th,
+    .size-table td {
+        padding: 0.75rem 0.5rem;
+        text-align: center;
+        font-size: 0.9rem;
+        border: 1px solid #e5e7eb;
+    }
+
+    .size-table th {
+        background: #f3f4f6;
+        font-weight: 700;
+        color: #374151;
+    }
+
+    .size-table td.label-cell {
+        background: #f9fafb;
+        font-weight: 700;
+        text-align: left;
+        padding-left: 1.25rem;
+    }
+
+    .size-table input {
+        width: 100%;
+        text-align: center;
+        border: none;
+        background: transparent;
+        padding: 0.25rem;
+        font-size: 0.95rem;
+        font-weight: 500;
+    }
+
+    .size-table input:focus {
+        outline: none;
+        background: #f0fdf4;
+    }
+
+    .size-table .total-cell {
+        background: #f0fdf4;
+        color: #10B981;
+        font-weight: 800;
+    }
+
+    .size-table .jum-cell {
+        background: #eff6ff;
+        color: #2563eb;
+        font-weight: 700;
+    }
+
+    /* Notes Input */
+    .notes-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 1.5rem;
+    }
+
+    .notes-list {
+        background: #f9fafb;
+        border-radius: 12px;
+        padding: 1.25rem;
+    }
+
+    .notes-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .notes-number {
+        width: 24px;
+        height: 24px;
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #6b7280;
+    }
+
+    .notes-item input {
+        flex: 1;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 0.65rem 1rem;
+        font-size: 0.9rem;
+        color: #111827;
+        background: white;
+        transition: all 0.2s;
+    }
+
+    .notes-item input:focus {
+        outline: none;
+        border-color: #10B981;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    }
+
+    .label-box {
+        background: #f9fafb;
+        border-radius: 12px;
+        padding: 1.25rem;
+    }
+
+    .label-box textarea {
+        width: 100%;
+        min-height: 200px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 1rem;
+        font-size: 0.95rem;
+        resize: none;
+    }
+
+    /* Action Bar */
+    .action-bar {
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        padding: 1.25rem 2rem;
+        background: #f8f9fa;
+        border-top: 1px solid #e5e7eb;
+        border-radius: 0 0 12px 12px;
+    }
+
+    /* Buttons */
+    .btn-save {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: none;
+        background: #10B981;
+        color: white;
+        border-radius: 8px;
+        font-weight: 700;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        transition: all 0.2s;
+    }
+
+    .btn-save:hover {
+        background: #059669;
+    }
+
+    .btn-export {
+        padding: 0.65rem 1rem;
+        border: 1px solid #e5e7eb;
+        background: white;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s;
+        text-decoration: none !important;
+    }
+
+    .btn-export:hover {
+        background: #f3f4f6;
+    }
+
+    .btn-export.word {
+        color: #2563eb;
+    }
+
+    .btn-export.pdf {
+        color: #dc2626;
+    }
+
+    @media (max-width: 900px) {
+        .form-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .form-sidebar {
+            border-right: none;
+            border-bottom: 1px solid #e5e7eb;
+        }
     }
 </style>
 
-<!-- Action Header (Outside Paper) -->
-<div class="actions-header">
-    <div>
-        <a href="/orders/{{ dso.order.order_code }}" class="btn btn-outline-secondary btn-sm">
-            <i class="fas fa-arrow-left me-1"></i> Kembali
-        </a>
-    </div>
-    <div class="d-flex gap-2">
-        <a href="/api/dso/{{ dso.id }}/export-word" class="btn btn-white border text-primary fw-semibold btn-sm">
-            <i class="fas fa-file-word me-1"></i> Word
-        </a>
-        <a href="/api/dso/{{ dso.id }}/export-pdf" class="btn btn-white border text-danger fw-semibold btn-sm">
-            <i class="fas fa-file-pdf me-1"></i> PDF
-        </a>
-        <button onclick="saveDSO()" class="btn btn-primary btn-sm px-4 fw-bold">
-            <i class="fas fa-save me-1"></i> SIMPAN
-        </button>
-    </div>
-</div>
-
-<!-- The Document Paper -->
-<div class="dso-paper-container">
-
-    <!-- Header -->
-    <div class="doc-header-grid">
-        <div class="logo-area">
-            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Greens Production"
-                style="max-height: 60px;">
-        </div>
-        <div class="text-center">
-            <h4 class="mb-0 fw-bold text-uppercase">Design Specification Order (DSO)</h4>
-        </div>
-        <div class="dso-qrcode">
-            <img id="dsoQrcodeImage" src="" alt="QR Code" style="width: 70px; height: 70px; display: none;">
-            <div class="dso-qrcode-label" id="dsoQrcodeLabel" style="display: none;">{{ dso.order.order_code }}</div>
+<div class="modern-form-container">
+    <!-- Header Bar -->
+    <div class="form-header">
+        <div class="form-header-icon">
+            <i class="fas fa-clipboard-check"></i>
         </div>
         <div>
-            <table class="info-box-table text-center" style="font-size: 0.8rem;">
-                <tr>
-                    <td class="bg-red" style="width: 80px;">NO INV</td>
-                    <td class="text-danger">{{ dso.order.order_code }}</td>
-                </tr>
-                <tr>
-                    <td class="bg-green">DUE DATE</td>
-                    <td>{{ dso.order.deadline.strftime('%d/%m/%Y') if dso.order.deadline else '-' }}</td>
-                </tr>
-            </table>
+            <h4>Design Specification Order (DSO)</h4>
+            <p>Form input spesifikasi desain produksi</p>
         </div>
+        <a href="/orders/{{ dso.order.order_code }}" class="form-header-close">
+            <i class="fas fa-times"></i>
+        </a>
     </div>
 
-    <!-- Specs Table Row -->
-    <div class="row g-0">
-        <!-- Left: Basic Specs & Left Acc -->
-        <div class="col-6 pe-3">
-            <table class="doc-table">
-                <tbody>
-                    <tr>
-                        <td class="label-col">MODEL</td>
-                        <td><input type="text" name="model" class="doc-input" value="{{ dso.order.model or '' }}"></td>
-                    </tr>
-                    <tr>
-                        <td class="label-col">BAHAN</td>
-                        <td><input type="text" name="bahan" class="doc-input" value="{{ dso.bahan or '' }}"></td>
-                    </tr>
-                    <tr>
-                        <td class="label-col">WARNA</td>
-                        <td><input type="text" name="warna" class="doc-input" value="{{ dso.warna or '' }}"></td>
-                    </tr>
-                    <!-- ACC Section embedded in left table as per layout often seen -->
-                    <!-- But layout shows ACC list separate. Let's follow the image structure -->
-                    <!-- Image: Table Left (Model, Bahan, Warna, ACC blocks), Table Right (Jenis, Sablon, Posisi, Kancing...) -->
+    <div class="form-layout">
+        <!-- Left Sidebar -->
+        <aside class="form-sidebar">
+            <div class="sidebar-title">
+                <i class="fas fa-info-circle"></i>
+                KONTEKS ORDER
+            </div>
 
-                    <tr>
-                        <td class="label-col align-top pt-2" rowspan="5">ACC</td>
-                        <td class="p-0 border-0">
-                            <table class="w-100 m-0 border-0">
-                                {% for i in range(1, 6) %}
+            <div class="sidebar-section">
+                <label>NO. INV</label>
+                <div class="sidebar-value highlight">{{ dso.order.order_code }}</div>
+            </div>
+
+            <div class="sidebar-section">
+                <label>CUSTOMER</label>
+                <div class="sidebar-value">{{ dso.order.customer.name if dso.order.customer else '-' }}</div>
+            </div>
+
+            <div class="sidebar-section">
+                <label>DUE DATE</label>
+                <div class="sidebar-value">{{ dso.order.deadline.strftime('%d/%m/%Y') if dso.order.deadline else '-' }}
+                </div>
+            </div>
+
+            <div class="sidebar-qr">
+                <img id="dsoQrcodeImage" src="" alt="QR" style="display: none;">
+                <div class="sidebar-qr-label" id="dsoQrcodeLabel" style="display: none;">{{ dso.order.order_code }}
+                </div>
+            </div>
+
+            <div style="margin-top: 2rem;">
+                <label
+                    style="font-size: 0.75rem; color: #6b7280; font-weight: 700; margin-bottom: 0.75rem; display: block;">EKSPOR
+                    & TINDAKAN</label>
+                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <a href="/api/dso/{{ dso.id }}/export-word" class="btn-export word">
+                        <i class="fas fa-file-word"></i> Export Word
+                    </a>
+                    <a href="/api/dso/{{ dso.id }}/export-pdf" class="btn-export pdf">
+                        <i class="fas fa-file-pdf"></i> Export PDF
+                    </a>
+                    <button onclick="saveDSO()" class="btn-save" style="margin-top: 0.5rem;">
+                        <i class="fas fa-save"></i> SIMPAN DSO
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="form-main">
+            <!-- 1. Detail Produk -->
+            <section class="form-section">
+                <div class="section-header">
+                    <span class="section-number">1</span>
+                    <div>
+                        <h5>Detail Produk</h5>
+                        <p>Informasi dasar mengenai produk dan desain</p>
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Model <span class="required">*</span></label>
+                        <input type="text" name="model" class="modern-input" value="{{ dso.order.model or '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label>Jenis</label>
+                        <input type="text" name="jenis" class="modern-input" value="{{ dso.jenis or '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label>Bahan</label>
+                        <input type="text" name="bahan" class="modern-input" value="{{ dso.bahan or '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label>Warna</label>
+                        <input type="text" name="warna" class="modern-input" value="{{ dso.warna or '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label>Sablon</label>
+                        <input type="text" name="sablon" class="modern-input" value="{{ dso.sablon or '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label>Posisi</label>
+                        <input type="text" name="posisi" class="modern-input" value="{{ dso.posisi or '' }}"
+                            placeholder="-">
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. Detail Konstruksi -->
+            <section class="form-section">
+                <div class="section-header">
+                    <span class="section-number">2</span>
+                    <div>
+                        <h5>Detail Konstruksi & Aksesoris</h5>
+                        <p>Spesifikasi detail komponen produk</p>
+                    </div>
+                </div>
+
+                <div class="form-grid cols-3">
+                    <div class="form-group">
+                        <label>Kancing</label>
+                        <input type="text" name="kancing" class="modern-input" value="{{ dso.kancing or '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label>Saku</label>
+                        <input type="text" name="saku" class="modern-input" value="{{ dso.saku or '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label>Resleting</label>
+                        <input type="text" name="resleting" class="modern-input" value="{{ dso.resleting or '' }}">
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Model Badan Bawah</label>
+                        <input type="text" name="model_badan_bawah" class="modern-input"
+                            value="{{ dso.model_badan_bawah or '' }}">
+                    </div>
+                </div>
+
+                <div style="margin-top: 1.5rem;">
+                    <label style="font-size: 0.85rem; font-weight: 700; margin-bottom: 0.75rem; display: block;">Daftar
+                        Aksesoris (ACC)</label>
+                    <div class="acc-list">
+                        {% for i in range(1, 6) %}
+                        <div class="acc-item">
+                            <span class="acc-number">{{ i }}</span>
+                            <input type="text" name="acc_{{ i }}" class="modern-input"
+                                value="{{ dso['acc_' ~ i] or '' }}">
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. Gambar Desain -->
+            <section class="form-section">
+                <div class="section-header">
+                    <span class="section-number">3</span>
+                    <div>
+                        <h5>Gambar Desain</h5>
+                        <p>Upload visual desain produk tampak depan</p>
+                    </div>
+                </div>
+
+                <input type="file" id="uploadGambar" accept="image/*" class="d-none" onchange="uploadGambarDepan(this)">
+                <div class="upload-area {% if dso.gambar_depan_url %}has-image{% endif %}"
+                    onclick="document.getElementById('uploadGambar').click()">
+                    {% if dso.gambar_depan_url %}
+                    <img src="{{ dso.gambar_depan_url }}" id="gambarDepan" alt="Desain">
+                    <div class="upload-overlay">
+                        <i class="fas fa-camera" style="font-size: 2rem; color: #10B981; margin-bottom: 0.5rem;"></i>
+                        <span class="upload-text">Ganti Gambar</span>
+                    </div>
+                    {% else %}
+                    <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                    <div class="upload-text">Upload Gambar Desain</div>
+                    <div class="upload-hint">Format: JPG, PNG, WEBP (Maks. 5MB)</div>
+                    {% endif %}
+                </div>
+            </section>
+
+            <!-- 4. Catatan & Label -->
+            <section class="form-section">
+                <div class="section-header">
+                    <span class="section-number">4</span>
+                    <div>
+                        <h5>Catatan & Label</h5>
+                        <p>Informasi tambahan dari customer dan label produk</p>
+                    </div>
+                </div>
+
+                <div class="notes-grid">
+                    <div class="notes-list">
+                        <label
+                            style="font-size: 0.85rem; font-weight: 700; margin-bottom: 1rem; display: block;">Catatan
+                            Customer</label>
+                        {% for i in range(1, 7) %}
+                        <div class="notes-item">
+                            <span class="notes-number">{{ i }}</span>
+                            <input type="text" name="catatan_customer_{{ i }}"
+                                value="{{ dso['catatan_customer_' ~ i] or '' }}">
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="label-box">
+                        <label
+                            style="font-size: 0.85rem; font-weight: 700; margin-bottom: 1rem; display: block;">Instruksi
+                            Label</label>
+                        <textarea name="label" placeholder="Detail label...">{{ dso.label or '' }}</textarea>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5. Size Chart -->
+            <section class="form-section">
+                <div class="section-header">
+                    <span class="section-number">5</span>
+                    <div>
+                        <h5>Size Chart</h5>
+                        <p>Data kuantitas per ukuran produk</p>
+                    </div>
+                </div>
+
+                <!-- Dewasa -->
+                <div class="size-chart-container">
+                    <div class="size-chart-title">👔 SIZE CHART DEWASA</div>
+                    <div class="table-responsive">
+                        <table class="size-table">
+                            <thead>
                                 <tr>
-                                    <td class="num-cell py-1 border-0 border-bottom border-end" style="width: 30px;">{{
-                                        i }}</td>
-                                    <td class="py-1 border-0 border-bottom"><input type="text" name="acc_{{ i }}"
-                                            class="doc-input" value="{{ dso['acc_' ~ i] or '' }}"></td>
+                                    <th style="width: 100px;">UKURAN</th>
+                                    {% for s in ['XS','S','M','L','XL','XXL','3XL','4XL','5XL'] %}<th>{{ s }}</th>{%
+                                    endfor %}
+                                    <th class="jum-cell">JUM</th>
+                                    <th class="total-cell">TOTAL</th>
                                 </tr>
-                                {% endfor %}
-                            </table>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Right: Detail Specs -->
-        <div class="col-6 ps-3">
-            <table class="doc-table">
-                <tbody>
-                    <tr>
-                        <td class="label-col" style="width: 140px;">JENIS</td>
-                        <td><input type="text" name="jenis" class="doc-input" value="{{ dso.jenis or '' }}"></td>
-                    </tr>
-                    <tr>
-                        <td class="label-col">SABLON</td>
-                        <td><input type="text" name="sablon" class="doc-input" value="{{ dso.sablon or '' }}"></td>
-                    </tr>
-                    <tr>
-                        <td class="label-col">POSISI</td>
-                        <td><input type="text" name="posisi" class="doc-input" value="{{ dso.posisi or '' }}"
-                                placeholder="-"></td>
-                    </tr>
-                    <tr>
-                        <td class="label-col">KANCING</td>
-                        <td><input type="text" name="kancing" class="doc-input" value="{{ dso.kancing or '' }}"></td>
-                    </tr>
-                    <tr>
-                        <td class="label-col">SAKU</td>
-                        <td><input type="text" name="saku" class="doc-input" value="{{ dso.saku or '' }}"></td>
-                    </tr>
-                    <tr>
-                        <td class="label-col">RESLETING</td>
-                        <td><input type="text" name="resleting" class="doc-input" value="{{ dso.resleting or '' }}">
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="label-col">MODEL BADAN BAWAH</td>
-                        <td style="font-size: 0.8rem;"><input type="text" name="model_badan_bawah" class="doc-input"
-                                value="{{ dso.model_badan_bawah or '' }}"></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Tampak Depan -->
-    <div class="mb-4">
-        <div class="visual-section-header">TAMPAK DEPAN</div>
-        <div class="visual-area {% if not dso.gambar_depan_url %}empty{% endif %}">
-            <input type="file" id="uploadGambar" accept="image/*" class="d-none" onchange="uploadGambarDepan(this)">
-
-            {% if dso.gambar_depan_url %}
-            <img src="{{ dso.gambar_depan_url }}" id="gambarDepan"
-                style="max-width: 100%; max-height: 400px; object-fit: contain;">
-            <div class="upload-overlay" onclick="document.getElementById('uploadGambar').click()">
-                <div class="bg-white p-2 rounded shadow text-dark fw-bold border">
-                    <i class="fas fa-camera me-1"></i> Ganti Desain
+                            </thead>
+                            <tbody>
+                                {% set dev = dso.size_chart_dewasa %}
+                                <tr>
+                                    <td class="label-cell">Pendek</td>
+                                    {% for s in ['xs','s','m','l','xl','xxl','x3l','x4l','x5l'] %}
+                                    <td><input type="number" name="dewasa_pendek_{{ s }}"
+                                            value="{{ dev['pendek_' ~ s] if dev else 0 }}" min="0"
+                                            onchange="calcDewasa()"></td>
+                                    {% endfor %}
+                                    <td class="jum-cell" id="jumDewasaPendek">{{ dev.jum_pendek if dev else 0 }}</td>
+                                    <td class="total-cell" rowspan="2" id="totalDewasa">{{ dev.total if dev else 0 }}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="label-cell">Panjang</td>
+                                    {% for s in ['xs','s','m','l','xl','xxl','x3l','x4l','x5l'] %}
+                                    <td><input type="number" name="dewasa_panjang_{{ s }}"
+                                            value="{{ dev['panjang_' ~ s] if dev else 0 }}" min="0"
+                                            onchange="calcDewasa()"></td>
+                                    {% endfor %}
+                                    <td class="jum-cell" id="jumDewasaPanjang">{{ dev.jum_panjang if dev else 0 }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
-            {% else %}
-            <div class="upload-overlay" onclick="document.getElementById('uploadGambar').click()">
-                <div class="text-center text-secondary">
-                    <i class="fas fa-cloud-upload-alt fa-3x mb-2 text-primary"></i>
-                    <div class="fw-bold text-dark">UPLOAD GAMBAR DESAIN</div>
-                    <div class="small">Klik area ini untuk memilih file</div>
+
+                <!-- Anak -->
+                <div class="size-chart-container">
+                    <div class="size-chart-title">👕 SIZE CHART ANAK</div>
+                    <div class="table-responsive">
+                        <table class="size-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 100px;">UKURAN</th>
+                                    {% for s in ['XS','S','M','L','XL','XXL','3XL','4XL','5XL'] %}<th>{{ s }}</th>{%
+                                    endfor %}
+                                    <th class="jum-cell">JUM</th>
+                                    <th class="total-cell">TOTAL</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% set ank = dso.size_chart_anak %}
+                                <tr>
+                                    <td class="label-cell">Pendek</td>
+                                    {% for s in ['xs','s','m','l','xl','xxl','x3l','x4l','x5l'] %}
+                                    <td><input type="number" name="anak_pendek_{{ s }}"
+                                            value="{{ ank['pendek_' ~ s] if ank else 0 }}" min="0"
+                                            onchange="calcAnak()"></td>
+                                    {% endfor %}
+                                    <td class="jum-cell" id="jumAnakPendek">{{ ank.jum_pendek if ank else 0 }}</td>
+                                    <td class="total-cell" rowspan="2" id="totalAnak">{{ ank.total if ank else 0 }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="label-cell">Panjang</td>
+                                    {% for s in ['xs','s','m','l','xl','xxl','x3l','x4l','x5l'] %}
+                                    <td><input type="number" name="anak_panjang_{{ s }}"
+                                            value="{{ ank['panjang_' ~ s] if ank else 0 }}" min="0"
+                                            onchange="calcAnak()"></td>
+                                    {% endfor %}
+                                    <td class="jum-cell" id="jumAnakPanjang">{{ ank.jum_panjang if ank else 0 }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
-            {% endif %}
-        </div>
+            </section>
+        </main>
     </div>
 
-    <!-- Notes & Label Row -->
-    <div class="row mb-4">
-        <div class="col-8">
-            <table class="doc-table mb-0">
-                <tr>
-                    <td class="label-col text-center" rowspan="6" style="width: 120px;">CATATAN<br>CUSTOMER</td>
-                    <td class="num-cell" style="width: 40px !important;">1</td>
-                    <td><input type="text" name="catatan_customer_1" class="doc-input"
-                            value="{{ dso.catatan_customer_1 or '' }}"></td>
-                </tr>
-                {% for i in range(2, 7) %}
-                <tr>
-                    <td class="num-cell">{{ i }}</td>
-                    <td><input type="text" name="catatan_customer_{{ i }}" class="doc-input"
-                            value="{{ dso['catatan_customer_' ~ i] or '' }}"></td>
-                </tr>
-                {% endfor %}
-            </table>
-        </div>
-        <div class="col-4">
-            <table class="doc-table mb-0" style="height: 100%;">
-                <tr>
-                    <td class="label-col text-center border-bottom-0" style="height: 40px;">LABEL</td>
-                </tr>
-                <tr>
-                    <td class="p-2 border-top-0 align-top" style="height: 100%;">
-                        <textarea name="label" class="doc-input w-100 h-100 text-center"
-                            style="min-height: 150px; resize: none;" placeholder="-">{{ dso.label or '' }}</textarea>
-                    </td>
-                </tr>
-            </table>
-        </div>
-    </div>
-
-    <!-- Size Charts -->
-    <div class="mb-2">
-        <div class="doc-table mt-0 mb-0 border-bottom-0 bg-light fw-bold px-2 py-1 border border-bottom-0"
-            style="font-size: 0.85rem;">S. CHART DEWASA</div>
-        <div class="table-responsive">
-            <table class="doc-table text-center mb-4">
-                <thead>
-                    <tr>
-                        <th style="width: 100px;">Ukuran</th>
-                        {% for size in ['XS','S','M','L','XL','XXL','3XL','4XL','5XL'] %}
-                        <th>{{ size }}</th>
-                        {% endfor %}
-                        <th class="bg-light text-primary">JUM</th>
-                        <th class="bg-light text-success">TOTAL</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% set dewasa = dso.size_chart_dewasa %}
-                    <tr>
-                        <td class="fw-bold text-start ps-3">Pendek</td>
-                        {% for size in ['xs','s','m','l','xl','xxl','x3l','x4l','x5l'] %}
-                        <td class="size-input-cell"><input type="number" name="dewasa_pendek_{{ size }}"
-                                class="doc-input" value="{{ dewasa['pendek_' ~ size] if dewasa else 0 }}" min="0"
-                                onchange="calcDewasa()"></td>
-                        {% endfor %}
-                        <td class="fw-bold text-primary" id="jumDewasaPendek">{{ dewasa.jum_pendek if dewasa else 0 }}
-                        </td>
-                        <td class="fw-bold text-success fs-5 align-middle" rowspan="2" id="totalDewasa">{{ dewasa.total
-                            if dewasa else 0 }}</td>
-                    </tr>
-                    <tr>
-                        <td class="fw-bold text-start ps-3">Panjang</td>
-                        {% for size in ['xs','s','m','l','xl','xxl','x3l','x4l','x5l'] %}
-                        <td class="size-input-cell"><input type="number" name="dewasa_panjang_{{ size }}"
-                                class="doc-input" value="{{ dewasa['panjang_' ~ size] if dewasa else 0 }}" min="0"
-                                onchange="calcDewasa()"></td>
-                        {% endfor %}
-                        <td class="fw-bold text-primary" id="jumDewasaPanjang">{{ dewasa.jum_panjang if dewasa else 0 }}
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <div class="doc-table mt-0 mb-0 border-bottom-0 bg-light fw-bold px-2 py-1 border border-bottom-0"
-            style="font-size: 0.85rem;">S. CHART ANAK</div>
-        <div class="table-responsive">
-            <table class="doc-table text-center mb-0">
-                <thead>
-                    <tr>
-                        <th style="width: 100px;">Ukuran</th>
-                        {% for size in ['XS','S','M','L','XL','XXL','3XL','4XL','5XL'] %}
-                        <th>{{ size }}</th>
-                        {% endfor %}
-                        <th class="bg-light text-primary">JUM</th>
-                        <th class="bg-light text-success">TOTAL</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% set anak = dso.size_chart_anak %}
-                    <tr>
-                        <td class="fw-bold text-start ps-3">Pendek</td>
-                        {% for size in ['xs','s','m','l','xl','xxl','x3l','x4l','x5l'] %}
-                        <td class="size-input-cell"><input type="number" name="anak_pendek_{{ size }}" class="doc-input"
-                                value="{{ anak['pendek_' ~ size] if anak else 0 }}" min="0" onchange="calcAnak()"></td>
-                        {% endfor %}
-                        <td class="fw-bold text-primary" id="jumAnakPendek">{{ anak.jum_pendek if anak else 0 }}</td>
-                        <td class="fw-bold text-success fs-5 align-middle" rowspan="2" id="totalAnak">{{ anak.total if
-                            anak else 0 }}</td>
-                    </tr>
-                    <tr>
-                        <td class="fw-bold text-start ps-3">Panjang</td>
-                        {% for size in ['xs','s','m','l','xl','xxl','x3l','x4l','x5l'] %}
-                        <td class="size-input-cell"><input type="number" name="anak_panjang_{{ size }}"
-                                class="doc-input" value="{{ anak['panjang_' ~ size] if anak else 0 }}" min="0"
-                                onchange="calcAnak()"></td>
-                        {% endfor %}
-                        <td class="fw-bold text-primary" id="jumAnakPanjang">{{ anak.jum_panjang if anak else 0 }}</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
+    <!-- Bottom Actions Removed -->
 </div>
 
-<!-- Scripts reused -->
 <script>
-    // Include same calc functions and logic
     function calcDewasa() {
         const sizes = ['xs', 's', 'm', 'l', 'xl', 'xxl', 'x3l', 'x4l', 'x5l'];
-        let jumPendek = 0, jumPanjang = 0;
-
-        sizes.forEach(size => {
-            jumPendek += parseInt(document.querySelector(`[name="dewasa_pendek_${size}"]`)?.value) || 0;
-            jumPanjang += parseInt(document.querySelector(`[name="dewasa_panjang_${size}"]`)?.value) || 0;
+        let jp = 0, jpj = 0;
+        sizes.forEach(s => {
+            jp += parseInt(document.querySelector(`[name="dewasa_pendek_${s}"]`)?.value) || 0;
+            jpj += parseInt(document.querySelector(`[name="dewasa_panjang_${s}"]`)?.value) || 0;
         });
-
-        document.getElementById('jumDewasaPendek').textContent = jumPendek;
-        document.getElementById('jumDewasaPanjang').textContent = jumPanjang;
-        document.getElementById('totalDewasa').textContent = jumPendek + jumPanjang;
+        document.getElementById('jumDewasaPendek').textContent = jp;
+        document.getElementById('jumDewasaPanjang').textContent = jpj;
+        document.getElementById('totalDewasa').textContent = jp + jpj;
     }
 
     function calcAnak() {
         const sizes = ['xs', 's', 'm', 'l', 'xl', 'xxl', 'x3l', 'x4l', 'x5l'];
-        let jumPendek = 0, jumPanjang = 0;
-
-        sizes.forEach(size => {
-            jumPendek += parseInt(document.querySelector(`[name="anak_pendek_${size}"]`)?.value) || 0;
-            jumPanjang += parseInt(document.querySelector(`[name="anak_panjang_${size}"]`)?.value) || 0;
+        let jp = 0, jpj = 0;
+        sizes.forEach(s => {
+            jp += parseInt(document.querySelector(`[name="anak_pendek_${s}"]`)?.value) || 0;
+            jpj += parseInt(document.querySelector(`[name="anak_panjang_${s}"]`)?.value) || 0;
         });
-
-        document.getElementById('jumAnakPendek').textContent = jumPendek;
-        document.getElementById('jumAnakPanjang').textContent = jumPanjang;
-        document.getElementById('totalAnak').textContent = jumPendek + jumPanjang;
+        document.getElementById('jumAnakPendek').textContent = jp;
+        document.getElementById('jumAnakPanjang').textContent = jpj;
+        document.getElementById('totalAnak').textContent = jp + jpj;
     }
 
     function uploadGambarDepan(input) {
         if (input.files && input.files[0]) {
-            // Preview only first
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                const img = document.getElementById('gambarDepan');
-                if (img) {
-                    img.src = e.target.result;
-                } else {
-                    // If fresh upload
-                    const container = document.querySelector('.visual-area');
-                    container.classList.remove('empty');
-                    container.innerHTML = `
-                        <input type="file" id="uploadGambar" accept="image/*" class="d-none" onchange="uploadGambarDepan(this)">
-                        <img src="${e.target.result}" id="gambarDepan" style="max-width: 100%; max-height: 400px; object-fit: contain;">
-                        <div class="upload-overlay" onclick="document.getElementById('uploadGambar').click()">
-                             <div class="bg-white p-2 rounded shadow text-dark fw-bold border">
-                                 <i class="fas fa-camera me-1"></i> Ganti Desain
-                             </div>
-                        </div>
-                     `;
-                }
-            }
-            reader.readAsDataURL(input.files[0]);
-
             const formData = new FormData();
             formData.append('gambar_depan', input.files[0]);
             showLoading();
@@ -538,28 +915,27 @@
             fetch('/api/dso/{{ dso.id }}/upload', {
                 method: 'PUT',
                 body: formData,
-                headers: headers, // Do NOT set Content-Type here, let browser set multipart/form-data
-                credentials: 'same-origin'
+                headers: headers
             })
-                .then(async response => {
-                    const data = await response.json();
-                    if (!response.ok) throw new Error(data.message || 'Upload failed');
-                    return data;
+                .then(res => res.json())
+                .then(data => {
+                    hideLoading();
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        showToast(data.message, 'error');
+                    }
                 })
-                .then(() => {
+                .catch(err => {
                     hideLoading();
-                    showToast('Desain berhasil diupdate', 'success');
-                }).catch(err => {
-                    hideLoading();
-                    showToast(err.message || 'Upload gagal', 'error');
+                    showToast('Upload gagal', 'error');
                 });
         }
     }
 
     async function saveDSO() {
         showLoading();
-        // Collect data
-        const dsoData = {
+        const d = {
             model: document.querySelector('[name="model"]').value,
             jenis: document.querySelector('[name="jenis"]').value,
             bahan: document.querySelector('[name="bahan"]').value,
@@ -571,56 +947,50 @@
             resleting: document.querySelector('[name="resleting"]').value,
             model_badan_bawah: document.querySelector('[name="model_badan_bawah"]').value,
             label: document.querySelector('[name="label"]').value,
+            status: 'published'
         };
 
-        for (let i = 1; i <= 5; i++) dsoData[`acc_${i}`] = document.querySelector(`[name="acc_${i}"]`).value;
-        for (let i = 1; i <= 6; i++) dsoData[`catatan_customer_${i}`] = document.querySelector(`[name="catatan_customer_${i}"]`).value;
+        for (let i = 1; i <= 5; i++) d[`acc_${i}`] = document.querySelector(`[name="acc_${i}"]`).value;
+        for (let i = 1; i <= 6; i++) d[`catatan_customer_${i}`] = document.querySelector(`[name="catatan_customer_${i}"]`).value;
 
-        dsoData.size_chart_dewasa = {};
-        dsoData.size_chart_anak = {};
         const sizes = ['xs', 's', 'm', 'l', 'xl', 'xxl', 'x3l', 'x4l', 'x5l'];
+        d.size_chart_dewasa = {};
+        d.size_chart_anak = {};
         sizes.forEach(s => {
-            dsoData.size_chart_dewasa[`pendek_${s}`] = parseInt(document.querySelector(`[name="dewasa_pendek_${s}"]`)?.value) || 0;
-            dsoData.size_chart_dewasa[`panjang_${s}`] = parseInt(document.querySelector(`[name="dewasa_panjang_${s}"]`)?.value) || 0;
-            dsoData.size_chart_anak[`pendek_${s}`] = parseInt(document.querySelector(`[name="anak_pendek_${s}"]`)?.value) || 0;
-            dsoData.size_chart_anak[`panjang_${s}`] = parseInt(document.querySelector(`[name="anak_panjang_${s}"]`)?.value) || 0;
+            d.size_chart_dewasa[`pendek_${s}`] = parseInt(document.querySelector(`[name="dewasa_pendek_${s}"]`)?.value) || 0;
+            d.size_chart_dewasa[`panjang_${s}`] = parseInt(document.querySelector(`[name="dewasa_panjang_${s}"]`)?.value) || 0;
+            d.size_chart_anak[`pendek_${s}`] = parseInt(document.querySelector(`[name="anak_pendek_${s}"]`)?.value) || 0;
+            d.size_chart_anak[`panjang_${s}`] = parseInt(document.querySelector(`[name="anak_panjang_${s}"]`)?.value) || 0;
         });
 
-        // Explicitly set status to published to approve the DSO
-        dsoData.status = 'published';
-
         try {
-            await api.put('/dso/{{ dso.id }}', dsoData);
+            await api.put('/dso/{{ dso.id }}', d);
             hideLoading();
-            showToast('DSO berhasil disimpan dan diterbitkan!', 'success');
-            // Reload to reflect status change visually if needed
-            setTimeout(() => window.location.reload(), 1500);
-        } catch (error) {
+            showToast('DSO berhasil disimpan!', 'success');
+            setTimeout(() => location.reload(), 1000);
+        } catch (e) {
             hideLoading();
-            showToast(error.message || 'Gagal menyimpan DSO', 'error');
+            showToast('Gagal menyimpan DSO', 'error');
         }
     }
 
     document.addEventListener('DOMContentLoaded', () => {
         calcDewasa();
         calcAnak();
-        loadDsoQRCode();
+        loadQR();
     });
 
-    async function loadDsoQRCode() {
+    async function loadQR() {
         try {
-            const orderId = {{ dso.order_id }};
-            const response = await api.get('/barcodes/qc-qrcode/' + orderId);
-            if (response.success && response.data.qr_image) {
-                const qrImg = document.getElementById('dsoQrcodeImage');
-                const qrLabel = document.getElementById('dsoQrcodeLabel');
-                qrImg.src = response.data.qr_image;
-                qrImg.style.display = 'block';
-                qrLabel.style.display = 'block';
+            const res = await api.get('/barcodes/qc-qrcode/{{ dso.order_id }}');
+            if (res.success && res.data.qr_image) {
+                const img = document.getElementById('dsoQrcodeImage');
+                const lbl = document.getElementById('dsoQrcodeLabel');
+                img.src = res.data.qr_image;
+                img.style.display = 'block';
+                lbl.style.display = 'block';
             }
-        } catch (error) {
-            console.log('DSO QR code loading failed:', error);
-        }
+        } catch (e) { }
     }
 </script>
 {% endblock %}
