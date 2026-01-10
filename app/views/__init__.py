@@ -82,7 +82,7 @@ def dashboard():
     """Main dashboard."""
     from datetime import datetime, timedelta
     from ..models.material import MaterialRequest
-    from ..models.audit import ActivityLog
+
     from ..models.qc import QCSheet
     
     # Get stats
@@ -121,10 +121,7 @@ def dashboard():
         ).count()
         order.progress = int((completed_tasks / total_tasks * 100)) if total_tasks > 0 else 0
     
-    # Recent activities from activity log
-    recent_activities = ActivityLog.query.order_by(
-        ActivityLog.timestamp.desc()
-    ).limit(8).all()
+
     
     # Calculate Quality Score from QC Analytics Service
     from ..services.qc_analytics import QCAnalyticsService
@@ -140,7 +137,7 @@ def dashboard():
         pending_materials=pending_materials,
         recent_orders=recent_orders,
         production_orders=production_orders,
-        recent_activities=recent_activities,
+
         now=datetime.now().date(),
         quality_score=quality_score
     )

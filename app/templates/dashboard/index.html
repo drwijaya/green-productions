@@ -193,7 +193,6 @@
             </div>
         </div>
     </div>
-
     <!-- Right Column -->
     <div class="dashboard-right">
         <!-- Quick Actions -->
@@ -279,58 +278,7 @@
             </div>
         </div>
 
-        <!-- Recent Activity -->
-        <div class="card card-modern">
-            <div class="card-header">
-                <h3 class="card-title">
-                    <i class="fas fa-history"></i>
-                    Aktivitas Terbaru
-                </h3>
-            </div>
-            <div class="card-body">
-                {% if recent_activities %}
-                <div class="activity-timeline">
-                    {% for activity in recent_activities %}
-                    <div class="activity-item">
-                        <div class="activity-icon 
-                            {% if 'create' in activity.action.lower() %}icon-success
-                            {% elif 'update' in activity.action.lower() %}icon-info
-                            {% elif 'delete' in activity.action.lower() %}icon-danger
-                            {% else %}icon-default{% endif %}">
-                            {% if 'create' in activity.action.lower() %}
-                            <i class="fas fa-plus"></i>
-                            {% elif 'update' in activity.action.lower() %}
-                            <i class="fas fa-edit"></i>
-                            {% elif 'delete' in activity.action.lower() %}
-                            <i class="fas fa-trash"></i>
-                            {% else %}
-                            <i class="fas fa-circle"></i>
-                            {% endif %}
-                        </div>
-                        <div class="activity-content">
-                            <div class="activity-text">
-                                <strong>{{ activity.user.username if activity.user else 'System' }}</strong>
-                                {{ activity.action }}
-                                {% if activity.module %}
-                                <span class="activity-entity">{{ activity.module }}</span>
-                                {% endif %}
-                            </div>
-                            <div class="activity-time">
-                                <i class="fas fa-clock"></i>
-                                {{ activity.timestamp.strftime('%d %b, %H:%M') }}
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <div class="empty-state-sm">
-                    <i class="fas fa-history"></i>
-                    <p>Belum ada aktivitas</p>
-                </div>
-                {% endif %}
-            </div>
-        </div>
+
     </div>
 </div>
 
@@ -593,82 +541,7 @@
         text-align: center;
     }
 
-    /* Activity Timeline */
-    .activity-timeline {
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
-    }
 
-    .activity-item {
-        display: flex;
-        gap: 0.75rem;
-        align-items: flex-start;
-        padding: 0.75rem;
-        background: var(--gray-50);
-        border-radius: var(--radius);
-        transition: background var(--transition-fast);
-    }
-
-    .activity-item:hover {
-        background: var(--gray-100);
-    }
-
-    .activity-icon {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.75rem;
-        flex-shrink: 0;
-    }
-
-    .activity-icon.icon-success {
-        background: #D1FAE5;
-        color: #065F46;
-    }
-
-    .activity-icon.icon-info {
-        background: #DBEAFE;
-        color: #1E40AF;
-    }
-
-    .activity-icon.icon-danger {
-        background: #FEE2E2;
-        color: #991B1B;
-    }
-
-    .activity-icon.icon-default {
-        background: var(--gray-200);
-        color: var(--gray-600);
-    }
-
-    .activity-content {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .activity-text {
-        font-size: 0.8125rem;
-        color: var(--gray-700);
-        line-height: 1.4;
-    }
-
-    .activity-entity {
-        color: var(--primary);
-        font-weight: 500;
-    }
-
-    .activity-time {
-        font-size: 0.75rem;
-        color: var(--gray-400);
-        margin-top: 0.25rem;
-        display: flex;
-        align-items: center;
-        gap: 0.25rem;
-    }
 
     /* Empty State Small */
     .empty-state-sm {
