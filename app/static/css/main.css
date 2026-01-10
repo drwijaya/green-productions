@@ -1108,10 +1108,15 @@ a:hover {
     box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);
 }
 
-.btn-qr-scanner:hover {
+.btn-qr-scanner:hover,
+.btn-qr-scanner.active {
     background: #059669;
     transform: translateY(-2px);
     box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3);
+}
+
+.btn-qr-scanner.active {
+    border: 2px solid white;
 }
 
 .btn-qr-scanner i {

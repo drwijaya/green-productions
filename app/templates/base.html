@@ -43,7 +43,8 @@
             </div>
 
             <div class="nav-qr-scanner">
-                <a href="{{ url_for('views.scanner') }}" class="btn-qr-scanner">
+                <a href="{{ url_for('views.scanner') }}"
+                    class="btn-qr-scanner {% if 'scanner' in request.endpoint %}active{% endif %}">
                     <i class="fas fa-qrcode"></i>
                     <span>Invoice Scanner</span>
                 </a>
@@ -88,7 +89,7 @@
 
                     {% if current_user.has_permission('qc') %}
                     <a href="{{ url_for('views.qc_monitoring') }}"
-                        class="nav-link {% if 'qc/monitoring' in request.endpoint %}active{% endif %}">
+                        class="nav-link {% if 'qc_monitoring' in request.endpoint %}active{% endif %}">
                         <i class="fas fa-microscope"></i>
                         <span>QC Monitoring</span>
                     </a>
