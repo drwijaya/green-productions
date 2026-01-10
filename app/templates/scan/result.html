@@ -325,7 +325,7 @@
         <div class="menu-section">
             <h4>Pilih Menu</h4>
             <div class="menu-list">
-                <a href="/orders/{{ order.order_code }}" class="menu-item">
+                <a href="/orders/{{ order.order_code }}?ref=invoice_scan" class="menu-item">
                     <div class="menu-icon blue">
                         <i class="fas fa-file-invoice"></i>
                     </div>
@@ -337,7 +337,7 @@
                 </a>
 
                 {% if order.dso_status != 'not_created' %}
-                <a href="/dso/{{ order.order_code }}/1" class="menu-item">
+                <a href="/dso/{{ order.order_code }}/1?ref=invoice_scan" class="menu-item">
                     <div class="menu-icon purple">
                         <i class="fas fa-drafting-compass"></i>
                     </div>
@@ -354,23 +354,23 @@
         <div class="qc-section">
             <h4>QC Checklist</h4>
             <div class="qc-grid">
-                <a href="/production/qc/{{ order.order_code }}/cutting" class="qc-item">
+                <a href="/production/qc/{{ order.order_code }}/cutting?ref=invoice_scan" class="qc-item">
                     <i class="fas fa-cut"></i>
                     <span>Cutting</span>
                 </a>
-                <a href="/production/qc/{{ order.order_code }}/sewing" class="qc-item">
+                <a href="/production/qc/{{ order.order_code }}/sewing?ref=invoice_scan" class="qc-item">
                     <i class="fas fa-tshirt"></i>
                     <span>Sewing</span>
                 </a>
-                <a href="/production/qc/{{ order.order_code }}/sablon" class="qc-item">
+                <a href="/production/qc/{{ order.order_code }}/sablon?ref=invoice_scan" class="qc-item">
                     <i class="fas fa-paint-roller"></i>
                     <span>Sablon</span>
                 </a>
-                <a href="/production/qc/{{ order.order_code }}/finishing" class="qc-item">
+                <a href="/production/qc/{{ order.order_code }}/finishing?ref=invoice_scan" class="qc-item">
                     <i class="fas fa-magic"></i>
                     <span>Finishing</span>
                 </a>
-                <a href="/production/qc/{{ order.order_code }}/packing" class="qc-item">
+                <a href="/production/qc/{{ order.order_code }}/packing?ref=invoice_scan" class="qc-item">
                     <i class="fas fa-box"></i>
                     <span>Packing</span>
                 </a>

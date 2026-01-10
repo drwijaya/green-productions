@@ -582,10 +582,23 @@
             <h4>Design Specification Order (DSO)</h4>
             <p>Form input spesifikasi desain produksi</p>
         </div>
-        <a href="/orders/{{ dso.order.order_code }}" class="form-header-close">
+        <a href="#" id="dsoBackButton" class="form-header-close" onclick="navigateDsoBack(); return false;">
             <i class="fas fa-times"></i>
         </a>
     </div>
+
+    <script>
+        function navigateDsoBack() {
+            const ref = getNavigationRef();
+            const orderCode = '{{ dso.order.order_code }}';
+
+            if (ref === 'invoice_scan') {
+                window.location.href = '/scan/result/' + orderCode;
+            } else {
+                window.location.href = '/orders/' + orderCode;
+            }
+        }
+    </script>
 
     <div class="form-layout">
         <!-- Left Sidebar -->

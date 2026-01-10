@@ -6,8 +6,8 @@
 {% block content %}
 <div class="page-header mb-4">
     <div class="page-header-left">
-        <a href="{{ url_for('views.orders') }}" class="btn btn-sm btn-outline mb-2">
-            <i class="fas fa-arrow-left"></i> Kembali
+        <a href="#" id="backButton" class="btn btn-sm btn-outline mb-2" onclick="navigateBack(); return false;">
+            <i class="fas fa-arrow-left"></i> <span id="backButtonText">Kembali</span>
         </a>
         <div class="order-title-row">
             <h2>{{ order.order_code }}</h2>
@@ -17,6 +17,30 @@
         </div>
     </div>
 </div>
+
+<script>
+    function navigateBack() {
+        const ref = getNavigationRef();
+        const orderCode = '{{ order.order_code }}';
+
+        if (ref === 'invoice_scan') {
+            window.location.href = '/scan/result/' + orderCode;
+        } else {
+            window.location.href = '{{ url_for("views.orders") }}';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const ref = getNavigationRef();
+        const textEl = document.getElementById('backButtonText');
+
+        if (ref === 'invoice_scan') {
+            textEl.textContent = 'Kembali ke Invoice Scanner';
+        } else {
+            textEl.textContent = 'Kembali';
+        }
+    });
+</script>
 
 <!-- Workflow Actions -->
 <div class="workflow-card mb-4">

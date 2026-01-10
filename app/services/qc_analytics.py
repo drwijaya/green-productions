@@ -83,7 +83,7 @@ class QCAnalyticsService:
         sql = text("""
             SELECT 
                 TO_CHAR(qs.created_at, 'IW') as week_num,
-                elem->>'name' as param_name,
+                COALESCE(elem->>'parameter', elem->>'name') as param_name,
                 SUM(CAST(COALESCE(elem->>'qty_checked', '0') AS INTEGER)) as checked,
                 SUM(CAST(COALESCE(elem->>'qty_ng', '0') AS INTEGER)) as ng
             FROM qc_sheet qs, 
@@ -455,7 +455,7 @@ class QCAnalyticsService:
         sql = text("""
             SELECT 
                 pt.process,
-                elem->>'name' as param_name,
+                COALESCE(elem->>'parameter', elem->>'name') as param_name,
                 SUM(CAST(COALESCE(elem->>'qty_checked', '0') AS INTEGER)) as total_checked,
                 SUM(CAST(COALESCE(elem->>'qty_ng', '0') AS INTEGER)) as total_ng,
                 COUNT(*) as sample_count,

@@ -272,3 +272,38 @@ const BarcodeScanner = {
         }
     }
 };
+
+// ========== Navigation History Utilities ==========
+/**
+ * Get the navigation referrer from URL query params.
+ * @returns {string|null} The ref param value or null.
+ */
+function getNavigationRef() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('ref');
+}
+
+/**
+ * Build a URL with ref parameter appended.
+ * @param {string} url - The base URL.
+ * @param {string} ref - The reference source (e.g., 'invoice_scan', 'production').
+ * @returns {string} URL with ref query param.
+ */
+function buildRefUrl(url, ref) {
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}ref=${encodeURIComponent(ref)}`;
+}
+
+/**
+ * Navigate back based on ref param or fallback to default URL.
+ * @param {string} fallbackUrl - The default URL if no ref is found.
+ * @param {object} refMap - Mapping of ref values to URLs.
+ */
+function goBackWithRef(fallbackUrl, refMap = {}) {
+    const ref = getNavigationRef();
+    if (ref && refMap[ref]) {
+        window.location.href = refMap[ref];
+    } else {
+        window.location.href = fallbackUrl;
+    }
+}

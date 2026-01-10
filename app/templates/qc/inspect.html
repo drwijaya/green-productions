@@ -9,10 +9,34 @@
 
 {% block content %}
 <div class="page-header mb-4">
-    <a href="{{ url_for('views.production') }}" class="btn btn-sm btn-outline">
-        <i class="fas fa-arrow-left"></i> Kembali ke Production
+    <a href="#" id="backButton" class="btn btn-sm btn-outline" onclick="navigateBack(); return false;">
+        <i class="fas fa-arrow-left"></i> <span id="backButtonText">Kembali</span>
     </a>
 </div>
+
+<script>
+    function navigateBack() {
+        const ref = getNavigationRef();
+        const orderCode = '{{ task.order.order_code }}';
+
+        if (ref === 'invoice_scan') {
+            window.location.href = '/scan/result/' + orderCode;
+        } else {
+            window.location.href = '{{ url_for("views.production") }}';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const ref = getNavigationRef();
+        const textEl = document.getElementById('backButtonText');
+
+        if (ref === 'invoice_scan') {
+            textEl.textContent = 'Kembali ke Invoice';
+        } else {
+            textEl.textContent = 'Kembali ke Production';
+        }
+    });
+</script>
 
 <!-- QC Document Header (Like SOP) -->
 <div class="qc-document">
@@ -128,8 +152,14 @@
             </div>
             <div class="summary-item">
                 <label>Total NG <small class="text-muted">(auto)</small></label>
-                <input type="number" class="form-input" id="totalNG" value="0" min="0" readonly
-                    style="background: #fef2f2; color: #dc2626; cursor: not-allowed;">
+                <div class="d-flex align-items-center gap-2">
+                    <input type="number" class="form-input" id="totalNG" value="0" min="0" readonly
+                        style="background: #fef2f2; color: #dc2626; cursor: not-allowed; flex: 1;">
+                    <button type="button" class="btn btn-sm btn-outline" onclick="syncTotals()"
+                        title="Sync Total NG & Diperiksa">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
             </div>
             <div class="summary-item">
                 <label>Pass Rate</label>
@@ -1191,6 +1221,32 @@
 
         // Update Rework List
         updateReworkList();
+    }
+
+    function syncTotals() {
+        // Recalculate Total NG from checklist rows only
+        // Total Diperiksa stays as invoice qty (user can manually change if needed)
+        let totalNG = 0;
+
+        checklistData.forEach(item => {
+            if (!item) return;
+            totalNG += parseInt(item.qtyNG) || 0;
+        });
+
+        // Update Total NG field
+        document.getElementById('totalNG').value = totalNG;
+
+        // Total Diperiksa stays from invoice qty (don't change it)
+        const totalInspected = parseInt(document.getElementById('totalInspected').value) || 0;
+
+        // Recalculate Total Lolos = Total Diperiksa - Total NG
+        const calculatedPassed = Math.max(0, totalInspected - totalNG);
+        document.getElementById('totalPassed').value = calculatedPassed;
+
+        updatePassRate();
+        updateReworkList();
+
+        showToast('Total NG disinkronkan dari data checklist', 'success');
     }
 
     function saveDefectDetail() {

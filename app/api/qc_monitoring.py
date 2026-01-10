@@ -161,7 +161,7 @@ def get_parameter_stats():
             if not isinstance(item, dict):
                 continue
                 
-            param_name = item.get('name', item.get('id', 'Unknown'))
+            param_name = item.get('parameter', item.get('name', item.get('id', 'Unknown')))
             qty_checked = int(item.get('qty_checked', 0) or 0)
             qty_ng = int(item.get('qty_ng', 0) or 0)
             status = item.get('status', '')
