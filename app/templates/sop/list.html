@@ -16,13 +16,17 @@
     </div>
 </div>
 
-<!-- Category Filter -->
+<!-- Search and Category Filter -->
 <div class="filter-bar mb-4">
+    <div class="search-box">
+        <i class="fas fa-search"></i>
+        <input type="text" class="form-input" id="sopSearchInput" placeholder="Cari nama dokumen atau kode...">
+    </div>
     <div class="category-tabs">
-        <button class="tab-btn active" onclick="filterByCategory('')">Semua</button>
-        <button class="tab-btn" onclick="filterByCategory('Produksi')">Produksi</button>
-        <button class="tab-btn" onclick="filterByCategory('QC')">Quality Control</button>
-        <button class="tab-btn" onclick="filterByCategory('Safety')">Safety</button>
+        <button class="tab-btn active" data-category="" onclick="filterByCategory('')">Semua</button>
+        <button class="tab-btn" data-category="Produksi" onclick="filterByCategory('Produksi')">Produksi</button>
+        <button class="tab-btn" data-category="QC" onclick="filterByCategory('QC')">Quality Control</button>
+        <button class="tab-btn" data-category="Safety" onclick="filterByCategory('Safety')">Safety</button>
     </div>
 </div>
 
@@ -44,7 +48,8 @@
                 </thead>
                 <tbody>
                     {% for doc in documents.items %}
-                    <tr data-id="{{ doc.id }}">
+                    <tr data-id="{{ doc.id }}" data-title="{{ doc.title|lower }}"
+                        data-code="{{ doc.document_code|lower }}" data-category="{{ doc.category or '' }}">
                         <td>
                             <div class="doc-name">
                                 <i class="fas fa-file-pdf text-danger"></i>
@@ -200,11 +205,33 @@
     .filter-bar {
         display: flex;
         gap: 1rem;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .search-box {
+        flex: 1;
+        min-width: 250px;
+        position: relative;
+    }
+
+    .search-box i {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--gray-400);
+    }
+
+    .search-box input {
+        padding-left: 2.5rem;
+        width: 100%;
     }
 
     .category-tabs {
         display: flex;
         gap: 0.5rem;
+        flex-wrap: wrap;
     }
 
     .tab-btn {
@@ -371,18 +398,55 @@
 
 <script>
     let currentCategory = '';
+    let currentSearch = '';
+
+    // Setup on page load
+    document.addEventListener('DOMContentLoaded', function () {
+        setupSopFilters();
+    });
+
+    function debounce(func, wait) {
+        let timeout;
+        return function (...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, args), wait);
+        };
+    }
+
+    function setupSopFilters() {
+        const searchInput = document.getElementById('sopSearchInput');
+        if (searchInput) {
+            searchInput.addEventListener('input', debounce(() => {
+                currentSearch = searchInput.value.toLowerCase();
+                applyFilters();
+            }, 300));
+        }
+    }
 
     function filterByCategory(category) {
         currentCategory = category;
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.classList.remove('active');
-            if (btn.textContent.trim() === (category || 'Semua')) {
+            if (btn.dataset.category === category) {
                 btn.classList.add('active');
             }
         });
+        applyFilters();
+    }
 
-        // Reload with filter
-        window.location.href = `?category=${category}`;
+    function applyFilters() {
+        document.querySelectorAll('#sopTable tbody tr[data-id]').forEach(row => {
+            const title = row.dataset.title || '';
+            const code = row.dataset.code || '';
+            const rowCategory = row.dataset.category || '';
+
+            const matchesSearch = !currentSearch ||
+                title.includes(currentSearch) ||
+                code.includes(currentSearch);
+            const matchesCategory = !currentCategory || rowCategory === currentCategory;
+
+            row.style.display = (matchesSearch && matchesCategory) ? '' : 'none';
+        });
     }
 
     function editSop(id) {

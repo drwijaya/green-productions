@@ -157,14 +157,29 @@ def update_user(user_id):
 @require_roles(UserRole.ADMIN)
 @log_activity('users', 'delete')
 def delete_user(user_id):
-    """Delete/deactivate user."""
+    """Delete/deactivate user.
+    
+    By default, soft deletes (deactivates) the user.
+    Add ?permanent=true to permanently delete the user.
+    """
     user = User.query.get_or_404(user_id)
     
-    # Soft delete - just deactivate
-    user.is_active = False
-    db.session.commit()
+    # Cannot delete yourself
+    if user.id == current_user.id:
+        return api_response(message='Cannot delete your own account', status=400)
     
-    return api_response(message='User deactivated successfully')
+    permanent = request.args.get('permanent', 'false').lower() == 'true'
+    
+    if permanent:
+        # Permanent delete - remove from database
+        db.session.delete(user)
+        db.session.commit()
+        return api_response(message='User permanently deleted')
+    else:
+        # Soft delete - just deactivate
+        user.is_active = False
+        db.session.commit()
+        return api_response(message='User deactivated successfully')
 
 
 @api_bp.route('/users/roles', methods=['GET'])

@@ -10,8 +10,21 @@
 
 <div class="card">
     <div class="card-body">
+        <!-- Search and Filter -->
+        <div class="filters-row mb-3">
+            <div class="filter-group search-group">
+                <i class="fas fa-search"></i>
+                <input type="text" class="form-input" id="searchInput" placeholder="Cari nama, company, atau phone...">
+            </div>
+            <div class="filter-group">
+                <select class="form-select" id="cityFilter">
+                    <option value="">Semua Kota</option>
+                </select>
+            </div>
+        </div>
+
         <div class="table-container">
-            <table class="table">
+            <table class="table" id="customersTable">
                 <thead>
                     <tr>
                         <th>Nama</th>
@@ -25,7 +38,8 @@
                 </thead>
                 <tbody>
                     {% for c in customers.items %}
-                    <tr>
+                    <tr data-name="{{ c.name|lower }}" data-company="{{ (c.company_name or '')|lower }}"
+                        data-phone="{{ c.phone or '' }}" data-city="{{ c.city or '' }}">
                         <td><strong>{{ c.name }}</strong></td>
                         <td>{{ c.company_name or '-' }}</td>
                         <td>{{ c.contact_person or '-' }}</td>
@@ -241,17 +255,112 @@
         display: block;
     }
 
+    /* Filter Styles */
+    .filters-row {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .filter-group {
+        min-width: 150px;
+    }
+
+    .filter-group.search-group {
+        flex: 1;
+        min-width: 250px;
+        position: relative;
+    }
+
+    .search-group i {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--gray-400);
+    }
+
+    .search-group input {
+        padding-left: 2.5rem;
+    }
+
     @media (max-width: 768px) {
 
         .form-row,
         .customer-info-grid {
             grid-template-columns: 1fr;
         }
+
+        .filters-row {
+            flex-direction: column;
+        }
+
+        .filter-group {
+            width: 100%;
+        }
     }
 </style>
 
 <script>
     let currentCustomerId = null;
+
+    // Setup filters on page load
+    document.addEventListener('DOMContentLoaded', function () {
+        setupFilters();
+        populateCityFilter();
+    });
+
+    function debounce(func, wait) {
+        let timeout;
+        return function (...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, args), wait);
+        };
+    }
+
+    function populateCityFilter() {
+        const cities = new Set();
+        document.querySelectorAll('#customersTable tbody tr[data-city]').forEach(row => {
+            const city = row.dataset.city;
+            if (city) cities.add(city);
+        });
+
+        const cityFilter = document.getElementById('cityFilter');
+        cities.forEach(city => {
+            const option = document.createElement('option');
+            option.value = city;
+            option.textContent = city;
+            cityFilter.appendChild(option);
+        });
+    }
+
+    function setupFilters() {
+        const searchInput = document.getElementById('searchInput');
+        const cityFilter = document.getElementById('cityFilter');
+
+        const filterRows = () => {
+            const search = searchInput.value.toLowerCase();
+            const city = cityFilter.value;
+
+            document.querySelectorAll('#customersTable tbody tr[data-name]').forEach(row => {
+                const name = row.dataset.name || '';
+                const company = row.dataset.company || '';
+                const phone = row.dataset.phone || '';
+                const rowCity = row.dataset.city || '';
+
+                const matchesSearch = !search ||
+                    name.includes(search) ||
+                    company.includes(search) ||
+                    phone.includes(search);
+                const matchesCity = !city || rowCity === city;
+
+                row.style.display = (matchesSearch && matchesCity) ? '' : 'none';
+            });
+        };
+
+        searchInput.addEventListener('input', debounce(filterRows, 300));
+        cityFilter.addEventListener('change', filterRows);
+    }
 
     function openAddModal() {
         resetForm();

@@ -18,8 +18,45 @@
 
 <div class="card">
     <div class="card-body">
+        <!-- Search and Filter -->
+        <div class="filters-row mb-3">
+            <div class="filter-group search-group">
+                <i class="fas fa-search"></i>
+                <input type="text" class="form-input" id="searchInput" placeholder="Cari kode, nama, atau phone...">
+            </div>
+            <div class="filter-group">
+                <select class="form-select" id="positionFilter">
+                    <option value="">Semua Posisi</option>
+                    <option value="owner">Owner</option>
+                    <option value="admin">Admin</option>
+                    <option value="qc_line">QC Line</option>
+                    <option value="sewing">Sewing</option>
+                    <option value="sablon">Sablon</option>
+                    <option value="cutting">Cutting</option>
+                    <option value="finishing">Finishing</option>
+                    <option value="packing">Packing</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <select class="form-select" id="empTypeFilter">
+                    <option value="">Semua Status Pekerja</option>
+                    <option value="karyawan">Karyawan</option>
+                    <option value="harian_lepas">Harian Lepas</option>
+                    <option value="borongan">Borongan</option>
+                    <option value="magang">Magang</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <select class="form-select" id="statusFilter">
+                    <option value="">Semua Status</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                </select>
+            </div>
+        </div>
+
         <div class="table-container">
-            <table class="table">
+            <table class="table" id="employeesTable">
                 <thead>
                     <tr>
                         <th>Kode</th>
@@ -34,7 +71,9 @@
                 </thead>
                 <tbody>
                     {% for e in employees.items %}
-                    <tr>
+                    <tr data-code="{{ e.employee_code|lower }}" data-name="{{ e.name|lower }}"
+                        data-position="{{ e.position or '' }}" data-emptype="{{ e.employment_type or 'karyawan' }}"
+                        data-phone="{{ e.phone or '' }}" data-status="{{ 'active' if e.is_active else 'inactive' }}">
                         <td><strong>{{ e.employee_code }}</strong></td>
                         <td>{{ e.name }}</td>
                         <td>
@@ -367,6 +406,35 @@
 </div>
 
 <style>
+    /* Filter Styles */
+    .filters-row {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .filter-group {
+        min-width: 150px;
+    }
+
+    .filter-group.search-group {
+        flex: 1;
+        min-width: 250px;
+        position: relative;
+    }
+
+    .search-group i {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--gray-400);
+    }
+
+    .search-group input {
+        padding-left: 2.5rem;
+    }
+
     /* Position Grid */
     .position-grid {
         display: grid;
@@ -606,6 +674,57 @@
 
 <script>
     let editingEmployeeId = null;
+
+    // Setup filters on page load
+    document.addEventListener('DOMContentLoaded', function () {
+        setupEmployeeFilters();
+    });
+
+    function debounce(func, wait) {
+        let timeout;
+        return function (...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, args), wait);
+        };
+    }
+
+    function setupEmployeeFilters() {
+        const searchInput = document.getElementById('searchInput');
+        const positionFilter = document.getElementById('positionFilter');
+        const empTypeFilter = document.getElementById('empTypeFilter');
+        const statusFilter = document.getElementById('statusFilter');
+
+        const filterRows = () => {
+            const search = searchInput.value.toLowerCase();
+            const position = positionFilter.value;
+            const empType = empTypeFilter.value;
+            const status = statusFilter.value;
+
+            document.querySelectorAll('#employeesTable tbody tr[data-name]').forEach(row => {
+                const code = row.dataset.code || '';
+                const name = row.dataset.name || '';
+                const rowPosition = row.dataset.position || '';
+                const rowEmpType = row.dataset.emptype || '';
+                const phone = row.dataset.phone || '';
+                const rowStatus = row.dataset.status || '';
+
+                const matchesSearch = !search ||
+                    code.includes(search) ||
+                    name.includes(search) ||
+                    phone.includes(search);
+                const matchesPosition = !position || rowPosition.includes(position);
+                const matchesEmpType = !empType || rowEmpType === empType;
+                const matchesStatus = !status || rowStatus === status;
+
+                row.style.display = (matchesSearch && matchesPosition && matchesEmpType && matchesStatus) ? '' : 'none';
+            });
+        };
+
+        searchInput.addEventListener('input', debounce(filterRows, 300));
+        positionFilter.addEventListener('change', filterRows);
+        empTypeFilter.addEventListener('change', filterRows);
+        statusFilter.addEventListener('change', filterRows);
+    }
 
     // Position card selection (multi-select with checkboxes)
     document.querySelectorAll('.position-card').forEach(card => {

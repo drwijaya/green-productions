@@ -8,10 +8,26 @@ import requests
 from .barcode_service import generate_qr_code
 
 
-def export_dso_to_word(dso):
-    """Export DSO data to Word document using template."""
+def export_dso_to_word(dso, use_libre_template=False):
+    """Export DSO data to Word document using template.
+    
+    Args:
+        dso: The DSO object to export
+        use_libre_template: If True, use LibreOffice-optimized template (for PDF export)
+                           If False, use MS Word template (for .docx download)
+    """
+    if use_libre_template:
+        template_name = 'dsotemplates_libre.docx'
+    else:
+        template_name = 'dsotemplates.docx'
+    
     template_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 
-                                  '..', 'template_docs', 'dsotemplates.docx')
+                                  '..', 'template_docs', template_name)
+    
+    if not os.path.exists(template_path):
+        # Fallback to original template if libre version doesn't exist
+        template_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 
+                                      '..', 'template_docs', 'dsotemplates.docx')
     
     if not os.path.exists(template_path):
         raise FileNotFoundError(f"Template not found: {template_path}")
@@ -278,57 +294,50 @@ def _export_dso_to_pdf_windows(dso):
 
 
 def _export_dso_to_pdf_weasyprint(dso):
-    """Export DSO to PDF using LibreOffice (Linux/Railway compatible).
+    """Export DSO to PDF using LibreOffice (Linux compatible).
     
-    This uses LibreOffice headless mode to convert Word to PDF,
-    giving the same result as docx2pdf on Windows.
+    Uses the LibreOffice-optimized template for better PDF output.
     """
     import tempfile
     import subprocess
     import os
     
-    # First, generate the Word document using the template
-    word_buffer = export_dso_to_word(dso)
+    # Generate the Word document using the LibreOffice-optimized template
+    word_buffer = export_dso_to_word(dso, use_libre_template=True)
     
     # Create temp directory for conversion
     with tempfile.TemporaryDirectory() as tmpdir:
         # Save Word file
         docx_path = os.path.join(tmpdir, 'dso.docx')
+        pdf_path = os.path.join(tmpdir, 'dso.pdf')
+        
         with open(docx_path, 'wb') as f:
             f.write(word_buffer.getvalue())
         
         # Convert using LibreOffice headless
-        try:
-            result = subprocess.run([
-                'libreoffice',
-                '--headless',
-                '--convert-to', 'pdf',
-                '--outdir', tmpdir,
-                docx_path
-            ], capture_output=True, text=True, timeout=60)
-            
-            if result.returncode != 0:
-                raise Exception(f"LibreOffice conversion failed: {result.stderr}")
-            
-        except FileNotFoundError:
-            # LibreOffice not installed - try soffice command instead
-            result = subprocess.run([
-                'soffice',
-                '--headless',
-                '--convert-to', 'pdf',
-                '--outdir', tmpdir,
-                docx_path
-            ], capture_output=True, text=True, timeout=60)
-            
-            if result.returncode != 0:
-                raise Exception(f"LibreOffice conversion failed: {result.stderr}")
+        lo_commands = ['libreoffice', 'soffice']
+        converted = False
+        
+        for lo_cmd in lo_commands:
+            try:
+                result = subprocess.run([
+                    lo_cmd,
+                    '--headless',
+                    '--convert-to', 'pdf',
+                    '--outdir', tmpdir,
+                    docx_path
+                ], capture_output=True, text=True, timeout=60)
+                
+                if result.returncode == 0 and os.path.exists(pdf_path):
+                    converted = True
+                    break
+            except FileNotFoundError:
+                continue
+        
+        if not converted:
+            raise Exception("PDF conversion failed. Please install LibreOffice: sudo pacman -S libreoffice-fresh")
         
         # Read the generated PDF
-        pdf_path = os.path.join(tmpdir, 'dso.pdf')
-        
-        if not os.path.exists(pdf_path):
-            raise Exception(f"PDF file not created. LibreOffice output: {result.stdout}")
-        
         with open(pdf_path, 'rb') as f:
             pdf_content = f.read()
     
