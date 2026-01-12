@@ -19,6 +19,7 @@ class MaterialRequestStatus(Enum):
 class MaterialQCResult(Enum):
     """Material QC result enum."""
     PENDING = 'pending'
+    SUBMITTED = 'submitted'
     PASS = 'pass'
     FAIL = 'fail'
     CONDITIONAL_PASS = 'conditional_pass'

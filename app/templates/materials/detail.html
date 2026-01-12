@@ -139,8 +139,16 @@
 
     <!-- QC Result (if exists) -->
     {% if material_request.qc_sheet %}
-    <div class="detail-card">
-        <h3 class="card-title"><i class="fas fa-clipboard-check"></i> QC Result</h3>
+    <div class="detail-card qc-card-detailed">
+        <div class="qc-card-header">
+            <h3 class="card-title"><i class="fas fa-clipboard-check"></i> QC Checklist Result</h3>
+            <a href="{{ url_for('views.materials_qc', request_id=material_request.id) }}"
+                class="btn btn-sm btn-outline">
+                <i class="fas fa-external-link-alt"></i> Lihat Detail Lengkap
+            </a>
+        </div>
+
+        <!-- QC Header Info -->
         <div class="qc-result">
             <div class="qc-result-header">
                 <div>
@@ -149,8 +157,10 @@
                         material_request.qc_sheet.inspected_at else '-' }}</span>
                 </div>
                 <span class="result-badge {{ material_request.qc_sheet.result }}">{{
-                    material_request.qc_sheet.result.upper() }}</span>
+                    material_request.qc_sheet.result.replace('_', ' ').upper() }}</span>
             </div>
+
+            <!-- QC Stats -->
             <div class="qc-stats">
                 <div class="stat-item">
                     <span class="stat-value">{{ material_request.qc_sheet.total_received }}</span>
@@ -166,6 +176,64 @@
                 </div>
             </div>
         </div>
+
+        <!-- Checklist Items -->
+        {% if material_request.qc_sheet.checklist_json %}
+        <div class="checklist-section">
+            <h4 class="checklist-title"><i class="fas fa-list-check"></i> Detail Checklist</h4>
+            <div class="checklist-grid">
+                {% for item in material_request.qc_sheet.checklist_json %}
+                <div class="checklist-item {{ 'accepted' if item.status_accepted else 'rejected' }}">
+                    <div class="checklist-item-header">
+                        <span class="param-number">{{ loop.index }}</span>
+                        <span class="param-name">{{ item.parameter }}</span>
+                        <span class="param-status {{ 'pass' if item.status_accepted else 'fail' }}">
+                            <i class="fas {{ 'fa-check-circle' if item.status_accepted else 'fa-times-circle' }}"></i>
+                            {{ 'Ya' if item.status_accepted else 'Tidak' }}
+                        </span>
+                    </div>
+                    <div class="checklist-item-body">
+                        <div class="qty-info">
+                            <span class="qty-label">Qty Diterima:</span>
+                            <span class="qty-value">{{ item.qty_received or 0 }}</span>
+                        </div>
+                        <div class="qty-info">
+                            <span class="qty-label">Qty NG:</span>
+                            <span class="qty-value text-danger">{{ item.qty_ng or 0 }}</span>
+                        </div>
+                        {% if item.notes %}
+                        <div class="item-notes">
+                            <i class="fas fa-sticky-note"></i> {{ item.notes }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Signatures -->
+        {% if material_request.qc_sheet.sender_name or material_request.qc_sheet.receiver_name %}
+        <div class="signatures-section">
+            <div class="signature-item">
+                <span class="sig-label">Pengirim (Vendor)</span>
+                <span class="sig-value">{{ material_request.qc_sheet.sender_name or '-' }}</span>
+            </div>
+            <div class="signature-item">
+                <span class="sig-label">Penerima (QC)</span>
+                <span class="sig-value">{{ material_request.qc_sheet.receiver_name or '-' }}</span>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Notes -->
+        {% if material_request.qc_sheet.notes %}
+        <div class="qc-notes">
+            <label><i class="fas fa-comment-alt"></i> Catatan Inspeksi</label>
+            <p>{{ material_request.qc_sheet.notes }}</p>
+        </div>
+        {% endif %}
     </div>
     {% endif %}
 
@@ -415,15 +483,21 @@
         color: #DC2626;
     }
 
-    .result-badge.conditional_pass {
-        background: #FEF3C7;
-        color: #D97706;
+    .result-badge.pending {
+        background: var(--gray-200);
+        color: var(--gray-600);
+    }
+
+    .result-badge.submitted {
+        background: #DBEAFE;
+        color: #1D4ED8;
     }
 
     .qc-stats {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
         gap: 1rem;
+        margin-top: 1rem;
     }
 
     .stat-item {
@@ -445,6 +519,190 @@
         text-transform: uppercase;
     }
 
+    /* QC Card Detailed Styles */
+    .qc-card-detailed {
+        overflow: hidden;
+    }
+
+    .qc-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .qc-card-header .card-title {
+        margin: 0;
+    }
+
+    /* Checklist Section */
+    .checklist-section {
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--gray-200);
+    }
+
+    .checklist-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--gray-700);
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .checklist-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .checklist-item {
+        background: var(--gray-50);
+        border-radius: var(--radius);
+        border-left: 4px solid var(--gray-300);
+        overflow: hidden;
+        transition: all 0.2s ease;
+    }
+
+    .checklist-item:hover {
+        box-shadow: var(--shadow-sm);
+    }
+
+    .checklist-item.accepted {
+        border-left-color: #10B981;
+    }
+
+    .checklist-item.rejected {
+        border-left-color: #EF4444;
+    }
+
+    .checklist-item-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        background: white;
+    }
+
+    .param-number {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: var(--gray-200);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--gray-600);
+        flex-shrink: 0;
+    }
+
+    .param-name {
+        flex: 1;
+        font-weight: 500;
+        color: var(--gray-800);
+    }
+
+    .param-status {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        padding: 0.25rem 0.75rem;
+        border-radius: var(--radius-sm);
+    }
+
+    .param-status.pass {
+        background: #D1FAE5;
+        color: #059669;
+    }
+
+    .param-status.fail {
+        background: #FEE2E2;
+        color: #DC2626;
+    }
+
+    .checklist-item-body {
+        padding: 0.75rem 1rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        font-size: 0.875rem;
+    }
+
+    .qty-info {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .qty-label {
+        color: var(--gray-500);
+    }
+
+    .qty-value {
+        font-weight: 600;
+    }
+
+    .item-notes {
+        flex: 1 1 100%;
+        color: var(--gray-600);
+        font-style: italic;
+        padding-top: 0.5rem;
+        border-top: 1px dashed var(--gray-200);
+    }
+
+    /* Signatures Section */
+    .signatures-section {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--gray-200);
+    }
+
+    .signature-item {
+        text-align: center;
+    }
+
+    .sig-label {
+        display: block;
+        font-size: 0.75rem;
+        color: var(--gray-500);
+        text-transform: uppercase;
+        margin-bottom: 0.5rem;
+    }
+
+    .sig-value {
+        font-weight: 600;
+        color: var(--gray-800);
+    }
+
+    /* QC Notes */
+    .qc-notes {
+        margin-top: 1.5rem;
+        padding: 1rem;
+        background: var(--gray-50);
+        border-radius: var(--radius);
+    }
+
+    .qc-notes label {
+        display: block;
+        font-size: 0.75rem;
+        color: var(--gray-500);
+        text-transform: uppercase;
+        margin-bottom: 0.5rem;
+    }
+
+    .qc-notes p {
+        margin: 0;
+        color: var(--gray-700);
+    }
+
     .detail-actions {
         display: flex;
         justify-content: center;
@@ -456,6 +714,25 @@
         .info-grid,
         .qc-stats {
             grid-template-columns: repeat(2, 1fr);
+        }
+
+        .signatures-section {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        .checklist-item-header {
+            flex-wrap: wrap;
+        }
+
+        .param-name {
+            flex: 1 1 calc(100% - 80px);
+        }
+
+        .qc-card-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.75rem;
         }
     }
 </style>

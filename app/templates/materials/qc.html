@@ -99,11 +99,14 @@
         <div class="summary-row">
             <div class="summary-item">
                 <label>Total Diterima</label>
-                <input type="number" class="form-input" id="totalReceived" value="0" min="0">
+                <input type="number" class="form-input" id="totalReceived"
+                    value="{{ material_request.qc_sheet.total_received if material_request.qc_sheet else material_request.get_total_qty() }}"
+                    min="0">
             </div>
             <div class="summary-item">
                 <label>Total NG</label>
-                <input type="number" class="form-input" id="totalNG" value="0" min="0">
+                <input type="number" class="form-input" id="totalNG"
+                    value="{{ material_request.qc_sheet.total_ng if material_request.qc_sheet else 0 }}" min="0">
             </div>
             <div class="summary-item">
                 <label>Pass Rate</label>
@@ -139,14 +142,8 @@
 
     <!-- Action Buttons -->
     <div class="action-buttons">
-        <button type="button" class="btn btn-lg result-btn pass" onclick="submitChecklist('pass')">
-            <i class="fas fa-check-circle"></i> PASS - Diterima
-        </button>
-        <button type="button" class="btn btn-lg result-btn conditional" onclick="submitChecklist('conditional_pass')">
-            <i class="fas fa-exclamation-circle"></i> Conditional Pass
-        </button>
-        <button type="button" class="btn btn-lg result-btn fail" onclick="submitChecklist('fail')">
-            <i class="fas fa-times-circle"></i> FAIL - Ditolak
+        <button type="button" class="btn btn-lg result-btn submit" onclick="submitChecklist('submitted')">
+            <i class="fas fa-paper-plane"></i> Submit QC Checklist
         </button>
     </div>
 </div>
@@ -458,8 +455,8 @@
     }
 
     .action-buttons {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
+        display: flex;
+        justify-content: center;
         gap: 1rem;
         padding: 1.5rem;
         background: var(--gray-50);
@@ -513,6 +510,19 @@
         box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
     }
 
+    .result-btn.submit {
+        background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+        color: white;
+        border: none;
+        min-width: 250px;
+    }
+
+    .result-btn.submit:hover {
+        background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    }
+
     @media (max-width: 1024px) {
         .doc-header {
             grid-template-columns: 1fr;
@@ -556,19 +566,16 @@
 
     let checklistData = [];
 
+    // Total qty order for prefilling
+    const totalQtyOrder = {{ material_request.get_total_qty() }};
+
     // Load existing QC data if available
     const existingChecklist = {{ material_request.qc_sheet.checklist_json| tojson | safe if material_request.qc_sheet and material_request.qc_sheet.checklist_json else '[]' }};
 
     document.addEventListener('DOMContentLoaded', () => {
         initializeChecklist();
         setupEventListeners();
-
-        // Load existing summary data
-        {% if material_request.qc_sheet %}
-        document.getElementById('totalReceived').value = {{ material_request.qc_sheet.total_received or 0 }};
-        document.getElementById('totalNG').value = {{ material_request.qc_sheet.total_ng or 0 }};
         calculatePassRate();
-        {% endif %}
     });
 
     function initializeChecklist() {
@@ -579,9 +586,12 @@
             // Check for existing data
             const existing = existingChecklist.find(item => item.parameter === param.name) || {};
 
+            // Default qty_received to totalQtyOrder if no existing data
+            const defaultQtyReceived = existing.qty_received !== undefined ? existing.qty_received : totalQtyOrder;
+
             checklistData.push({
                 parameter: param.name,
-                qty_received: existing.qty_received || 0,
+                qty_received: defaultQtyReceived,
                 qty_ng: existing.qty_ng || 0,
                 status_accepted: existing.status_accepted !== undefined ? existing.status_accepted : null,
                 notes: existing.notes || ''
@@ -593,7 +603,7 @@
                 <td class="param-cell">${param.name}</td>
                 <td>
                     <input type="number" class="qty-received" data-index="${index}" 
-                        value="${existing.qty_received || ''}" min="0" placeholder="0">
+                        value="${defaultQtyReceived}" min="0" placeholder="0">
                 </td>
                 <td>
                     <input type="number" class="qty-ng" data-index="${index}" 

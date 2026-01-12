@@ -89,6 +89,10 @@
                                 <a href="/orders/{{ order.order_code }}" class="btn btn-sm btn-outline" title="View">
                                     <i class="fas fa-eye"></i>
                                 </a>
+                                <button class="btn btn-sm btn-outline" onclick="openEditModal({{ order.id }})"
+                                    title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </button>
                                 {% if order.dso.first() %}
                                 <a href="{{ url_for('views.dso_management') }}?search={{ order.order_code }}"
                                     class="btn btn-sm btn-outline" title="Manage DSO">
@@ -152,6 +156,18 @@
         <div class="modal-body">
             <form id="newOrderForm">
                 <div class="form-group">
+                    <label class="form-label">Nomor Invoice *</label>
+                    <div class="input-with-button">
+                        <input type="text" class="form-input" name="order_code" id="newOrderCode" required
+                            placeholder="INV-YYYYMM-XXXX">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="refreshInvoiceCode()"
+                            title="Generate Ulang">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                    <small class="form-hint">Kode invoice otomatis dibuat, bisa diubah sesuai kebutuhan</small>
+                </div>
+                <div class="form-group">
                     <label class="form-label">Customer *</label>
                     <select class="form-select" name="customer_id" required>
                         <option value="">Pilih Customer</option>
@@ -186,6 +202,72 @@
             <button class="btn btn-secondary" onclick="closeModal('newOrderModal')">Batal</button>
             <button class="btn btn-primary" onclick="createOrder()">
                 <i class="fas fa-save"></i> Simpan Invoice
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Order Modal -->
+<div class="modal-backdrop" id="editOrderModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title">Edit Invoice</h3>
+            <button class="modal-close" onclick="closeModal('editOrderModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="editOrderForm">
+                <input type="hidden" name="order_id" id="editOrderId">
+                <div class="form-group">
+                    <label class="form-label">Nomor Invoice *</label>
+                    <input type="text" class="form-input" name="order_code" id="editOrderCode" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Customer *</label>
+                    <select class="form-select" name="customer_id" id="editCustomerId" required>
+                        <option value="">Pilih Customer</option>
+                        {% for customer in customers %}
+                        <option value="{{ customer.id }}">{{ customer.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Model / Nama Produk *</label>
+                    <input type="text" class="form-input" name="model" id="editModel" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Qty Total *</label>
+                        <input type="number" class="form-input" name="qty_total" id="editQtyTotal" required min="1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Deadline</label>
+                        <input type="date" class="form-input" name="deadline" id="editDeadline">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" name="status" id="editStatus">
+                        <option value="draft">Draft</option>
+                        <option value="in_production">In Production</option>
+                        <option value="qc_pending">QC Pending</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Catatan Customer</label>
+                    <textarea class="form-textarea" name="customer_notes" id="editCustomerNotes" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Catatan Internal</label>
+                    <textarea class="form-textarea" name="internal_notes" id="editInternalNotes" rows="2"></textarea>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('editOrderModal')">Batal</button>
+            <button class="btn btn-primary" onclick="updateOrder()">
+                <i class="fas fa-save"></i> Simpan Perubahan
             </button>
         </div>
     </div>
@@ -241,6 +323,22 @@
         gap: 1rem;
     }
 
+    .input-with-button {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .input-with-button .form-input {
+        flex: 1;
+    }
+
+    .form-hint {
+        display: block;
+        margin-top: 0.25rem;
+        font-size: 0.8rem;
+        color: var(--gray-500);
+    }
+
     @media (max-width: 768px) {
         .filters-row {
             flex-direction: column;
@@ -257,13 +355,56 @@
 </style>
 
 <script>
+    // Fetch generated invoice code from API
+    async function fetchInvoiceCode() {
+        try {
+            const response = await api.get('/orders/generate-code');
+            return response.order_code;
+        } catch (error) {
+            console.error('Failed to fetch invoice code:', error);
+            return null;
+        }
+    }
+
+    // Refresh invoice code in new order form
+    async function refreshInvoiceCode() {
+        const input = document.getElementById('newOrderCode');
+        if (!input) return;
+
+        const btn = input.nextElementSibling;
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        }
+
+        const code = await fetchInvoiceCode();
+        if (code) {
+            input.value = code;
+        }
+
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-sync-alt"></i>';
+        }
+    }
+
+    // Listen for modal open to auto-fetch invoice code
+    document.addEventListener('click', function (e) {
+        // Check if clicking the "Invoice Baru" button
+        const btn = e.target.closest('[onclick*="newOrderModal"]');
+        if (btn) {
+            // Wait a tick for modal to open, then fetch code
+            setTimeout(refreshInvoiceCode, 100);
+        }
+    });
+
     async function createOrder() {
         const form = document.getElementById('newOrderForm');
         const formData = new FormData(form);
         const data = Object.fromEntries(formData.entries());
 
         // Validate
-        if (!data.customer_id || !data.model || !data.qty_total) {
+        if (!data.order_code || !data.customer_id || !data.model || !data.qty_total) {
             showToast('Mohon lengkapi semua field yang wajib', 'error');
             return;
         }
@@ -275,6 +416,60 @@
             window.location.reload();
         } catch (error) {
             showToast(error.message || 'Gagal membuat invoice', 'error');
+        }
+    }
+
+    // Open edit modal with order data
+    async function openEditModal(orderId) {
+        // Show loading immediately
+        showLoading('Memuat data invoice...');
+
+        try {
+            const response = await api.get('/orders/' + orderId);
+            const order = response.data;  // API returns { success: true, data: {...} }
+
+            console.log('Order data:', order);  // Debug log
+
+            document.getElementById('editOrderId').value = orderId;
+            document.getElementById('editOrderCode').value = order.order_code || '';
+            document.getElementById('editCustomerId').value = order.customer_id || '';
+            document.getElementById('editModel').value = order.model || '';
+            document.getElementById('editQtyTotal').value = order.qty_total || '';
+            document.getElementById('editDeadline').value = order.deadline || '';
+            document.getElementById('editStatus').value = order.status || 'draft';
+            document.getElementById('editCustomerNotes').value = order.customer_notes || '';
+            document.getElementById('editInternalNotes').value = order.internal_notes || '';
+
+            hideLoading();
+            openModal('editOrderModal');
+        } catch (error) {
+            hideLoading();
+            console.error('Edit modal error:', error);
+            showToast(error.message || 'Gagal memuat data invoice', 'error');
+        }
+    }
+
+    // Update order
+    async function updateOrder() {
+        const orderId = document.getElementById('editOrderId').value;
+        const form = document.getElementById('editOrderForm');
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+        delete data.order_id; // Don't send order_id in body
+
+        // Validate
+        if (!data.order_code || !data.customer_id || !data.model || !data.qty_total) {
+            showToast('Mohon lengkapi semua field yang wajib', 'error');
+            return;
+        }
+
+        try {
+            await api.put('/orders/' + orderId, data);
+            showToast('Invoice berhasil diperbarui!', 'success');
+            closeModal('editOrderModal');
+            window.location.reload();
+        } catch (error) {
+            showToast(error.message || 'Gagal memperbarui invoice', 'error');
         }
     }
 
@@ -339,11 +534,15 @@
             return;
         }
 
+        showLoading('Menghapus invoice...');
         try {
             await api.delete('/orders/' + orderId);
+            hideLoading();
             showToast('Invoice berhasil dihapus', 'success');
             window.location.reload();
         } catch (error) {
+            hideLoading();
+            console.error('Delete error:', error);
             showToast(error.message || 'Gagal menghapus invoice', 'error');
         }
     }

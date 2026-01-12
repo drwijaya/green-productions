@@ -13,6 +13,14 @@ from ..extensions import db
 from ..utils.decorators import require_roles, api_response, paginate_query, log_activity
 
 
+@api_bp.route('/orders/generate-code', methods=['GET'])
+@login_required
+def generate_order_code():
+    """Generate a new order code for invoice creation."""
+    code = Order.generate_order_code()
+    return api_response(data={'order_code': code})
+
+
 @api_bp.route('/orders', methods=['GET'])
 @login_required
 def list_orders():
@@ -108,9 +116,19 @@ def create_order():
         except ValueError:
             return api_response(message='Invalid deadline format', status=400)
     
+    # Handle order_code - use provided or auto-generate
+    order_code = data.get('order_code', '').strip()
+    if order_code:
+        # Validate that order_code is unique
+        existing = Order.query.filter_by(order_code=order_code).first()
+        if existing:
+            return api_response(message='Nomor invoice sudah digunakan', status=400)
+    else:
+        order_code = Order.generate_order_code()
+    
     # Create order
     order = Order(
-        order_code=Order.generate_order_code(),
+        order_code=order_code,
         customer_id=data['customer_id'],
         model=data['model'],
         description=data.get('description'),
@@ -196,6 +214,15 @@ def update_order(order_id):
     
     # Store before state for audit
     g.data_before = order.to_dict()
+    
+    # Handle order_code update with duplicate validation
+    if 'order_code' in data:
+        new_code = data['order_code'].strip()
+        if new_code and new_code != order.order_code:
+            existing = Order.query.filter(Order.order_code == new_code, Order.id != order_id).first()
+            if existing:
+                return api_response(message='Nomor invoice sudah digunakan', status=400)
+            order.order_code = new_code
     
     if 'customer_id' in data:
         order.customer_id = data['customer_id']
